@@ -1,0 +1,28 @@
+.ui-attributebox{
+	
+}
+
+.ui-attributebox.vertical{
+	
+}
+
+.ui-attributebox.horizontal{
+	display: grid;
+	  grid-template-columns: 50px 1fr;
+	  align-items: center;
+	  gap: 8px;
+}
+
+
+.attributebox-icon{
+		height: 40px;
+		width: 40px;
+}
+
+.attributebox-title{
+  color: var(--text-dark);
+  font-size: 15px;
+  text-transform: uppercase;
+  font-weight: 800;
+  font-style: italic;
+}

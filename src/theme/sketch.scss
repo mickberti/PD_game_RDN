@@ -1,0 +1,172 @@
+@use "sketch/variables" as sketch;
+@use "sketch/variables_bg" as sketch_bg;
+
+.theme-sketch {
+	@include sketch.sketch-variables;
+	@include sketch_bg.sketch-variables-bg;
+
+
+	@import "sketch/login";
+	@import "sketch/profile";
+	@import "sketch/hub";
+	@import "sketch/bottomnav";
+	@import "sketch/reward";
+	@import "sketch/power-up";
+	@import "sketch/shop";
+	@import "sketch/inventory";
+	@import "sketch/hero";
+	@import "sketch/hero-upgrade";
+	@import "sketch/gameplay";
+	@import "sketch/phaser-game";
+	@import "sketch/pause";
+	@import "sketch/result";
+	@import "sketch/game-mode";
+	@import "sketch/ranking";
+
+	@import "sketch/settings";
+	@import "sketch/header";
+
+	@import "sketch/pill";
+	@import "sketch/sprite";
+	@import "sketch/panel";
+	@import "sketch/button";
+	@import "sketch/icons";
+	@import "sketch/band";
+	//@import "sketch/bar";
+	@import "sketch/tabs";
+	@import "sketch/box";
+	@import "sketch/progressbar";
+	@import "sketch/attribute-box";
+	//@import "sketch/top";
+	@import "sketch/prestige-box";
+	@import "sketch/effect-fx";
+	@import "sketch/effect-fx1";
+	@import "sketch/effect-fx2";
+	@import "sketch/equip-selection";
+	@import "sketch/popover";
+	@import "sketch/floating-panel";
+	@import "sketch/action-feedback-overlay";
+	//@import "sketch/fog_bg.scss";
+	@import "sketch/preview-attribute-stats";
+
+	@import "demo/utils";
+
+	&{
+		background-image: var(--main-background-sfondo11);
+		background-repeat: no-repeat;
+		background-position: center;
+		/* Applica la sfocatura */
+		//backdrop-filter: blur(10px);
+		//-webkit-backdrop-filter: blur(10px); /* Supporto per Safari */
+
+	}
+
+	ion-content {
+		--background: var(--main-background);
+		--color: var(--color-text);
+
+	}
+
+	.screen {
+		margin: 0 auto;
+		position: relative;
+		overflow: hidden;
+		padding: var(--safe-top) 0px var(--safe-bottom) 0px;
+		color: var(--game-text);
+		font-style: var(--ion-font-style);
+
+		width: var(--width);
+		min-height: 100%;
+	}
+
+	.screen-list, .generic-list{
+		display: grid;
+		gap: 24px;
+	}
+
+	.small {
+		min-height: 34px;
+		min-width: 70px;
+		font-size: 12px;
+		padding: 0 10px;
+	}
+
+	:disabled {
+		filter: grayscale(.75);
+		opacity: .7;
+	}
+
+	.item-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 10px;
+		margin-bottom: 10px;
+	}
+
+	.item-list {
+		display: grid;
+		gap: 12px;
+	}
+
+
+
+
+
+	.modal-backdrop {
+	  position: fixed;
+	  inset: 0;
+	  z-index: 100;
+	  background: var(--overlay-backdrop);
+	  display: grid;
+	  place-items: center;
+	  padding: 20px;
+	  color: var(--color-medium);
+	}
+
+	.modal {
+	  width: min(390px, 100%);
+	  padding: 18px;
+	  transform: var(--rotate-modal);
+	  border-radius: 6px;
+	}
+
+	.modal-title-row{
+		display: grid;
+		align-items: start;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.modal-title-row h2{
+		grid-column: 2;
+		font-size: 26px;
+		line-height: 1.15;
+		margin: 0;
+		text-align: center;
+	}
+
+	.modal-title-row .popup-close-button{
+		grid-column: 3;
+		justify-self: end;
+	}
+
+	.modal-action{
+		display:flex;
+		gap:10px;
+		justify-content:flex-end;
+	}
+
+	.locked{
+		filter: brightness(60%);
+	}
+
+	.lock {
+	  position: absolute;
+	  left: 50%;
+	  top: 50%;
+	  font-size: 44px;
+	  transform: translate(-50%, -50%);
+	  height: 60px;
+	  width: 60px;
+	}
+}

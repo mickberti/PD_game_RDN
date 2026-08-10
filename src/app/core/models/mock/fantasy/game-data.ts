@@ -1,0 +1,42 @@
+import { ModeItem } from "../../game.models";
+
+export const fantasyModes: ModeItem[] = [
+	{
+		id: "adventure",
+		title: "Adventure",
+		description: "Seleziona e avanza con il tuo eroe.",
+		frame: { name: 'game-adventure-castle', effect: 'none' },
+		route: "/game-mode",
+		progress: { descr: "",  current: 0, total: 2000, },
+		mastery: 1,
+	},
+	{
+		id: "time-attack",
+		title: "Time Attack",
+		description: "Sfida il tempo in questa modalità veloce.",
+		frame: { name: 'game-speed-run', effect: 'none' },
+		route: "/game-mode",
+		progress: { descr: "",  current: 0, total: 1500, },
+		mastery: 1,
+	},
+	{	
+		id: "seasons",
+		title: "Seasons",
+		description: "Stagione completa.",
+		frame: { name: 'game-monster-portal', effect: 'none' },
+		route: "/game-mode",
+		availability: { weeksOfYear: [23,24,25] },
+		progress: { descr: "erwrwr", current: 0, total: 1000 },
+		mastery: 1,
+	},
+	{
+		id: "arena",
+		title: "Arena",
+		description: "Sfida altri giocatori in battaglie PvP.",
+		frame: { name: 'game-trophy-arena', effect: 'none' },
+		route: "/game-mode",
+		availability: { weekdays: [0, 6] },
+		progress: { descr: "erwrwr", current: 0, total: 2500 },
+		mastery: 1,
+	}
+];

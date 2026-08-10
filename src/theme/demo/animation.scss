@@ -1,0 +1,236 @@
+:host {
+  position: relative;
+  width: 100%;
+  height: 100%;
+
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      #30383d 0px,
+      #30383d 40px,
+      #374248 40px,
+      #374248 80px
+    );
+
+  animation: roadMove .5s linear infinite;
+}
+
+@keyframes roadMove {
+  from {
+    background-position-y: 0;
+  }
+
+  to {
+    background-position-y: 80px;
+  }
+}
+
+.hud {
+  position: absolute;
+  background-repeat: no-repeat;
+}
+
+.rpm {
+  left: 20px;
+  bottom: 20px;
+}
+
+.speed {
+  left: 190px;
+  bottom: 20px;
+}
+
+.fuel {
+  right: 20px;
+  bottom: 20px;
+}
+
+.needle {
+  position: absolute;
+
+  width: 6px;
+  height: 70px;
+
+  background: red;
+
+  left: 50%;
+  bottom: 50%;
+
+  border-radius: 999px;
+
+  transform-origin: bottom center;
+
+  animation: rpmMove 1s ease-in-out infinite alternate;
+}
+
+.speed-needle {
+  background: #00ff66;
+  animation-duration: .4s;
+}
+
+@keyframes rpmMove {
+
+  from {
+    transform:
+      translateX(-50%)
+      rotate(-90deg);
+  }
+
+  to {
+    transform:
+      translateX(-50%)
+      rotate(70deg);
+  }
+}
+
+
+
+
+
+.fuel-mask {
+
+  background:
+    linear-gradient(
+      to top,
+      red,
+      yellow,
+      lime
+    );
+
+  animation: fuelAnim 3s infinite alternate;
+}
+
+@keyframes fuelAnim {
+
+  from {
+    height: 20%;
+  }
+
+  to {
+    height: 100%;
+  }
+}
+
+.pedal {
+  position: absolute;
+
+  right: 40px;
+  bottom: 240px;
+
+  border: none;
+  background-color: transparent;
+
+  transition: transform .08s;
+}
+
+.pedal:active {
+
+  transform:
+    translateY(12px)
+    scale(.96);
+}
+
+.traffic-light {
+  position: absolute;
+
+  left: 50%;
+  top: 40px;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  gap: 16px;
+}
+
+.a-light {
+  opacity: .35;
+}
+
+.a-light.active {
+  opacity: 1;
+
+  filter:
+    drop-shadow(0 0 12px red)
+    drop-shadow(0 0 20px red);
+
+  animation: blink .5s infinite;
+}
+
+@keyframes blink {
+
+  from {
+    transform: scale(1);
+  }
+
+  to {
+    transform: scale(1.08);
+  }
+}
+
+.countdown {
+  position: absolute;
+
+  left: 50%;
+  top: 240px;
+
+  transform: translateX(-50%);
+
+  animation: countdownPulse 1s infinite;
+}
+
+@keyframes countdownPulse {
+
+  0% {
+    transform:
+      translateX(-50%)
+      scale(.6);
+
+    opacity: 0;
+  }
+
+  50% {
+    transform:
+      translateX(-50%)
+      scale(1.2);
+
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      translateX(-50%)
+      scale(1);
+
+    opacity: 0;
+  }
+}
+
+.trophy {
+  position: absolute;
+
+  left: 40px;
+  top: 40px;
+
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0% {
+    transform:
+      translateY(0)
+      rotate(-2deg);
+  }
+
+  50% {
+    transform:
+      translateY(-12px)
+      rotate(2deg);
+  }
+
+  100% {
+    transform:
+      translateY(0)
+      rotate(-2deg);
+  }
+}

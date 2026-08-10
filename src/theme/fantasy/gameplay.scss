@@ -1,0 +1,93 @@
+.gameplay-screen{
+	min-height: 100dvh;
+}
+
+.road-bg {
+  position: absolute;
+  inset: 80px 35% 0 35%;
+  background: var(--track-background);
+  border-left: var(--main-border-left-1);
+  border-right: var(--main-border-right-1);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.hud-top {
+  position: relative;
+  z-index: 2;
+  padding: 18px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.go-text {
+  font-size: 52px;
+  color: var(--game-blue);
+  text-shadow: var(--shadow-title-hard);
+  font-style: italic;
+}
+
+.hero-player{
+  position: absolute;
+  left: 48%;
+  bottom: 140px;
+  width: 48px;
+  height: 96px;
+  background: var(--game-cream);
+  border: var(--fantasy-border-5-ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card-xl);
+  z-index: 2;
+}
+
+.pedal {
+  position: absolute;
+  right: 22px;
+  bottom: 212px;
+  z-index: 4;
+}
+
+.speedometers {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 92px;
+  display: flex;
+  justify-content: space-between;
+  z-index: 3;
+}
+
+.gauge {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  border: var(--fantasy-border-7-cyan);
+  background: var(--track-lane-bg);
+  box-shadow: var(--shadow-card-lg);
+  position: relative;
+}
+
+.gauge::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 48%;
+  width: 6px;
+  height: 42px;
+  background: var(--boost-fill-bg);
+  transform-origin: bottom;
+  transform: rotate(-35deg);
+  border-radius: 4px;
+}
+
+.game-actions {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 18px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}

@@ -1,0 +1,41 @@
+/* Contenitore principale */
+.fog-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #202025; /* Colore di sfondo scuro di base */
+}
+
+/* Base delle immagini della nebbia */
+.fog-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 300%; /* Più largo dello schermo per permettere lo scorrimento */
+  height: 100%;
+  background: var(--main-background-sfondo6) repeat-x;
+  background-size: cover;
+  animation: driftFog 60s linear infinite; /* Durata e tipo di animazione */
+  filter: blur(16px); /* Sfocatura per l'effetto nebbia */
+  opacity: 0.4;
+}
+
+/* Secondo livello per dare profondità */
+.fog-img-second {
+  background: var(--main-background-sfondo6) repeat-x;
+  animation-duration: 90s; /* Più lento per creare parallasse */
+  opacity: 0.2;
+}
+
+/* Definizione dell'animazione chiave */
+@keyframes driftFog {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}

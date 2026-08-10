@@ -1,0 +1,328 @@
+
+
+//############################################################################
+//								BOX
+//############################################################################
+
+.ui-box-wrapper{
+	position: relative;
+}
+
+.ui-box {
+	height: 180px;
+	width: 100%;
+	display: grid;
+	place-items: center;
+	padding: 20px 0px 0px 0px;
+	color: var(--color-dark);
+	position: relative;
+	gap: 8px;
+}
+
+.ui-box .sprite {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+	
+.ui-box .price {
+	margin-top: 5px;
+	z-index: 1;
+	color: var(--color-text);
+}
+
+.ui-box .stock {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--fantasy-surface-gold);
+	border: 3px solid var(--fantasy-border-primary);
+	z-index: 1;
+	transform: skewX(-10deg);
+
+}
+
+.ui-box .stock span {
+	font-weight: 900;
+	  font-style: italic;
+	  text-transform: uppercase;
+	  text-shadow: 2px 3px 0 var(--shadow-rgba-20);
+	  white-space: nowrap;
+	  padding: 0px 15px;
+}
+
+.ui-box .frame{
+	height: 60px;
+	width: 60px;
+}	
+	
+.ui-box .value {
+	font-size: 30px;
+	color: var(--color-primary)
+}
+
+//############################################################################
+//								EQUIP-BOX
+//############################################################################
+
+.ui-equip-box-wrapper{
+	position: relative;
+}
+
+.ui-equip-box {
+	height: 180px;
+	width: 100%;
+	display: grid;
+	place-items: center;
+	padding: 15px 0px 0px 0px;
+	color: var(--color-dark);
+	position: relative;
+	gap: 0px;
+	align-content: start;
+}
+
+.ui-equip-box .sprite {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.ui-equip-box .icon {
+	height: 70px;
+	  width: 70px;
+}
+	
+.ui-equip-box .descr {
+	z-index: 1;
+	  padding: 0px 15px;
+	  height: 40px;
+	  text-align: center;
+}
+
+.ui-equip-box .equip-box-level {
+	z-index: 1;
+	position: absolute;
+	  left: 0px;
+	  top: 40px;
+}
+
+.ui-equip-box .equip-box-level .maestria-sprite{
+	height: 30px;
+	width: 30px;
+}
+
+.ui-equip-box .equip-box-maestria {
+	z-index: 1;
+	position: absolute;
+	right: -5px;
+	top: 8px;
+}
+
+.ui-equip-box .equip-box-maestria .maestria-sprite{
+	height: 30px;
+	width: 30px;
+}
+
+.ui-equip-box .stats {
+	z-index: 1;
+	width: 70%;
+	position: absolute;
+	bottom: 11px;
+}
+
+
+.ui-equip-box .stats .ui-progress-stats.label-none{
+	width: 100%;
+	gap: 0px;
+	padding: 0px;
+	background: transparent;
+	box-shadow: none;
+}
+
+.ui-equip-box .level {
+	display: flex;
+	  align-items: center;
+	  z-index: 1;
+	  width: 100%;
+	  padding: 12px 20px;
+	  justify-content: center;
+}
+
+.ui-equip-box .equip-action{
+	position: absolute;
+	left: 15px;
+	top: 9px;
+	  z-index: 1;
+	height: 30px;
+	  width: 30px;
+	  background-color: transparent;
+}
+
+.ui-equip-box .level-up-indicator{
+		position: absolute;
+	  right: -5px;
+	  bottom: 0px;
+	  z-index: 1;
+	height: 30px;
+	  width: 30px;
+	  background-color: transparent;
+}
+
+.ui-equip-box .value {
+	font-size: 30px;
+	color: var(--color-primary)
+}
+
+.ui-equip-box.light small{
+	color: var(--color-light);
+}
+
+.ui-equip-box.dark small{
+	color: var(--color-dark);	
+}
+
+//############################################################################
+//							SHOP	BOX
+//############################################################################
+
+.ui-shop-box-wrapper{
+	position: relative;
+}
+
+.ui-shop-box {
+	height: 180px;
+	display: grid;
+	place-items: center;
+	padding: 20px 0px 0px 0px;
+	color: var(--color-dark);
+	position: relative;
+	gap: 8px;
+	align-content: start;
+}
+
+.ui-shop-box .sprite {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+	
+.ui-shop-box .price {
+	z-index: 1;
+	color: var(--color-text);
+	position: absolute;
+  bottom: 5px;
+}
+
+.ui-shop-box .item-status {
+	z-index: 1;
+	color: var(--color-text);
+	position: absolute;
+  	bottom: 0px;
+	right: -5px;
+}
+
+.ui-shop-box .stock {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--fantasy-surface-gold);
+	border: 3px solid var(--fantasy-border-primary);
+	z-index: 1;
+	transform: skewX(-10deg);
+
+}
+
+.ui-shop-box .stock span {
+	font-weight: 900;
+	  font-style: italic;
+	  text-transform: uppercase;
+	  text-shadow: 2px 3px 0 var(--shadow-rgba-20);
+	  white-space: nowrap;
+	  padding: 0px 15px;
+}
+
+.ui-shop-box .action {
+	display: flex;
+	  align-items: center;
+	  justify-content: space-between;
+	  z-index: 1;
+	  padding: 0 10px;
+}
+
+.ui-shop-box .box-container{
+	height: 30px;
+	  width: 30px;
+	  background-color: transparent;
+	  margin: 0 2px;
+}
+
+.ui-shop-box .box-action{
+	height: 30px;
+	  width: 30px;
+	  background-color: transparent;
+}
+
+.ui-shop-box .box-buy{
+	  color: var(--color-text);
+	  background-color: transparent;
+}
+
+.ui-shop-box .frame{
+	height: 70px;
+	width: 70px;
+}	
+
+.ui-shop-box .equip-box-level {
+	z-index: 1;
+	position: absolute;
+	  left: 0px;
+	  top: 40px;
+}
+
+.ui-shop-box .equip-box-level .maestria-sprite{
+	height: 30px;
+	width: 30px;
+}
+
+.ui-shop-box .equip-box-maestria {
+	z-index: 1;
+	position: absolute;
+	  right: -5px;
+	  top: 8px;
+}
+
+.ui-shop-box .equip-box-maestria .maestria-sprite{
+	height: 30px;
+	width: 30px;
+}
+
+.ui-shop-box .value {
+	font-size: 30px;
+	color: var(--color-primary)
+}
+.level-up-indicator {
+	height: 24px;
+	width: 24px;
+	filter: drop-shadow(2px 2px 0 var(--shadow-rgba-24));
+}
+
+//############################################################################
+//							MODE BOX
+//############################################################################
+
+ .mode-item__mastery .maestria-sprite { width: 36px; height: 36px; }
+
+//############################################################################
+//							INVENTORY BOX
+//############################################################################
+
+ ui-inventory-box {
+	position: relative;
+ }
+
+  ui-inventory-box .lock{
+	height: 40px;
+    width: 40px;
+  }

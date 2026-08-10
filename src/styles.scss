@@ -1,0 +1,102 @@
+
+@use "@ionic/angular/css/core.css";
+@use "@ionic/angular/css/normalize.css";
+@use "@ionic/angular/css/structure.css";
+@use "@ionic/angular/css/typography.css";
+@use "@ionic/angular/css/display.css";
+@use  "theme/fantasy_bg";
+@use "theme/fantasy";
+@use "theme/sketch";
+@use "theme/race";
+@use "theme/demo/animation";
+@use "theme/fantasy_bg/action-feedback-overlay";
+
+@import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800;900&display=swap");
+
+.game-result-banner,
+.game-minigame-banner {
+  position: relative;
+  z-index: 5;
+  display: grid;
+  gap: 3px;
+  margin: 0 10px 10px;
+  padding: 10px 12px;
+  text-shadow: var(--text-shadow-strong);
+}
+
+.game-result-banner {
+  color: var(--color-gold);
+  background: var(--bg-dark);
+  border: var(--race-border-3-white);
+}
+
+.game-result-banner strong,
+.game-minigame-banner strong {
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.game-result-banner strong {
+  font-size: 18px;
+}
+
+.game-result-banner span,
+.game-result-banner small,
+.game-minigame-banner span {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.game-result-banner--win {
+  border-color: var(--color-gold);
+}
+
+.game-result-banner--lose {
+  border-color: var(--color-complementary);
+}
+
+.game-minigame-banner {
+  color: #fef3c7;
+  background: rgba(46, 26, 71, 0.92);
+  border: 2px solid rgba(246, 211, 101, 0.95);
+}
+
+.game-minigame-banner strong {
+  font-size: 14px;
+}
+
+.game-footer {
+  height: auto;
+  min-height: 54px;
+  align-items: start;
+}
+
+.game-footer__pill {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.game-footer__pill .pill-value-xs,
+.game-footer__pill .pill-value-sm,
+.game-footer__pill .pill-value-md,
+.game-footer__pill .pill-value-lg {
+  display: block;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  place-items: initial;
+}
+
+.game-footer__pill small {
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--accent-gold-bg);
+  text-shadow: var(--text-shadow-strong);
+}
+

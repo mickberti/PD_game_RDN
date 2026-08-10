@@ -1,0 +1,9 @@
+{
+  "/private/api/*": {
+    "target": "http://localhost:8083/",
+    "secure": false,
+    "changeOrigin": true,
+    "timeout": 360000,
+    "logLevel": "debug"
+  }
+}

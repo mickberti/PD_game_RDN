@@ -1,0 +1,264 @@
+:host {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 35%),
+    linear-gradient(145deg, #26383b, #182326);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+}
+
+.utils-screen{
+	width: 100%;
+}
+
+.atlas-page {
+  padding: 20px;
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: 18px;
+
+  h1 {
+    margin: 0;
+    font-size: 34px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: #74d9ec;
+  }
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 auto 20px;
+  max-width: 1040px;
+
+  label {
+    display: grid;
+    gap: 6px;
+    font-size: 14px;
+  }
+
+  select,
+  input,
+  button {
+    border-radius: 8px;
+    border: 1px solid #4a6970;
+    background: #132126;
+    color: #fff;
+    padding: 8px 10px;
+  }
+
+  input {
+    width: 96px;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.atlas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.icon-card {
+  background: rgba(20, 32, 36, 0.95);
+  border: 2px solid rgba(116, 217, 236, 0.35);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.icon-preview {
+  position: relative;
+  overflow: hidden;
+  margin: 0 auto 12px;
+  border-radius: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.icon-sprite {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center;
+  border: 1px solid red;
+}
+
+.icon-info {
+  text-align: center;
+  display: grid;
+  gap: 2px;
+  margin-bottom: 10px;
+
+  small {
+    color: #9eb4ba;
+    font-size: 11px;
+  }
+  
+  input{
+	border-radius: 8px;
+	  border: 1px solid #4a6970;
+	  background: #132126;
+	  color: #fff;
+	  padding: 8px 10px;
+  }
+}
+
+.frame-editor {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 8px;
+
+  .field {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 6px;
+    display: grid;
+    gap: 5px;
+
+    span {
+      text-transform: uppercase;
+      font-size: 11px;
+      color: #9eb4ba;
+    }
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 5px;
+
+    button {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid #4a6970;
+      background: #132126;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    input {
+      width: 72px;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid #4a6970;
+      background: #132126;
+      color: #ffc400;
+      padding: 4px 6px;
+    }
+  }
+}
+
+
+.atlas-source-preview {
+  margin: 0 auto 20px;
+  max-width: 1040px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 2px solid rgba(116, 217, 236, 0.35);
+  background: rgba(20, 32, 36, 0.95);
+  overflow: auto;
+
+  img {
+    display: block;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+  }
+}
+
+.copy-css-btn {
+  width: 100%;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid #4a6970;
+  background: #132126;
+  color: #fff;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.animation-view {
+  display: grid;
+  grid-template-columns: auto minmax(0, 520px) auto;
+  gap: 18px;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+  max-width: 1040px;
+}
+
+.animation-card {
+  width: 100%;
+}
+
+.animation-counter,
+.empty-animation {
+  margin-bottom: 10px;
+  text-align: center;
+  color: #ffc400;
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.empty-animation {
+  margin: 0 auto 20px;
+  max-width: 1040px;
+  padding: 24px;
+  border: 2px dashed rgba(116, 217, 236, 0.35);
+  border-radius: 14px;
+  background: rgba(20, 32, 36, 0.95);
+}
+
+.animation-nav {
+  width: 56px;
+  height: 96px;
+  border-radius: 14px;
+  border: 2px solid rgba(116, 217, 236, 0.55);
+  background: rgba(19, 33, 38, 0.95);
+  color: #74d9ec;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 720px) {
+  .animation-view {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .animation-card {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .animation-nav {
+    width: 100%;
+    height: 52px;
+    font-size: 34px;
+  }
+}

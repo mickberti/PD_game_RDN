@@ -1,0 +1,59 @@
+@mixin race-variables-bg {
+
+	--color-primary: #203033;
+	--color-secondary: #8a3ec3;
+	--color-complementary: #f8db92;
+	--color-light: #d59b54;
+	--color-medium: #8d5830;
+	--color-dark: #5d3224;
+	--color-gold: #ffdf85;
+	
+	--color-green: #72c928;
+	--color-yellow: #ffd34e;
+	--color-red: #d94034;
+	--color-blue: #26a9e0;
+	
+	--color-text: #fff7d8; // da eliminare
+	
+	--text-primary: #203033;
+	--text-secondary: #8a3ec3;
+	--text-complementary: #f8db92;
+	--text-light: #d59b54;
+	--text-medium: #4a2318;
+	--text-dark: #151017;
+	
+	--border-primary: #203033;
+	--border-secondary: #8a3ec3;
+	--border-complementary: #f8db92;
+	--border-light: #fff7d8;
+	--border-medium: #d59b54;
+	--border-dark: #4a2318;
+	
+	--background-primary: #203033;
+	--background-secondary: #8a3ec3;
+	--background-complementary: #f8db92;
+	--background-light: #fff7d8;
+	--background-medium: #d59b54;
+	--background-dark: #2b1612;
+	
+	--main-background-sfondo1: url("/assets/ui/race/sfondo/sfondo1.png");
+	--main-background-sfondo2: url("/assets/ui/race/sfondo/sfondo2.png");
+	--main-background-sfondo3: url("/assets/ui/race/sfondo/sfondo3.png");
+	--main-background-sfondo4: url("/assets/ui/race/sfondo/sfondo4.png");
+	--main-background-sfondo5: url("/assets/ui/race/sfondo/sfondo5.png");
+	--main-background-sfondo6: url("/assets/ui/race/sfondo/sfondo_bg1.png");
+	--main-background-sfondo7: url("/assets/ui/race/sfondo/sfondo_bg2.png");
+	--main-background-sfondo8: url("/assets/ui/race/sfondo/sfondo_bg3.png");
+	--main-background-sfondo9: url("/assets/ui/race/sfondo/sfondo_bg4.png");
+	--main-background-sfondo10: url("/assets/ui/race/sfondo/sfondo_gm1.png");
+	--main-background-sfondo11: url("/assets/ui/race/sfondo/sfondo_gm2.png");
+	
+	--min-width: 406px;
+	--width: min(100% - 24px, var(--min-width));
+	
+	--safe-top: 12px;
+	--safe-bottom: 12px;
+	
+	--main-background: transparent;
+	--ion-toolbar-background: var(--main-background);
+}

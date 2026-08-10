@@ -1,0 +1,81 @@
+.settings-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 12px;
+}
+
+.settings-back {
+	width: 40px;
+	height: 40px;
+	border: 0;
+	border-radius: 8px;
+}
+
+.settings-card {
+	display: grid;
+	gap: 12px;
+	padding: 14px;
+	border: var(--fantasy-border-3-brown-alt);
+	background: var(--overlay-panel-bg);
+}
+
+.settings-menu{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.settings-selector,
+.settings-row,
+.settings-theme-select,
+.settings-social,
+.settings-links {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.settings-row {
+	justify-content: space-between;
+}
+
+.settings-theme-select,
+.settings-links {
+	flex-wrap: wrap;
+}
+
+.settings-toggle {
+	width: 56px;
+	height: 32px;
+	border-radius: 999px;
+	border: var(--fantasy-border-2-cream-alt);
+	background: var(--settings-card-bg);
+}
+
+.settings-toggle span {
+	display: block;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: var(--surface-white-bg);
+}
+
+.settings-toggle.on {
+	background: var(--toggle-active-bg);
+}
+
+.settings-toggle.on span {
+	margin-left: 24px;
+}
+
+.settings-links button,
+.settings-theme-select button,
+.settings-social button,
+.settings-selector button {
+	border: var(--fantasy-border-2-brown);
+	background: var(--wood-gradient-top);
+	color: #fff8df;
+	padding: 8px 12px;
+}

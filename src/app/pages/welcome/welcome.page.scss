@@ -1,0 +1,123 @@
+.welcome-screen {
+  min-height: 100%;
+  overflow: hidden;
+  padding: clamp(20px, 5vw, 36px) 0 clamp(28px, 6vw, 48px);
+  color: var(--color-medium);
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.44);
+}
+
+.welcome-kicker {
+  margin: 0;
+  color: var(--ui-secondary, #ffd96b);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.welcome-gallery-shell {
+  position: relative;
+  margin: 4px 0 26px;
+  padding: 28px 0 18px;
+}
+
+.welcome-gallery {
+  width: 100%;
+  --swiper-pagination-bottom: 4px;
+  --swiper-pagination-bullet-inactive-color: rgba(255, 255, 255, 0.72);
+  --swiper-pagination-color: var(--ui-secondary, #ffd96b);
+}
+
+.welcome-slide {
+
+}
+
+.welcome-slide:nth-child(2) .welcome-card {
+  animation-delay: 90ms;
+}
+
+.welcome-slide:nth-child(3) .welcome-card {
+  animation-delay: 180ms;
+}
+
+.welcome-slide:nth-child(4) .welcome-card {
+  animation-delay: 270ms;
+}
+
+.welcome-slide--treasure {
+
+}
+
+.welcome-card {
+  position: relative;
+  display: grid;
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  scroll-snap-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+    rgba(11, 14, 38, 0.86);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  
+}
+
+
+.welcome-card__art {
+  display: grid;
+  place-items: center;
+  min-height: 185px;
+    padding: 5px;
+  overflow: hidden;
+}
+
+.welcome-card__art ui-sprite {
+  animation: welcome-float 2.8s ease-in-out infinite;
+}
+
+.welcome-card__box {
+  display: grid;
+  place-items: center;
+  min-height: 238px;
+  padding: 26px 24px 10px;
+  background: radial-gradient(circle, rgba(255, 217, 107, 0.18), transparent 62%);
+}
+
+.welcome-card__box ui-sprite {
+  width: min(210px, 58vw);
+  filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.42));
+  animation: welcome-float 2.8s ease-in-out infinite;
+}
+	
+.welcome-card__copy {
+  align-self: end;
+  display: grid;
+  gap: 10px;
+  padding: 0px 24px;
+  transform-origin: center bottom;
+}
+
+.welcome-card__copy span {
+  color: var(--ui-secondary, #ffd96b);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.welcome-card__copy ui-button{
+	margin-left: auto;
+}
+
+
+@keyframes welcome-float {
+  0%, 100% {
+    transform: translateY(0) rotateZ(-1deg);
+  }
+  50% {
+    transform: translateY(-10px) rotateZ(1deg);
+  }
+}
+
+

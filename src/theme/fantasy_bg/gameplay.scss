@@ -1,0 +1,323 @@
+.gameplay-screen{
+	min-height: 100dvh;
+}
+
+.road-bg {
+  position: absolute;
+  inset: 80px 35% 0 35%;
+  background: var(--track-background);
+  border-left: var(--main-border-left-1);
+  border-right: var(--main-border-right-1);
+  opacity: 0.75;
+  pointer-events: none;
+}
+
+.hud-top {
+  position: relative;
+  z-index: 2;
+  padding: 18px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.go-text {
+  font-size: 52px;
+  color: var(--game-blue);
+  text-shadow: var(--shadow-title-hard);
+  font-style: italic;
+}
+
+.hero-player{
+  position: absolute;
+  left: 48%;
+  bottom: 140px;
+  width: 48px;
+  height: 96px;
+  background: var(--game-cream);
+  border: var(--fantasy-border-5-ink);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card-xl);
+  z-index: 2;
+}
+.phaser-game-screen {
+    min-height: 100%;
+    padding-top: 10px;
+    padding-bottom: 18px;
+    background-image: none;
+}
+
+.phaser-game-screen .road-bg {
+    inset: 0 24%
+}
+
+.game-header {
+    grid-template-columns: minmax(92px, 1fr) minmax(118px, 1.2fr) minmax(76px, .8fr) auto;
+}
+
+
+.game-header__bar {
+    display: flex;
+    gap: 4px;
+    width: 110px;
+}
+
+.game-header__bar ui-sprite{
+    width: 14px;
+    height: 14px;
+}
+
+.game-header__bar ui-progress-bar{
+    width: 100%;
+}
+
+.game-header__bar > span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent-gold-bg);
+    text-shadow: var(--text-shadow-strong);
+}
+
+.game-header__bar .ui-progressbar.horizontal {
+    width: 100%;
+}
+
+
+.game-shell {
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+}
+
+.game-container {
+    width: 100%;
+    height: 620px;
+    min-height: 420px;
+    border: var(--race-border-4-slate);
+    touch-action: none
+}
+
+.game-container canvas {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    margin: 0 auto;
+    image-rendering: auto
+}
+
+.game-help {
+    position: relative;
+    z-index: 2;
+    margin: 10px;
+    color: var(--color-gold);
+    font-size: 12px
+}
+
+.game-help p {
+    margin: 0
+}
+
+.settings-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: start center;
+    padding: calc(94px + var(--safe-top)) 14px calc(20px + var(--safe-bottom));
+    overflow: auto;
+    background: var(--overlay-backdrop)
+}
+
+.settings-panel {
+    width: min(100%, 390px);
+    color: var(--color-gold);
+    background: var(--panel);
+    padding: 18px
+}
+
+.game-actions {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 18px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+/* Gameplay Angular HUD */
+.game-header {
+    position: relative;
+    z-index: 2;
+    width: min(var(--width), calc(100% - 16px));
+    min-height: 130px;
+    margin: 0 auto 6px;
+    display: grid;
+    grid-template-columns: minmax(92px, 1fr) minmax(118px, 1.2fr) minmax(76px, .8fr);
+    grid-template-rows: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    color: var(--color-gold);
+    text-shadow: var(--text-shadow-strong);
+}
+
+.game-header__frame,
+.game-footer__frame {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+}
+
+.game-header__hero,
+.game-header__mode,
+.game-header__vitals {
+    display: grid;
+}
+
+.game-header__hero {
+    position: absolute;
+    top: 12px;
+    left: 9px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 7px;
+    align-items: center;
+    padding: 6px;
+    max-width: 135px;
+}
+
+.game-header__hero-frame {
+    width: 42px;
+    height: 52px;
+    overflow: hidden;
+    border: var(--race-border-2-white-12);
+    border-radius: 12px;
+    background: var(--bg-dark);
+}
+
+.game-header__hero-frame ui-sprite {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.game-header__hero span,
+.game-header__mode span,
+.game-header__vitals b,
+.game-header__xp span {
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent-gold-bg);
+}
+
+.game-header__hero strong,
+.game-header__mode strong {
+    display: block;
+    overflow: hidden;
+    font-size: clamp(14px, 4vw, 20px);
+    font-weight: 900;
+    line-height: 1;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.game-header__hero small,
+.game-header__mode small {
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.game-header__mode {
+    position: absolute;
+    top: 7px;
+    left: 0;
+    place-items: center;
+    padding: 7px 10px;
+    text-align: center;
+    width: 100%;
+}
+.game-header__level{
+    position: absolute;
+    top: 88px;
+    left: 0;
+    place-items: center;
+    padding: 7px 10px;
+    text-align: center;
+    width: 100%;
+}
+
+.game-header__vitals {
+    position: absolute;
+    top: 11px;
+    right: 10px;
+    gap: 3px;
+    padding: 6px 7px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.game-header__vitals span {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.game-header__xp {
+    position: absolute;
+    bottom: 19px;
+    left: 23px;
+}
+
+.game-header__xp-track {
+    height: 10px;
+    overflow: hidden;
+    border: var(--race-border-2-white-12);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, .45);
+}
+
+.game-header__xp-track i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--color-primary), var(--accent-gold-bg));
+}
+
+.game-footer {
+    position: relative;
+    width: min(var(--width), calc(100% - 16px));
+    height: 54px;
+    margin: 0 auto;
+    padding: 12px 12px calc(0px + var(--safe-bottom));
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 6px;
+    color: var(--color-gold);
+    text-shadow: var(--text-shadow-strong);
+}
+
+.game-footer span {
+    display: grid;
+    place-items: center;
+    gap: 2px;
+    min-width: 0;
+    padding: 5px 4px;
+    border: var(--race-border-2-white-12);
+    background: rgba(10, 14, 20, .58);
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.game-footer b {
+    font-size: 8px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent-gold-bg);
+}
+

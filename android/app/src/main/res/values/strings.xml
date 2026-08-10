@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">vg-game-workflow-ui</string>
+    <string name="title_activity_main">vg-game-workflow-ui</string>
+    <string name="package_name">com.mberti.tec.vgGameWorkflowUi</string>
+    <string name="custom_url_scheme">com.mberti.tec.vgGameWorkflowUi</string>
+</resources>

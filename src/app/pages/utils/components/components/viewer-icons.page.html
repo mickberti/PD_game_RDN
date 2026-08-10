@@ -1,0 +1,407 @@
+<ion-content>
+  <div class="viewer-screen">
+    <ui-utils-page-header
+      group="component"
+      title="Component Viewer Icons"
+      description="Showcase combinazioni UI con stili fantasy_bg per icon, panel, button e pill."
+    />
+
+    <section class="toolbar">
+      <label>
+        Tipologia
+        <select [value]="selectedType" (change)="onTypeChange($any($event.target).value)">
+          <option *ngFor="let type of types" [value]="type">{{ type }}</option>
+        </select>
+      </label>
+
+      <label>
+        Variante
+        <select [value]="selectedVariant" (change)="onVariantChange($any($event.target).value)">
+          <option *ngFor="let variant of variants" [value]="variant">{{ variant }}</option>
+        </select>
+      </label>
+
+      <label>
+        Size
+        <select [value]="selectedSize" (change)="onSizeChange($any($event.target).value)">
+          <option *ngFor="let size of sizes" [value]="size">{{ size }}</option>
+        </select>
+      </label>
+	  
+      <label>
+	    Effetto icona
+	    <select [value]="selectedEffect" (change)="onEffectChange($any($event.target).value)">
+	      <option *ngFor="let effect of effects" [value]="effect">{{ effect }}</option>
+	    </select>
+	  </label>
+
+      <label>
+        Effetto juice
+        <select [value]="selectedJuiceEffect" (change)="onJuiceEffectChange($any($event.target).value)">
+          <option *ngFor="let effect of juiceEffects" [value]="effect">{{ effect }}</option>
+        </select>
+      </label>
+
+    </section>
+
+    <section class="showcase" *ngIf="showSection('icons')">
+      <h2>Icons</h2>
+      <div class="grid icons-grid">
+        <div class="card" *ngFor="let iconType of iconTypes">
+          <ui-icon [icon]="getSelectedIcon(iconType)" [ngClass]="selectedEffectClass +' icon-wrapper-red'"></ui-icon>
+          <span>{{ iconType }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="showcase" *ngIf="showSection('panels')">
+      <h2>Panels</h2>
+      <div class="grid panels-grid">
+        <ui-panel
+          [variant]="selectedVariant"
+          [title]=""
+        >
+		
+		  <div class="mode-icon">
+		  	<ui-icon [icon]="getSelectedIcon('chest')" [ngClass]="selectedEffectClass +' icon-wrapper-red'"></ui-icon>
+		  </div>
+
+		  <div class="mode-name">
+		    <strong>size: {{ selectedPanelSize }} • Variant: {{ selectedVariant }}</strong>
+			
+			<div class="mode-description">
+			     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec vel sapien eget nunc faucibus tincidunt.</p>
+			</div>
+		  </div>
+		  
+        </ui-panel>
+		
+		<ui-panel
+		  [variant]="selectedVariant"
+		  [title]="selectedVariant"
+		>
+
+		  <div class="mode-icon">
+		  	<ui-icon [icon]="getSelectedIcon('chest')" [ngClass]="selectedEffectClass +' icon-wrapper-red'"></ui-icon>
+		  </div>
+
+		  <div class="mode-name">
+		    <strong>size: {{ selectedPanelSize }} • Variant: {{ selectedVariant }}</strong>
+			
+			<div class="mode-description">
+			     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec vel sapien eget nunc faucibus tincidunt.</p>
+			</div>
+		  </div>
+		  
+		</ui-panel>
+      </div>
+    </section>
+
+    <section class="showcase" *ngIf="showSection('buttons')">
+      <h2>Buttons</h2>
+      <div class="grid buttons-grid">
+		<ui-button [variant]="selectedButtonVariant" [size]="selectedSize">
+		</ui-button>
+		<ui-button [variant]="selectedButtonVariant" [size]="selectedSize" particleMode="part1">
+		  <span>{{ selectedButtonVariant }}</span>
+		</ui-button>
+		<ui-button [variant]="selectedButtonVariant" [size]="selectedSize" particleMode="part2">
+		  <ui-icon [icon]="getSelectedIcon('coin')" [ngClass]="selectedEffectClass +' icon-wrapper-red'"></ui-icon>
+		  <span>{{ selectedButtonVariant }}</span>
+		</ui-button>
+      </div>
+    </section>
+
+
+    <section class="showcase juice-showcase" *ngIf="showSection('juice')">
+      <div class="showcase-title-row">
+        <div>
+          <h2>Juice Effects</h2>
+          <p>Demo interattiva per applicare gli effetti tramite <code>JuiceDirective</code>: click sulle card, compra risorse o rilancia particelle.</p>
+        </div>
+        <button
+          type="button"
+          class="juice-play-all"
+          appJuice="juicy__bounce"
+          #playAllJuice="appJuice"
+          (click)="playJuice(playAllJuice)">
+          Play selezionato
+        </button>
+      </div>
+
+      <div class="juice-lab">
+        <article
+          class="juice-preview-card"
+          [appJuice]="selectedJuiceEffect"
+          #selectedJuice="appJuice"
+          (click)="playJuice(selectedJuice)">
+          <div class="sprite-juice-layer">
+            <ui-sprite [frame]="{ name: 'coin_many', effect: 'none' }"></ui-sprite>
+          </div>
+          <strong>{{ selectedJuiceEffect }}</strong>
+          <span>Click per riprodurre l'effetto scelto dalla toolbar.</span>
+        </article>
+
+        <div class="juice-effects-grid">
+          <button
+            type="button"
+            class="juice-effect-chip"
+            *ngFor="let effect of juiceEffects"
+            [appJuice]="effect"
+            #juiceEffect="appJuice"
+            (click)="playJuice(juiceEffect, effect)">
+            <span class="chip-sprite">
+              <ui-sprite [frame]="{ name: 'coin_single', effect: 'none' }"></ui-sprite>
+            </span>
+            <span>{{ effect }}</span>
+          </button>
+        </div>
+      </div>
+
+      <h3>Juice Bubble</h3>
+      <div class="bubble-demo-grid">
+        <div class="bubble-demo-copy">
+          <strong>Effetto <code>fx-juicy_bubble</code></strong>
+          <span>Le bolle usano le variabili CSS dell'esempio per altezza, oscillazione, scala e delay.</span>
+          <button
+            type="button"
+            class="juice-play-all"
+            (click)="replayBubbles()">
+            Replay bubble
+          </button>
+        </div>
+
+        <div
+          class="bubble-container"
+          (click)="replayBubbles()">
+          <div
+            class="juicy__bubble bubble fx-juicy_bubble"
+            *ngFor="let bubble of bubbleExamples; trackBy: trackById"
+            [style.left.px]="bubble.left"
+            [style.bottom.px]="bubble.bottom"
+            [style.--bubble-height-scale]="bubble.heightScale"
+            [style.--bubble-width-scale]="bubble.widthScale"
+            [style.--bubble-size-scale]="bubble.sizeScale"
+            [style.--bubble-delay]="bubble.delay">
+            <div class="bubble-inner"></div>
+          </div>
+          <span class="bubble-hint">Click sull'area per riprodurre il juice bubble.</span>
+        </div>
+      </div>
+
+      <h3>Risorse acquistabili / non acquistabili</h3>
+      <div class="resource-grid">
+        <article
+          class="resource-card"
+          [class.is-locked]="!canBuy(resource)"
+          *ngFor="let resource of juiceResources; trackBy: trackById"
+          appJuice="juicy__bounce"
+          #resourceJuice="appJuice"
+          (click)="collect(resource); resourceJuice.play('juicy__coinup')">
+          <div class="sprite-juice-layer">
+            <ui-sprite [frame]="{ name: resource.frameName, effect: 'none' }"></ui-sprite>
+          </div>
+
+          <div class="resource-body">
+            <strong>{{ resource.name }}</strong>
+            <span>Owned: {{ resource.owned }}</span>
+            <span>Price: {{ resource.price }}</span>
+          </div>
+
+          <button
+            type="button"
+            class="buy-button"
+            appJuice="juicy__shake__2"
+            #buyJuice="appJuice"
+            (click)="$event.stopPropagation(); tryBuy(resource, buyJuice)">
+            {{ canBuy(resource) ? 'Compra' : 'Non acquistabile' }}
+          </button>
+        </article>
+      </div>
+
+      <h3>Particelle</h3>
+      <div
+        class="particle-stage"
+        appJuice="juicy__bounce"
+        #particleJuice="appJuice"
+        (click)="refreshParticles(); particleJuice.play('juicy__bounce')">
+        <div
+          class="particle fx-juicy__particle"
+          *ngFor="let particle of particles; trackBy: trackById"
+          [style.--particle-jump]="particle.jump"
+          [style.--particle-direction]="particle.direction"
+          [style.--particle-spin]="particle.spin"
+          [style.--particle-size]="particle.size">
+          <ui-sprite [frame]="{ name: particle.frameName, effect: 'none' }"></ui-sprite>
+        </div>
+        <span class="particle-hint">Click per rigenerare traiettorie, dimensioni e spin.</span>
+      </div>
+    </section>
+
+    <section class="showcase" *ngIf="showSection('pills')">
+      <h2>Pills</h2>
+      <div class="grid pills-grid">
+        <div class="card" *ngFor="let iconType of iconTypes | slice:0:8">
+          <ui-pill [frame]="{name:'coin_single', effect:'none'}" [size]="selectedSize" [value]="iconType"></ui-pill>
+        </div>
+      </div>
+    </section>
+
+    <section class="showcase" *ngIf="showSection('bands')">
+      <h2>Bands</h2>
+	  <ui-band [variant]="selectedButtonVariant" [title]="selectedButtonVariant"></ui-band>
+    </section>
+	
+	<section class="showcase" *ngIf="showSection('tops')">
+	  <h2>Tops</h2>
+	  <div class="header-background" style="height: 80px;width: 100%;" >
+	  	<ui-sprite [frame]="{ name: selectedButtonVariant+'-top', effect: 'none' }"  />
+	  </div>
+	</section>
+	
+
+    <section class="showcase feedback-showcase" *ngIf="showSection('feedback')">
+      <div class="showcase-title-row">
+        <div>
+          <h2>Action Feedback Overlay</h2>
+          <p>Serie di pulsanti per provare <code>ui-action-feedback-overlay</code> con feedback singoli, sequenze multiple e configurazioni disponibili.</p>
+        </div>
+        <div class="feedback-variant-list" aria-label="Varianti disponibili">
+          <span *ngFor="let variant of feedbackVariants">{{ variant }}</span>
+        </div>
+      </div>
+
+      <h3>Singole</h3>
+      <div class="grid feedback-grid">
+        <article class="card feedback-card" *ngFor="let example of singleFeedbackExamples; trackBy: trackById">
+          <div class="feedback-card-preview">
+            <ui-sprite *ngIf="example.frame" [frame]="example.frame" fit="contain"></ui-sprite>
+          </div>
+          <div class="feedback-card-body">
+            <strong>{{ example.title }}</strong>
+            <span>{{ example.description }}</span>
+            <small>
+              variant: {{ example.variant }} · duration: {{ example.duration || 2000 }}ms
+              <ng-container *ngIf="example.dismissible"> · dismissible</ng-container>
+              <ng-container *ngIf="example.blocking"> · blocking</ng-container>
+              <ng-container *ngIf="example.closeOnAnimationEnd === false"> · manual close</ng-container>
+              <ng-container *ngIf="example.allowUpscale === false"> · no upscale</ng-container>
+            </small>
+          </div>
+          <ui-button [variant]="example.variant === 'sell' ? 'secondary' : selectedButtonVariant" size="sm" (pressed)="showFeedback(example)">
+            Mostra {{ example.variant }}
+          </ui-button>
+        </article>
+      </div>
+
+      <h3>Multiple</h3>
+      <div class="grid feedback-grid feedback-grid--multi">
+        <article class="card feedback-card" *ngFor="let example of multiFeedbackExamples; trackBy: trackById">
+          <div class="feedback-sequence-preview">
+            <span *ngFor="let item of example.frames">
+              <ui-sprite *ngIf="item.frame" [frame]="item.frame" fit="contain"></ui-sprite>
+            </span>
+          </div>
+          <div class="feedback-card-body">
+            <strong>{{ example.title }}</strong>
+            <span>{{ example.description }}</span>
+            <small>
+              {{ example.frames?.length || 0 }} step · variant: {{ example.variant }} · delay: {{ example.frameDelay || 0 }}ms
+              <ng-container *ngIf="example.advanceOnClick === false"> · no click advance</ng-container>
+              <ng-container *ngIf="example.blocking"> · blocking</ng-container>
+            </small>
+          </div>
+          <ui-button [variant]="selectedButtonVariant" size="sm" particleMode="part1" (pressed)="showFeedback(example)">
+            Avvia sequenza
+          </ui-button>
+        </article>
+      </div>
+    </section>
+	<section class="showcase" *ngIf="showSection('chests')">
+	  <h2>Tutti Chests</h2>
+	  <div class="grid chests-grid">
+	  <div>
+		<h1>Sprite Chests</h1>
+		<ui-box [item]="defaultShop" />
+	  </div>	
+	  <div>
+	  <h1>Setting Chests</h1>
+	  <ui-setting-box
+	    [icon]="getSelectedIcon('settings')"
+	    title="SFX"
+	    subtitle="Effetti sonori attivi"
+	  />
+	  </div>
+	  <div>
+	  <h1>Reward Chests</h1>
+	  <ui-award-box [item]="defaultAward" />
+	  </div>
+	  <div>
+	  <h1>ranking Chests</h1>
+	  <ui-ranking-box [item]="defaultRanking" />
+	  </div>
+	  <div>
+	  <h1>prestige Chests</h1>
+	  <ui-prestige-box
+	    [variant]="selectedVariant"
+	    [variantButton]="selectedVariant"
+	    [icon]="getSelectedIcon('star')"
+	    descrTitle="Prestigio Hero"
+	    descrSubtitle="Resetta i progressi e guadagna bonus permanenti"
+	    buttonLabel="Prestige"
+	  />
+	  </div>
+	  <div>
+	  <h1>powerup Chests</h1>
+	  <ui-power-up-box [item]="defaultPowerUps" />
+	  </div>
+	  <div>
+	  <h1>equipe Hero Chests</h1>
+	  	<ui-equip-hero-box />
+	  </div>
+	  <div>
+	  <h1>equipe Chests</h1>
+	  	<ui-equip-box />
+	  </div>	
+	  <div>
+	  <h1>attribute Chests</h1>
+	  <ui-attribute-box
+	    [variant]="selectedVariant"
+	    [frame]="{ name: 'skill-fist', effect: 'none' }"
+	    title="Attack"
+	  />
+	  </div>
+	  </div>
+	</section>
+
+    @if (activeFeedback(); as feedback) {
+      <ui-action-feedback-overlay
+        [open]="true"
+        [frame]="feedback.frame"
+        [text]="feedback.text || ''"
+        [frames]="feedback.frames || emptyFeedbackFrames"
+        [variant]="feedback.variant"
+        [duration]="feedback.duration || 2000"
+        [frameDelay]="feedback.frameDelay || 0"
+        [advanceOnClick]="feedback.advanceOnClick !== false"
+        [dismissible]="!!feedback.dismissible"
+        [blocking]="!!feedback.blocking"
+        [closeOnAnimationEnd]="feedback.closeOnAnimationEnd !== false"
+        [allowUpscale]="feedback.allowUpscale !== false"
+        [spriteFit]="feedback.spriteFit || 'contain'"
+        [spriteEffect]="feedback.spriteEffect || 'fx-juicy_bounce'"
+        [labelEffect]="feedback.labelEffect || 'fx-juicy_titlespin'"
+        ariaLabel="Demo action feedback overlay"
+        (closed)="closeFeedback()"
+        (sequenceEnded)="closeFeedback()"
+      />
+    }
+
+  </div>
+</ion-content>
+
+<ion-footer>
+<ion-toolbar>
+  <ui-bottom-utils />
+</ion-toolbar>
+</ion-footer>

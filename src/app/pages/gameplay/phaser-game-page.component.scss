@@ -1,0 +1,123 @@
+:host {
+  --phaser-game-max-width: calc(100% - 12px);
+  --phaser-game-max-height: min(78dvh, 660px);
+}
+
+.game-shell {
+  --game-shell-max-width: calc(var(--phaser-game-max-width) + 20px);
+}
+
+.game-container-effects {
+  position: relative;
+  width: min(100%, var(--phaser-game-max-width));
+  max-width: var(--phaser-game-max-width);
+  max-height: var(--phaser-game-max-height);
+  margin-inline: auto;
+}
+
+.game-container {
+  width: 100%;
+  max-height: var(--phaser-game-max-height);
+  overflow: hidden;
+}
+
+.game-container canvas {
+  display: block;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  margin: 0 auto;
+  image-rendering: auto;
+}
+
+.game-critical-health-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 18px;
+  z-index: 2;
+}
+
+.game-heal-effect {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: 18px;
+  z-index: 3;
+}
+
+.game-heal-bubble {
+  position: absolute;
+  pointer-events: none;
+}
+
+.game-heal-bubble__inner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(187, 247, 208, 0.94);
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgba(255, 255, 255, 0.94),
+    rgba(134, 239, 172, 0.42) 35%,
+    rgba(34, 197, 94, 0.14) 70%
+  );
+  box-shadow:
+    inset -4px -6px 10px rgba(22, 163, 74, 0.24),
+    0 0 12px rgba(134, 239, 172, 0.55);
+}
+
+.game-minigame-banner,
+.game-result-banner {
+  max-width: var(--phaser-game-max-width);
+}
+
+.game-minigame-banner--mode {
+  display: none;
+}
+
+.game-topright-hud {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 88px;
+  max-width: 132px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(10, 14, 20, 0.76);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+
+.game-topright-hud strong {
+  color: #fff4bf;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.game-topright-hud span {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.game-topright-hud--timer span {
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #f8e7b5;
+}
+
+.game-topright-hud__icon {
+  width: 34px;
+  height: 34px;
+}

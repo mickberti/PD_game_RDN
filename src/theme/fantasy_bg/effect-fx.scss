@@ -1,0 +1,234 @@
+.fx-new {
+  filter: saturate(1.4) hue-rotate(12deg) drop-shadow(0 0 15px rgb(255, 255, 255));
+}
+
+.fx-uncommon {
+  filter: saturate(1.4) hue-rotate(12deg) drop-shadow(0 0 15px rgb(4, 255, 4));
+}
+
+.fx-rare {
+  filter: saturate(1.4) hue-rotate(12deg) drop-shadow(0 0 15px rgb(0, 128, 255));
+}
+
+.fx-mythic {
+  filter: saturate(1.4) hue-rotate(12deg) drop-shadow(0 0 15px rgb(255, 128, 255));
+}
+
+.fx-legendary {
+  filter: saturate(1.4) hue-rotate(12deg) drop-shadow(0 0 15px rgb(255, 128, 64));
+}
+
+.fx-frozen {
+  filter: hue-rotate(180deg) saturate(1.35) brightness(1.1) drop-shadow(0 0 8px #89d8ff);
+}
+
+.fx-poisoned {
+  filter: hue-rotate(78deg) saturate(1.8) brightness(0.95) drop-shadow(0 0 8px #53d769);
+  animation: fx-poison-breathe 1.8s ease-in-out infinite;
+}
+
+.fx-holy-aura {
+  filter: sepia(0.2) saturate(1.45) brightness(1.22) drop-shadow(0 0 8px #ffe693);
+  animation: fx-holy-breath 1.4s ease-in-out infinite;
+}
+
+.fx-fire {
+  filter: hue-rotate(-22deg) saturate(1.8) contrast(1.1) drop-shadow(0 0 7px #ff7b00);
+  animation: fx-fire-flicker 0.9s steps(2) infinite;
+}
+
+.fx-hologram {
+  filter: hue-rotate(145deg) saturate(1.8) brightness(1.15);
+  opacity: 0.86;
+  animation: fx-hologram-flicker 2.2s linear infinite;
+}
+
+.fx-cursed {
+  filter: grayscale(0.2) hue-rotate(280deg) contrast(1.25) drop-shadow(0 0 8px #b16dff);
+  animation: fx-cursed-jitter 0.22s steps(2) infinite;
+}
+
+.fx-arcane-rune {
+  filter: hue-rotate(250deg) saturate(1.6) brightness(1.1) drop-shadow(0 0 6px #8b7dff);
+  animation: fx-arcane-orbit 1.6s ease-in-out infinite;
+}
+
+.fx-shadow {
+  filter: brightness(0.72) contrast(1.25) hue-rotate(305deg) drop-shadow(0 0 10px #5a2b87);
+}
+
+
+.fx-shadow-veil {
+  filter: brightness(0.72) contrast(1.25) hue-rotate(305deg) drop-shadow(0 0 10px #5a2b87);
+  animation: fx-shadow-shift 2s ease-in-out infinite;
+}
+
+
+.fx-nitro-boost {
+  filter: hue-rotate(170deg) saturate(2.2) brightness(1.2) drop-shadow(0 0 10px #32f0ff);
+  animation: fx-nitro-thrust 0.35s ease-in-out infinite;
+}
+
+.fx-turbo-heat {
+  filter: hue-rotate(-16deg) saturate(2) contrast(1.15) drop-shadow(0 0 9px #ff6a00);
+  animation: fx-turbo-vibrate 0.2s steps(2) infinite;
+}
+
+.fx-neon-drift {
+  filter: hue-rotate(118deg) saturate(2) brightness(1.16) drop-shadow(0 0 6px #77ff7a);
+  animation: fx-neon-sway 1s ease-in-out infinite;
+}
+
+.fx-storm-spark {
+  filter: hue-rotate(210deg) saturate(1.9) brightness(1.18) drop-shadow(0 0 9px #7ec8ff);
+  animation: fx-storm-flicker 0.55s linear infinite;
+}
+
+
+.fx-power-glow {
+  filter: drop-shadow(0 0 4px #8cc8ff) drop-shadow(0 0 10px #4d8dff);
+  animation: fx-pulse 1.2s ease-in-out infinite;
+}
+
+.fx-box-open {
+	animation: fx-box-open-pop .7s ease-in-out;
+}
+
+.fx-float {
+	animation: fx-float 2.8s ease-in-out infinite;
+}
+
+.fx-box-enter{
+	animation: fx-step-enter 640ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.fx-slideUpAnimation  {
+	animation-name: fx-slideUpAnimation;
+	animation-duration: 2s;
+	animation-timing-function: ease;
+	animation-iteration-count: 1;
+	animation-direction: normal;
+	animation-fill-mode: both;
+}
+
+
+
+@keyframes fx-pulse {
+  0%,
+  100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+@keyframes fx-poison-breathe {
+  0%,
+  100% { filter: hue-rotate(78deg) saturate(1.6) brightness(0.9) drop-shadow(0 0 6px #53d769); }
+  50% { filter: hue-rotate(86deg) saturate(2) brightness(1.05) drop-shadow(0 0 10px #53d769); }
+}
+
+@keyframes fx-fire-flicker {
+  0%,
+  100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1px) scale(1.04); }
+}
+
+@keyframes fx-hologram-flicker {
+  0%,
+  100% { opacity: 0.82; }
+  40% { opacity: 0.95; }
+  42% { opacity: 0.7; }
+  75% { opacity: 0.92; }
+}
+
+@keyframes fx-cursed-jitter {
+  0%,
+  100% { transform: translate(0, 0); }
+  30% { transform: translate(-1px, 1px); }
+  65% { transform: translate(1px, -1px); }
+}
+
+@keyframes fx-arcane-orbit {
+  0%,
+  100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(2deg) scale(1.05); }
+}
+
+@keyframes fx-holy-breath {
+  0%,
+  100% { opacity: 0.95; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.07); }
+}
+
+@keyframes fx-shadow-shift {
+  0%,
+  100% { transform: translateX(0) translateY(0); opacity: 0.9; }
+  50% { transform: translateX(-1px) translateY(1px); opacity: 0.78; }
+}
+
+@keyframes fx-nitro-thrust {
+  0%,
+  100% { transform: translateX(0) scale(1); }
+  50% { transform: translateX(2px) scale(1.08); }
+}
+
+@keyframes fx-turbo-vibrate {
+  0%,
+  100% { transform: translate(0, 0); }
+  25% { transform: translate(-1px, 0); }
+  75% { transform: translate(1px, 0); }
+}
+
+@keyframes fx-neon-sway {
+  0%,
+  100% { transform: rotate(0deg) translateY(0); }
+  50% { transform: rotate(-2deg) translateY(-1px); }
+}
+
+@keyframes fx-storm-flicker {
+  0%,
+  100% { opacity: 0.85; }
+  30% { opacity: 1; }
+  32% { opacity: 0.65; }
+  70% { opacity: 0.96; }
+}
+
+@keyframes fx-box-open-pop {
+	0%, 100% {
+		transform: scale(1) rotate(0deg);
+		filter: brightness(1);
+	}
+
+	35% {
+		transform: scale(1.16) rotate(-7deg);
+		filter: brightness(1.25);
+	}
+
+	70% {
+		transform: scale(1.08) rotate(7deg);
+		filter: brightness(1.45);
+	}
+}
+
+@keyframes fx-float {
+  0%, 100% {
+    transform: translateY(0) rotateZ(-1deg);
+  }
+  50% {
+    transform: translateY(-10px) rotateZ(1deg);
+  }
+}
+
+@keyframes fx-step-enter {
+  from {
+    opacity: 0;
+    transform: translateX(42px) rotateZ(1.5deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotateZ(0deg) scale(1);
+  }
+}
+
+@keyframes fx-slideUpAnimation {
+  0% { transform: translateY(100px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}

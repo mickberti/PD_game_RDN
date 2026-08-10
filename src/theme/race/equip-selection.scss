@@ -1,0 +1,271 @@
+.equip-screen {}
+
+.equip-current-box {
+	border: 3px solid var(--ink);
+	padding: 12px;
+	border-radius: 16px;
+	background: var(--surface-white-bg);
+}
+
+.equip-current-grid {
+	display: grid;
+	grid-template-columns: 90px 1fr;
+	gap: 8px;
+}
+
+.equip-current-sprite {
+	height: 100px;
+	width: 100px;
+	margin: auto;
+}
+
+.equip-current-descr {
+	
+}
+
+.equip-current-descr .descr-maestria{
+	display: inline-flex;
+
+}
+
+.equip-current-descr .maestria {
+	z-index: 1;
+	display: inline-flex;
+	padding: 0px 10px
+}
+
+.equip-current-descr .maestria-sprite{
+	height: 20px;
+	width: 20px;
+}
+.equip-diff {
+	margin-top: 8px;
+	font-weight: bold;
+}
+
+.equip-filters{
+	display: flex;
+	  align-items: center;
+	  justify-content: space-between;
+	  width: 100%;
+}
+
+.equip-body {
+	display: grid;
+	grid-template-columns: 100px 1fr;
+	gap: 12px;
+}
+
+.equip-types {
+	display: grid;
+	gap: 8px;
+}
+
+.equip-types-sprite {
+	height: 40px;
+	width: 40px;
+}
+
+.hero-equip-list {
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	gap: 10px;
+	overflow-y: auto;
+	padding: 0 5px;
+}
+
+.equip-list {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	max-height: 50vh;
+	overflow-y: auto;
+}
+
+.equip-list-item {
+  position: relative;
+}
+
+.equip-list-item.delete-mode .ui-equip-box {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.delete-equip-action {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-weight: 700;
+  color: #fff;
+  background: #b3261e;
+}
+
+.equip-item {
+	display: grid;
+	grid-template-columns: 70px 1fr;
+	gap: 12px;
+	background: var(--fantasy-surface-gold);
+	border: 3px solid var(--fantasy-border-primary);
+	color: var(--color-dark);
+}
+
+.equip-item-desc {
+	display: grid;
+	gap: 6px;
+}
+
+.equip-item-action {
+	display: inline-flex;
+	justify-content: end;
+}
+
+.equip-item-sprite {
+	height: 60px;
+	width: 60px;
+	margin: auto;
+}
+
+.button-equip-types {
+	width: 100px;
+}
+
+.equip-preview,
+.filter-popup {
+	padding: 12px;
+	width: 340px;
+	max-width: 90vw;
+	box-sizing: border-box;
+}
+
+.equip-preview .equip-preview-title-row,
+.filter-popup .equip-preview-title-row {
+	display: grid;
+	grid-template-columns: 32px minmax(0, 1fr) 32px;
+	align-items: start;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+
+.equip-preview .equip-preview-title,
+.filter-popup .equip-preview-title {
+	grid-column: 2;
+	margin: 0;
+	font-weight: bold;
+	font-size: 26px;
+	line-height: 1.1;
+	text-align: center;
+}
+
+.equip-preview .popup-close-button,
+.filter-popup .popup-close-button {
+	grid-column: 3;
+	justify-self: end;
+}
+
+.header {
+	text-align: center;
+	margin-bottom: 8px;
+}
+
+
+
+//###########################################################
+//      PREVIEW
+//###########################################################
+
+.equip-preview .content {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+
+.equip-preview .content .descr-maestria{
+}
+
+.equip-preview .content .maestria {
+	z-index: 1;
+	display: inline-flex;
+	align-items: center;
+}
+
+.equip-preview .content .maestria-sprite{
+	height: 20px;
+	width: 20px;
+}
+
+.equip-preview .col {
+	flex: 1;
+	background: transparent;
+}
+
+.equip-preview .col.arrow {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 28px;
+}
+
+.equip-preview .sprite-preview {
+	width: 64px;
+	height: 64px;
+	margin: 6px auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.equip-preview .name {
+	font-weight: 600;
+	text-align: center;
+	margin-bottom: 6px;
+	height: 35px;
+}
+
+.equip-preview .stats {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	font-size: 13px;
+}
+
+.equip-preview .stats li {
+	display: flex;
+	justify-content: space-between;
+	padding: 2px 0;
+}
+
+.equip-preview .stats li.stats-progress{
+	display: block;
+}
+
+.equip-preview .stats li.stats-progress .ui-progress-stats{
+	width: 100%;
+}
+.equip-preview .delta {
+	margin-left: 8px;
+	font-weight: 700;
+}
+
+.equip-preview .delta.positive {
+	color: #1aa34a;
+}
+
+.equip-preview .delta.negative {
+	color: #d9534f;
+}
+
+.equip-preview .actions {
+	display: flex;
+	gap: 8px;
+	justify-content: center;
+	margin-top: 10px;
+}
+
+.equip-preview .vs {
+	height: 32px;
+  	width: 32px;
+}

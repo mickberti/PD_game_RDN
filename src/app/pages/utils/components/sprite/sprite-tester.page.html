@@ -1,0 +1,87 @@
+<ion-content>
+  <div class="screen sprite-tester">
+    <ui-utils-page-header
+      group="component"
+      title="Component Sprite Tester"
+      description="Verifica il rendering dei frame atlas con formati, fit, anchor e upscale configurabili."
+    />
+
+    <section class="controls">
+      <label>
+        Atlas file
+        <select [(ngModel)]="selectedAtlasId" (ngModelChange)="onAtlasChange()">
+          <option *ngFor="let atlas of atlasOptions" [value]="atlas.id">{{ atlas.label }}</option>
+        </select>
+      </label>
+
+      <label>
+        Sprite frame
+        <select [value]="selectedFrameName" (change)="onSelectedFrameNameChange($any($event.target).value)">
+          <option *ngFor="let frameName of frameNames" [value]="frameName">{{ frameName }}</option>
+        </select>
+      </label>
+
+	  <label>
+	    Formato preview:
+	    <select [(ngModel)]="selectedPreviewFormatId" (ngModelChange)="onPreviewFormatChange($event)">
+	      <option *ngFor="let option of previewFormatOptions" [value]="option.id">{{ option.label }}</option>
+	    </select>
+	  </label>
+	  
+	  <label>
+	      Allow upscale:
+	      <select [(ngModel)]="allowUpscale">
+	        <option *ngFor="let option of allowUpscaleOptions" [ngValue]="option.value">{{ option.label }}</option>
+	      </select>
+	    </label>
+
+	    <label>
+	      Fit:
+	      <select [(ngModel)]="fit">
+	        <option *ngFor="let fitOption of fitOptions" [value]="fitOption">{{ fitOption }}</option>
+	      </select>
+	    </label>
+
+	    <label>
+	      Anchor:
+	      <select [(ngModel)]="anchor">
+	        <option *ngFor="let anchorOption of anchorOptions" [value]="anchorOption">{{ anchorOption }}</option>
+	      </select>
+	    </label>
+		
+      <label>
+        Panel width (px)
+        <input type="number" min="32" step="1" [(ngModel)]="panelWidth" />
+      </label>
+
+      <label>
+        Panel height (px)
+        <input type="number" min="32" step="1" [(ngModel)]="panelHeight" />
+      </label>
+    </section>
+
+    <section class="preview-wrapper">
+      <div class="panel" [ngStyle]="panelStyle">
+        <div class="sprite" [ngStyle]="spriteStyle"></div>
+      </div>
+    </section>
+	
+	<section class="preview-wrapper">
+	  <div class="panel" [ngStyle]="panelStyle">
+		<ui-sprite
+			  [frame]="{ name: selectedFrameName, effect: 'none' }"
+			  [allowUpscale]="allowUpscale"
+			  [fit]="fit"
+			  [anchor]="anchor"
+			/>
+	  </div>
+	</section>
+	
+  </div>
+</ion-content>
+
+<ion-footer>
+<ion-toolbar>
+  <ui-bottom-utils />
+</ion-toolbar>
+</ion-footer>

@@ -1,0 +1,13 @@
+ion-popover.equip-preview-popover, ion-popover.equip-filter-popover{
+  --width: var(--width);
+  --min-width: 280px;
+  --max-width: 90vw;
+
+  --height: auto;
+  --min-height: auto;
+  --max-height: 70vh;
+
+  --background: transparent;
+  --border-radius: 0px;
+  --box-shadow: none;
+}

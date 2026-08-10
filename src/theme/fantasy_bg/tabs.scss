@@ -1,0 +1,225 @@
+.tabs-menu{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 10px 0;
+}
+
+.ui-tabs {
+  display: flex;
+  gap: 0px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.ui-tab {
+  position: relative;
+  width: 190px;
+  height: 60px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  transition: filter .12s ease, transform .12s ease;
+}
+
+.ui-tab:active {
+  transform: translateY(2px);
+}
+
+.ui-tab:not(.active) {
+  filter: brightness(.75);
+}
+
+.ui-tab .sprite {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ui-tab .label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  white-space: nowrap;
+}
+
+//---------------------------------------------
+//   TAB CONTENT
+//---------------------------------------------
+
+
+.ui-content-tabs {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.ui-content-tabs.horizontal{
+	
+}
+
+.ui-content-tabs.vertical{
+	flex-direction: column;
+}
+
+.ui-content-tab {
+	position: relative;
+	width: 60px;
+	  height: 65px;
+	  border: 0;
+	  padding: 0;
+	  background: transparent;
+	  cursor: pointer;
+	  color: #fff;
+	  font-size: 10px;
+	  transition: filter 0.12s ease, transform 0.12s ease;
+	
+}
+
+.ui-content-tab-xs{
+	width: 55px;
+	  height: 60px;
+}
+
+.ui-content-tab-sm{
+	width: 60px;
+	  height: 65px;
+}
+
+.ui-content-tab-md{
+	width: 65px;
+	  height: 70px;
+}
+
+.ui-content-tab-lg{
+	width: 80px;
+	  height: 85px;
+}
+
+.ui-content-tab:active {
+  transform: translateY(2px);
+}
+
+.ui-content-tab:not(.active) {
+  filter: brightness(.75);
+}
+
+.ui-content-tab .sprite {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ui-content-tab-xs .frame {
+	width: 35px;
+	height: 35px;
+  margin: 0px auto 5px;
+}
+
+.ui-content-tab-sm .frame {
+	width: 40px;
+	height: 40px;
+  margin: 0px auto 7px;
+}
+
+.ui-content-tab-md .frame {
+	width: 45px;
+	height: 45px;
+  margin: 0px auto 10px;
+}
+
+.ui-content-tab-lg .frame {
+  width: 50px;
+  height: 50px;
+  margin: 0px auto 12px;
+}
+.ui-content-tab .label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  white-space: nowrap;
+}
+//---------------------------------------------
+//   RADIAL SPRITE TABS
+//---------------------------------------------
+
+.ui-radial-tabs {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 25px;
+  padding: 12px;
+}
+
+.ui-radial-tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(18px, 9vw, 44px);
+  width: 100%;
+}
+
+.ui-radial-tabs-row:nth-child(3n + 2) {
+  gap: clamp(10px, 5vw, 28px);
+}
+
+.ui-radial-tab-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-width: 64px;
+}
+
+.ui-radial-tab-wrap .ui-button-sprite {
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  filter: drop-shadow(3px 4px 0 var(--shadow-rgba-24)) brightness(.78) saturate(.9);
+  transform-origin: center;
+  transition: filter .12s ease, transform .12s ease;
+}
+
+.ui-radial-tab-wrap .ui-button-sprite.active {
+  filter: drop-shadow(0 0 8px var(--fantasy-surface-gold)) drop-shadow(3px 4px 0 var(--shadow-rgba-24)) brightness(1.45) saturate(1.2);
+  transform: scale(1.12);
+}
+
+.ui-radial-tab-wrap .ui-button-sprite:hover {
+  filter: drop-shadow(0 0 6px var(--fantasy-surface-gold)) drop-shadow(3px 4px 0 var(--shadow-rgba-24)) brightness(1.15);
+  transform: scale(1.06);
+}
+
+.ui-radial-tab-label {
+  max-width: 82px;
+  overflow: hidden;
+  color: var(--fantasy-surface-gold);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow: 2px 2px 0 var(--shadow-rgba-24);
+  text-transform: uppercase;
+  white-space: nowrap;
+}

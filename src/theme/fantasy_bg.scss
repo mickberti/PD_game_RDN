@@ -1,0 +1,171 @@
+@use "fantasy_bg/variables" as fantasy;
+@use "fantasy_bg/variables_bg" as fantasy_bg;
+
+.theme-fantasy-bg {
+	@include fantasy.fantasy-variables;
+	@include fantasy_bg.fantasy-variables-bg;
+
+
+	@import "fantasy_bg/login";
+	@import "fantasy_bg/profile";
+	@import "fantasy_bg/hub";
+	@import "fantasy_bg/bottomnav";
+	@import "fantasy_bg/reward";
+	@import "fantasy_bg/power-up";
+	@import "fantasy_bg/shop";
+	@import "fantasy_bg/inventory";
+	@import "fantasy_bg/hero";
+	@import "fantasy_bg/hero-upgrade";
+	@import "fantasy_bg/gameplay";
+	@import "fantasy_bg/phaser-game";
+	@import "fantasy_bg/pause";
+	@import "fantasy_bg/result";
+	@import "fantasy_bg/game-mode";
+	@import "fantasy_bg/ranking";
+
+	@import "fantasy_bg/settings";
+	@import "fantasy_bg/header";
+
+	@import "fantasy_bg/pill";
+	@import "fantasy_bg/sprite";
+	@import "fantasy_bg/panel";
+	@import "fantasy_bg/button";
+	@import "fantasy_bg/icons";
+	@import "fantasy_bg/band";
+	//@import "fantasy_bg/bar";
+	@import "fantasy_bg/tabs";
+	@import "fantasy_bg/box";
+	@import "fantasy_bg/progressbar";
+	@import "fantasy_bg/attribute-box";
+	//@import "fantasy_bg/top";
+	@import "fantasy_bg/prestige-box";
+	@import "fantasy_bg/effect-fx";
+	@import "fantasy_bg/effect-fx1";
+	@import "fantasy_bg/effect-fx2";
+	@import "fantasy_bg/equip-selection";
+	@import "fantasy_bg/popover";
+	@import "fantasy_bg/floating-panel";
+	@import "fantasy_bg/action-feedback-overlay";
+	//@import "fantasy_bg/fog_bg.scss";
+	@import "fantasy_bg/preview-attribute-stats";
+
+	@import "demo/utils";
+
+	background-image: var(--main-background-sfondo11);
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: cover;
+	/* Applica la sfocatura */
+	//backdrop-filter: blur(10px);
+	//-webkit-backdrop-filter: blur(10px); /* Supporto per Safari */
+	
+
+	ion-content {
+		--background: var(--main-background);
+		--color: var(--color-text);
+
+	}
+
+	.screen {
+		margin: 0 auto;
+		position: relative;
+		overflow: hidden;
+		padding: var(--safe-top) 0px var(--safe-bottom) 0px;
+		color: var(--game-text);
+		font-style: var(--ion-font-style);
+
+		width: var(--width);
+		min-height: 100%;
+	}
+
+	.screen-list, .generic-list{
+		display: grid;
+		gap: 24px;
+	}
+
+	.small {
+		min-height: 34px;
+		min-width: 70px;
+		font-size: 12px;
+		padding: 0 10px;
+	}
+
+	:disabled {
+		filter: grayscale(.75);
+		opacity: .7;
+	}
+
+	.item-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 10px;
+		margin-bottom: 10px;
+	}
+
+	.item-list {
+		display: grid;
+		gap: 12px;
+	}
+
+
+
+
+
+	.modal-backdrop {
+	  position: fixed;
+	  inset: 0;
+	  z-index: 100;
+	  background: var(--overlay-backdrop);
+	  display: grid;
+	  place-items: center;
+	  padding: 20px;
+	  color: var(--color-medium);
+	}
+
+	.modal {
+	  width: min(390px, 100%);
+	  padding: 18px;
+	  transform: var(--rotate-modal);
+	  border-radius: 6px;
+	}
+
+	.modal-title-row{
+		display: grid;
+		align-items: start;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.modal-title-row h2{
+		grid-column: 2;
+		font-size: 26px;
+		line-height: 1.15;
+		margin: 0;
+		text-align: center;
+	}
+
+	.modal-title-row .popup-close-button{
+		grid-column: 3;
+		justify-self: end;
+	}
+
+	.modal-action{
+		display:flex;
+		gap:10px;
+		justify-content:flex-end;
+	}
+
+	.locked{
+		filter: brightness(60%);
+	}
+
+	.lock {
+	  position: absolute;
+	  left: 50%;
+	  top: 50%;
+	  font-size: 44px;
+	  transform: translate(-50%, -50%);
+	  height: 60px;
+	  width: 60px;
+	}
+}

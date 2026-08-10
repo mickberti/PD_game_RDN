@@ -1,0 +1,7 @@
+{
+  "name": "vg-game-workflow-ui",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}

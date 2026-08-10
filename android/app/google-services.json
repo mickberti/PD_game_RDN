@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "543668190170",
+    "project_id": "vg-game-workflow-ui",
+    "storage_bucket": "vg-game-workflow-ui.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:543668190170:android:d703e286c11c5c840edee3",
+        "android_client_info": {
+          "package_name": "com.mberti.tec.vgGameWorkflowUi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "543668190170-mcefgr270k7t8oeqhevr4sgh39m4a9i0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mberti.tec.vgGameWorkflowUi",
+            "certificate_hash": "1b35ff1d15d738a63d11040ab6c2397003b6ae05"
+          }
+        },
+        {
+          "client_id": "543668190170-cdis5geelincbllvu79kplh8qn1a4mad.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnmnSRI8AjvC9tgidDFY7soTHPYcVDCvQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "543668190170-cdis5geelincbllvu79kplh8qn1a4mad.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

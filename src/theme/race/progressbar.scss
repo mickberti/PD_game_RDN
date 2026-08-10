@@ -1,0 +1,38 @@
+.ui-progressbar {}
+
+.ui-progressbar.vertical {}
+
+.ui-progressbar.horizontal {
+	display: grid;
+	grid-template-columns: 1fr 40px;
+	align-items: center;
+	gap: 8px;
+}
+
+.ui-progressbar.horizontal.label-none{
+	display: block;
+	width: 100%;
+}
+
+.progressbar {
+	height: 16px;
+	border: 3px solid var(--border-dark);
+	background: var(--background-dark);
+	width: 100%;
+	border-radius: 999px;
+	overflow: hidden;
+}
+
+.progressbar span {
+	display: block;
+	height: 100%;
+	background: var(--color-green);
+}
+
+
+.progressbar-progress {
+	display: block;
+	color: var(--text-complementary);
+	font-size: 12px;
+	font-weight: 800;
+}

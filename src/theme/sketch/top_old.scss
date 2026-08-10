@@ -1,0 +1,33 @@
+//############################################################################
+//								top
+//############################################################################
+
+.primary-top {
+	width: 460px;
+    height: 90px;
+    background-image: url("/assets/ui/sketch/panel-set1.png");
+    background-position: -529px -320px;
+    background-repeat: no-repeat;
+    transform: translate(0%, 0%) scale(0.88);
+	transform-origin: top left;
+}
+
+.secondary-top {
+	width: 460px;
+	height: 90px;
+	background-image: url("/assets/ui/sketch/panel-set1.png");
+	background-position: -529px -411px;
+	background-repeat: no-repeat;
+	transform: translate(0%, 0%) scale(0.88);
+	transform-origin: top left;
+}
+
+.complementary-top {
+	width: 460px;
+	height: 90px;
+	background-image: url("/assets/ui/sketch/panel-set1.png");
+	background-position: -529px -494px;
+	background-repeat: no-repeat;
+	transform: translate(0%, 0%) scale(0.88);
+	transform-origin: top left;
+}

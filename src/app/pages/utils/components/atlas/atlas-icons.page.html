@@ -1,0 +1,174 @@
+<ion-content >
+	<div class="screen utils-screen">
+  <ui-utils-page-header
+    [group]="isHeroAtlasPage ? 'frame' : 'component'"
+    [title]="isHeroAtlasPage ? 'Hero Frame Animation' : 'Component Atlas Icon'"
+    [description]="isHeroAtlasPage
+      ? 'Seleziona un atlas di eroi o mostri e sistema i frame modificando x/y/w/h.'
+      : 'Seleziona atlas + PNG e centra le icone modificando x/y/w/h.'"
+  />
+
+  <section class="toolbar">
+    <label>
+      Incremento frame (px):
+      <input type="number" min="1" [value]="frameAdjustStep" (input)="onFrameAdjustStepChange($any($event.target).value)" />
+    </label>
+    <label>
+      Combinazione atlas:
+      <select [value]="selectedAtlasId" (change)="onAtlasChange($any($event.target).value)">
+        <option *ngFor="let option of atlasOptions" [value]="option.id">
+          {{ option.label }}
+        </option>
+      </select>
+    </label>
+
+    <label>
+      Colonne griglia:
+      <input
+        type="number"
+        min="1"
+        max="12"
+        [value]="gridColumns"
+        (input)="onGridColumnsChange($any($event.target).value)"
+      />
+    </label>
+
+    <label>
+      Formato preview:
+      <select [value]="selectedPreviewFormatId" (change)="onPreviewFormatChange($any($event.target).value)">
+        <option *ngFor="let option of previewFormatOptions" [value]="option.id">{{ option.label }}</option>
+      </select>
+    </label>
+
+    <div class="actions">
+      <button type="button" (click)="copyAtlasToClipboard()">Copia atlas aggiornato</button>
+      <button type="button" (click)="downloadAtlasFile()">Scarica file atlas</button>
+      <button type="button" (click)="saveAtlasFile()">Salva su file atlas…</button>
+      <button type="button" (click)="addAtlasElement()">Aggiungi elemento atlas</button>
+      <button type="button" (click)="sortAnimationFrames()">Ordina frame animazione</button>
+      <button type="button" (click)="toggleAnimationMode()">{{ viewMode === 'animation' ? 'Modalità griglia' : 'Modalità animation' }}</button>
+      <button type="button" (click)="toggleAtlasImagePreview()">{{ showAtlasImagePreview ? 'Nascondi anteprima atlas' : 'Mostra anteprima atlas' }}</button>
+    </div>
+  </section>
+  <section class="toolbar">
+    <label>
+      Meta image:
+      <input type="text" [value]="metaImage" (input)="onMetaImageChange($any($event.target).value)" style="width: 400px;" />
+    </label>
+    <label>
+      Meta size W:
+      <input type="number" min="1" [value]="metaWidth" (input)="onMetaSizeChange('w', $any($event.target).value)" />
+    </label>
+    <label>
+      Meta size H:
+      <input type="number" min="1" [value]="metaHeight" (input)="onMetaSizeChange('h', $any($event.target).value)" />
+    </label>
+  </section>
+
+  <section class="atlas-source-preview" *ngIf="showAtlasImagePreview">
+    <img [src]="selectedAtlas.data.meta!.image" [alt]="'Anteprima atlas ' + selectedAtlas.label" />
+  </section>
+
+  <section class="animation-view" *ngIf="viewMode === 'animation' && activeAnimationIcon as icon">
+    <button type="button" class="animation-nav" (click)="showPreviousAnimationFrame()" [disabled]="icons.length < 2" aria-label="Frame precedente">
+      ‹
+    </button>
+
+    <article class="icon-card animation-card">
+      <div class="animation-counter">Frame {{ animationFrameLabel }}</div>
+
+      <div
+        class="icon-preview"
+        [ngStyle]="getIconViewportStyle()"
+        (pointerdown)="onPreviewPointerDown($event, icon)"
+        (pointermove)="onPreviewPointerMove($event)"
+        (pointerup)="onPreviewPointerUp()"
+        (pointerleave)="onPreviewPointerUp()"
+      >
+        <div class="icon-sprite" [ngStyle]="getIconStyle(icon)"></div>
+      </div>
+
+      <button type="button" class="copy-css-btn" (click)="copyIconCssToClipboard(icon)">Copia CSS icona</button>
+
+      <div class="icon-info">
+        <strong>{{ icon.name }}</strong>
+        <small>{{ icon.fileName }}</small>
+        <input type="text" [value]="icon.fileName" (change)="onFrameNameChange(icon, $any($event.target).value)" />
+      </div>
+
+      <div class="frame-editor">
+        <div class="field" *ngFor="let field of ['x','y','w','h']">
+          <span>{{ field }}</span>
+          <div class="controls">
+            <button type="button" (click)="adjustIconByStep(icon, $any(field), -1)" aria-label="Diminuisci valore del passo impostato">-</button>
+            <button type="button" (click)="adjustIcon(icon, $any(field), -1)" aria-label="Diminuisci valore di 1 pixel">-1</button>
+            <input
+              type="number"
+              [min]="field === 'w' || field === 'h' ? 1 : 0"
+              [value]="getFieldValue(icon, $any(field))"
+              (input)="onFieldInput(icon, $any(field), $any($event.target).value)"
+            />
+            <button type="button" (click)="adjustIcon(icon, $any(field), 1)" aria-label="Aumenta valore di 1 pixel">+1</button>
+            <button type="button" (click)="adjustIconByStep(icon, $any(field), 1)" aria-label="Aumenta valore del passo impostato">+</button>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <button type="button" class="animation-nav" (click)="showNextAnimationFrame()" [disabled]="icons.length < 2" aria-label="Frame successivo">
+      ›
+    </button>
+  </section>
+
+  <section class="empty-animation" *ngIf="viewMode === 'animation' && !activeAnimationIcon">
+    Nessun frame disponibile per questa animazione.
+  </section>
+
+  <section class="atlas-grid" [ngStyle]="getGridStyle()" *ngIf="viewMode === 'grid'">
+    <article class="icon-card" *ngFor="let icon of icons">
+      <div
+        class="icon-preview"
+        [ngStyle]="getIconViewportStyle()"
+        (pointerdown)="onPreviewPointerDown($event, icon)"
+        (pointermove)="onPreviewPointerMove($event)"
+        (pointerup)="onPreviewPointerUp()"
+        (pointerleave)="onPreviewPointerUp()"
+      >
+        <div class="icon-sprite" [ngStyle]="getIconStyle(icon)"></div>
+      </div>
+
+      <button type="button" class="copy-css-btn" (click)="copyIconCssToClipboard(icon)">Copia CSS icona</button>
+
+      <div class="icon-info">
+        <strong>{{ icon.name }}</strong>
+        <small>{{ icon.fileName }}</small>
+        <input type="text" [value]="icon.fileName" (change)="onFrameNameChange(icon, $any($event.target).value)" />
+      </div>
+
+      <div class="frame-editor">
+        <div class="field" *ngFor="let field of ['x','y','w','h']">
+          <span>{{ field }}</span>
+          <div class="controls">
+            <button type="button" (click)="adjustIconByStep(icon, $any(field), -1)" aria-label="Diminuisci valore del passo impostato">-</button>
+            <button type="button" (click)="adjustIcon(icon, $any(field), -1)" aria-label="Diminuisci valore di 1 pixel">-1</button>
+            <input
+              type="number"
+              [min]="field === 'w' || field === 'h' ? 1 : 0"
+              [value]="getFieldValue(icon, $any(field))"
+              (input)="onFieldInput(icon, $any(field), $any($event.target).value)"
+            />
+            <button type="button" (click)="adjustIcon(icon, $any(field), 1)" aria-label="Aumenta valore di 1 pixel">+1</button>
+            <button type="button" (click)="adjustIconByStep(icon, $any(field), 1)" aria-label="Aumenta valore del passo impostato">+</button>
+          </div>
+        </div>
+      </div>
+    </article>
+  </section>
+</div>
+</ion-content>
+
+<ion-footer>
+<ion-toolbar>
+  <ui-bottom-utils />
+</ion-toolbar>
+</ion-footer>

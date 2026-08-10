@@ -1,0 +1,177 @@
+.action-feedback-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--action-feedback-z-index, 70000);
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  height: 100vh;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  pointer-events: none;
+  background: rgba(8, 10, 20, .16);
+  backdrop-filter: blur(var(--action-feedback-blur, 12px)) saturate(1.15);
+  -webkit-backdrop-filter: blur(var(--action-feedback-blur, 12px)) saturate(1.15);
+  animation: action-feedback-backdrop-in 180ms ease-out both;
+}
+
+.action-feedback-overlay--blocking,
+.action-feedback-overlay--dismissible,
+.action-feedback-overlay--sequence {
+  pointer-events: auto;
+}
+
+.action-feedback-overlay--sequence {
+  cursor: pointer;
+}
+
+.action-feedback-stage {
+  --action-feedback-duration: 1050ms;
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(54vw, 240px);
+  aspect-ratio: 1;
+  pointer-events: auto;
+  cursor: inherit;
+  filter: drop-shadow(0 18px 24px rgba(0, 0, 0, .36));
+  transform-origin: center;
+}
+
+.action-feedback-sprite-motion {
+  width: 100%;
+  height: 100%;
+  transform-origin: center;
+  will-change: transform, opacity, filter;
+  animation-duration: var(--action-feedback-duration);
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(.2, 1.35, .22, 1);
+}
+
+.action-feedback-sprite-wrap,
+.action-feedback-sprite {
+  width: 100%;
+  height: 100%;
+}
+
+.action-feedback-label-motion {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+  will-change: transform, opacity, filter;
+  animation-duration: var(--action-feedback-duration);
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(.16, 1.38, .26, 1);
+}
+
+.action-feedback-label {
+  min-width: 72px;
+  padding: .08em .34em .14em;
+  border-radius: 999px;
+  color: var(--action-feedback-label-color, #fff7c7);
+  font-family: var(--font-display, "Exo 2", system-ui, sans-serif);
+  font-size: clamp(2rem, 9vw, 4.8rem);
+  font-weight: 900;
+  line-height: .95;
+  text-align: center;
+  letter-spacing: .02em;
+  text-shadow:
+    0 4px 0 rgba(71, 35, 12, .95),
+    0 8px 14px rgba(0, 0, 0, .45),
+    0 0 18px rgba(255, 216, 74, .55);
+}
+
+.action-feedback-stage--gain .action-feedback-sprite-motion,
+.action-feedback-stage--open .action-feedback-sprite-motion {
+  animation-name: action-feedback-sprite-pop;
+}
+
+.action-feedback-stage--collect .action-feedback-sprite-motion {
+  animation-name: action-feedback-sprite-collect;
+}
+
+.action-feedback-stage--sell .action-feedback-sprite-motion {
+  animation-name: action-feedback-sprite-sell;
+  animation-timing-function: cubic-bezier(.3, 0, .3, 1);
+}
+
+.action-feedback-stage--gain .action-feedback-label-motion,
+.action-feedback-stage--open .action-feedback-label-motion {
+  animation-name: action-feedback-label-pop;
+}
+
+.action-feedback-stage--collect .action-feedback-label-motion {
+  animation-name: action-feedback-label-coinup;
+}
+
+.action-feedback-stage--sell .action-feedback-label-motion {
+  animation-name: action-feedback-label-sell;
+}
+
+.action-feedback-stage--sell .action-feedback-label {
+  color: var(--action-feedback-sell-label-color, #9dffb5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action-feedback-overlay,
+  .action-feedback-sprite-motion,
+  .action-feedback-label-motion {
+    animation-duration: 1ms;
+    transition-duration: 1ms;
+  }
+}
+
+@keyframes action-feedback-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes action-feedback-sprite-pop {
+  0% { opacity: 0; transform: scale(.2) rotate(-14deg); filter: brightness(1.6); }
+  18% { opacity: 1; transform: scale(1.26) rotate(8deg); filter: brightness(1.35); }
+  34% { transform: scale(.92) rotate(-5deg); }
+  52% { transform: scale(1.08) rotate(3deg); filter: brightness(1.08); }
+  78% { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(.86) translateY(-10px); filter: brightness(1); }
+}
+
+@keyframes action-feedback-sprite-collect {
+  0% { opacity: 0; transform: translateY(44px) scale(.62) rotate(-8deg); filter: brightness(1.45); }
+  18% { opacity: 1; transform: translateY(0) scale(1.16) rotate(5deg); }
+  42% { transform: translateY(-10px) scale(1) rotate(-3deg); }
+  72% { opacity: 1; transform: translateY(-34px) scale(.94) rotate(0deg); }
+  100% { opacity: 0; transform: translateY(-76px) scale(.72); }
+}
+
+@keyframes action-feedback-sprite-sell {
+  0% { opacity: 0; transform: scale(.95); filter: saturate(1.2) brightness(1.2); }
+  16% { opacity: 1; transform: scale(1.08) rotate(-2deg); }
+  46% { opacity: 1; transform: scale(.92) rotate(3deg); filter: saturate(.95) brightness(1); }
+  74% { opacity: .65; transform: scale(.52) rotate(-10deg); filter: saturate(.55) blur(1px); }
+  100% { opacity: 0; transform: scale(.05) rotate(18deg); filter: saturate(.2) blur(5px); }
+}
+
+@keyframes action-feedback-label-pop {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.18) rotate(-10deg); }
+  16% { opacity: 1; transform: translate(-50%, -78%) scale(1.32) rotate(7deg); }
+  32% { transform: translate(-50%, -68%) scale(.9) rotate(-4deg); }
+  54% { transform: translate(-50%, -74%) scale(1.08) rotate(2deg); }
+  78% { opacity: 1; transform: translate(-50%, -82%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -118%) scale(.82); }
+}
+
+@keyframes action-feedback-label-coinup {
+  0% { opacity: 0; transform: translate(-50%, 4%) scale(.6); }
+  18% { opacity: 1; transform: translate(-50%, -48%) scale(1.16); }
+  52% { transform: translate(-50%, -92%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -150%) scale(.84); }
+}
+
+@keyframes action-feedback-label-sell {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.6) rotate(8deg); }
+  20% { opacity: 1; transform: translate(-50%, -86%) scale(1.14) rotate(-4deg); }
+  55% { opacity: 1; transform: translate(-50%, -98%) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate(-50%, -142%) scale(.78); }
+}

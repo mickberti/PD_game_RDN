@@ -1,0 +1,189 @@
+.band-wrapper{
+	overflow: hidden;
+	margin: 10px 0;
+}
+
+//############################################################################
+//								BAND
+//############################################################################
+
+.primary-band {
+
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	width: 100%;
+	height: 65px;
+
+	box-sizing: border-box;
+
+	border-style: solid;
+	border-width: 24px 40px;
+
+	border-image-source: url("/assets/ui/fantasy_bg/button/button3-set4.png");
+	border-image-slice: 30 48 30 48 fill;
+	border-image-repeat: stretch;
+
+	background: transparent;
+
+	color: white;
+	font-size: 18px;
+	font-weight: 700;
+	text-align: center;
+
+	cursor: pointer;
+	padding: 0px 0px 6px 0px;
+}
+
+.primary-band>span {
+	display: block;
+	font-size: 26px;
+	font-weight: 900;
+	font-style: italic;
+	text-shadow: var(--text-shadow-strong);
+}
+
+.secondary-band {
+	display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		width: 100%;
+		height: 65px;
+
+		box-sizing: border-box;
+
+		border-style: solid;
+		border-width: 24px 40px;
+
+		border-image-source: url("/assets/ui/fantasy_bg/button/button2-set4.png");
+		border-image-slice: 30 48 30 48 fill;
+		border-image-repeat: stretch;
+
+		background: transparent;
+
+		color: var(--color-medium);
+		font-size: 18px;
+		font-weight: 700;
+		text-align: center;
+
+		cursor: pointer;
+		padding: 0px 0px 6px 0px;
+	}
+.secondary-band>span {
+	display: block;
+	font-size: 26px;
+	font-weight: 900;
+	font-style: italic;
+	text-shadow: var(--text-shadow-strong);
+}
+
+.complementary-band {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		width: 100%;
+		height: 65px;
+
+		box-sizing: border-box;
+
+		border-style: solid;
+		border-width: 24px 40px;
+
+		border-image-source: url("/assets/ui/fantasy_bg/button/button4-set4.png");
+		border-image-slice: 30 48 30 48 fill;
+		border-image-repeat: stretch;
+
+		background: transparent;
+
+		color: white;
+		font-size: 18px;
+		font-weight: 700;
+		text-align: center;
+
+		cursor: pointer;
+		padding: 0px 0px 6px 0px;
+	}
+	
+
+.complementary-band>span {
+	display: block;
+	font-size: 26px;
+	font-weight: 900;
+	font-style: italic;
+	text-shadow: var(--text-shadow-strong);
+}
+
+.light-band {
+	display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		width: 100%;
+		height: 65px;
+
+		box-sizing: border-box;
+
+		border-style: solid;
+		border-width: 24px 40px;
+
+		border-image-source: url("/assets/ui/fantasy_bg/button/button2-set4.png");
+		border-image-slice: 30 48 30 48 fill;
+		border-image-repeat: stretch;
+
+		background: transparent;
+
+		color: white;
+		font-size: 18px;
+		font-weight: 700;
+		text-align: center;
+
+		cursor: pointer;
+		padding: 0px 0px 6px 0px;
+	}
+.light-band>span {
+	display: block;
+	font-size: 26px;
+	font-weight: 900;
+	font-style: italic;
+	text-shadow: var(--text-shadow-strong);
+}
+
+.dark-band {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	width: 100%;
+	height: 65px;
+
+	box-sizing: border-box;
+
+	border-style: solid;
+	border-width: 24px 40px;
+
+	border-image-source: url("/assets/ui/fantasy_bg/button/button1-set4.png");
+	border-image-slice: 30 48 30 48 fill;
+	border-image-repeat: stretch;
+
+	background: transparent;
+
+	color: white;
+	font-size: 18px;
+	font-weight: 700;
+	text-align: center;
+
+	cursor: pointer;
+	padding: 0px 0px 6px 0px;
+}
+
+.dark-band>span {
+	display: block;
+	font-size: 26px;
+	font-weight: 900;
+	font-style: italic;
+	text-shadow: var(--text-shadow-strong);
+}
+

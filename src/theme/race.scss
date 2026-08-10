@@ -1,0 +1,172 @@
+@use "race/variables" as race;
+@use "race/variables_bg" as race_bg;
+
+.theme-race {
+	@include race.race-variables;
+	@include race_bg.race-variables-bg;
+
+
+	@import "race/login";
+	@import "race/profile";
+	@import "race/hub";
+	@import "race/bottomnav";
+	@import "race/reward";
+	@import "race/power-up";
+	@import "race/shop";
+	@import "race/inventory";
+	@import "race/hero";
+	@import "race/hero-upgrade";
+	@import "race/gameplay";
+	@import "race/phaser-game";
+	@import "race/pause";
+	@import "race/result";
+	@import "race/game-mode";
+	@import "race/ranking";
+
+	@import "race/settings";
+	@import "race/header";
+
+	@import "race/pill";
+	@import "race/sprite";
+	@import "race/panel";
+	@import "race/button";
+	@import "race/icons";
+	@import "race/band";
+	//@import "race/bar";
+	@import "race/tabs";
+	@import "race/box";
+	@import "race/progressbar";
+	@import "race/attribute-box";
+	//@import "race/top";
+	@import "race/prestige-box";
+	@import "race/effect-fx";
+	@import "race/effect-fx1";
+	@import "race/effect-fx2";
+	@import "race/equip-selection";
+	@import "race/popover";
+	@import "race/floating-panel";
+	@import "race/action-feedback-overlay";
+	//@import "race/fog_bg.scss";
+	@import "race/preview-attribute-stats";
+
+	@import "demo/utils";
+
+	&{
+		background-image: var(--main-background-sfondo11);
+		background-repeat: no-repeat;
+		background-position: center;
+		/* Applica la sfocatura */
+		//backdrop-filter: blur(10px);
+		//-webkit-backdrop-filter: blur(10px); /* Supporto per Safari */
+
+	}
+
+	ion-content {
+		--background: var(--main-background);
+		--color: var(--color-text);
+
+	}
+
+	.screen {
+		margin: 0 auto;
+		position: relative;
+		overflow: hidden;
+		padding: var(--safe-top) 0px var(--safe-bottom) 0px;
+		color: var(--game-text);
+		font-style: var(--ion-font-style);
+
+		width: var(--width);
+		min-height: 100%;
+	}
+
+	.screen-list, .generic-list{
+		display: grid;
+		gap: 24px;
+	}
+
+	.small {
+		min-height: 34px;
+		min-width: 70px;
+		font-size: 12px;
+		padding: 0 10px;
+	}
+
+	:disabled {
+		filter: grayscale(.75);
+		opacity: .7;
+	}
+
+	.item-grid {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 10px;
+		margin-bottom: 10px;
+	}
+
+	.item-list {
+		display: grid;
+		gap: 12px;
+	}
+
+
+
+
+
+	.modal-backdrop {
+	  position: fixed;
+	  inset: 0;
+	  z-index: 100;
+	  background: var(--overlay-backdrop);
+	  display: grid;
+	  place-items: center;
+	  padding: 20px;
+	  color: var(--color-medium);
+	}
+
+	.modal {
+	  width: min(390px, 100%);
+	  padding: 18px;
+	  transform: var(--rotate-modal);
+	  border-radius: 6px;
+	}
+
+	.modal-title-row{
+		display: grid;
+		align-items: start;
+		gap: 8px;
+		margin-bottom: 12px;
+	}
+
+	.modal-title-row h2{
+		grid-column: 2;
+		font-size: 26px;
+		line-height: 1.15;
+		margin: 0;
+		text-align: center;
+	}
+
+	.modal-title-row .popup-close-button{
+		grid-column: 3;
+		justify-self: end;
+	}
+
+	.modal-action{
+		display:flex;
+		gap:10px;
+		justify-content:flex-end;
+	}
+
+	.locked{
+		filter: brightness(60%);
+	}
+
+	.lock {
+	  position: absolute;
+	  left: 50%;
+	  top: 50%;
+	  font-size: 44px;
+	  transform: translate(-50%, -50%);
+	  height: 60px;
+	  width: 60px;
+	}
+}

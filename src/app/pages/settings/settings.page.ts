@@ -1,0 +1,186 @@
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from "@angular/core";
+import { IonContent, IonFooter, IonHeader, IonToolbar } from "@ionic/angular/standalone";
+import { ThemeService, GameTheme } from "../../core/services/app/theme/theme.service";
+import { UIButtonComponent } from "src/app/shared/basic/ui-button.component";
+import { UISettingChestComponent } from "src/app/shared/components/box/ui-setting-box.component";
+import { UIPanelComponent } from "src/app/shared/basic/ui-panel.component";
+import { LanguageService } from "../../core/services/app/i18n/language.service";
+import { AppNavigationService } from "../../core/services/app/navigation/app-navigation.service";
+import { UIHeaderComponent } from "src/app/shared/components/ui-header.component";
+import { UIBottomNavComponent } from "src/app/shared/components/ui-bottom-nav.component";
+import { HeroProgressService } from "../../core/services/progression/hero-progress.service";
+import { StatisticProgressService } from "../../core/services/progression/statistic-progress.service";
+import { STATISTIC_TYPES, StatisticType } from "../../core/models/remote/progress.models";
+import { GameStateService } from "../../core/services/state/game-state.service";
+import { UIButtonSpriteComponent } from "src/app/shared/basic/ui-button-sprite.component";
+import { DirectRouteAccessService } from "../../core/services/app/navigation/direct-route-access.service";
+
+const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
+
+@Component({
+  selector: "app-settings",
+  standalone: true,
+  imports: [IonHeader, IonToolbar, UIHeaderComponent, IonFooter, UIBottomNavComponent, IonContent, UIButtonComponent, UISettingChestComponent, UIPanelComponent, UIButtonSpriteComponent],
+  template: `
+    <ion-header>
+  <ion-toolbar>
+    <ui-header title="Settings" backPath="/hub"></ui-header>
+  </ion-toolbar>
+  </ion-header>
+  
+  <ion-content >
+    <div class="screen settings-screen">
+      <ui-panel [variant]="'primary'" [title]="t('language')" >
+        <div class="settings-menu">
+          <ui-button-sprite [frame]="{name: 'play', effect: 'none'}" (pressed)="language.previousLanguage()"></ui-button-sprite>
+          <span class="s-desc-title">{{ language.activeLanguageLabel() }}</span>
+          <ui-button-sprite [frame]="{name: 'play', effect: 'none'}" (pressed)="language.nextLanguage()"></ui-button-sprite>
+        </div>
+      </ui-panel>
+
+      <ui-panel [variant]="'primary'" [title]="t('effects')" >
+        <ui-setting-box type="music" [title]="t('music')" (toggle)="toggleMusic()"></ui-setting-box>
+        <ui-setting-box type="sfx" [title]="t('sfx')" (toggle)="toggleSfx()"></ui-setting-box>
+        <ui-setting-box type="service" [title]="t('gameService')" [subtitle]="gameServiceModeLabel()" [checked]="gameState.isMockMode()" (toggle)="toggleService()"></ui-setting-box>
+        <ui-setting-box type="task" title="URL diretto senza boot" [subtitle]="directRouteAccessLabel()" [checked]="directRouteAccess.enabled()" (toggle)="toggleDirectRouteAccess()"></ui-setting-box>
+      </ui-panel>
+
+      <ui-panel [variant]="'primary'" [title]="t('theme')" >
+        <div class="settings-menu">
+          <ui-button-sprite [frame]="{name: 'play', effect: 'none'}" (pressed)="previousTheme()"></ui-button-sprite>
+          <span class="s-desc-title">{{ activeTheme() }}</span>
+          <ui-button-sprite [frame]="{name: 'play', effect: 'none'}" (pressed)="nextTheme()"></ui-button-sprite>
+        </div>
+      </ui-panel>
+
+      <ui-panel [variant]="'primary'" [title]="t('socialNetworks')" >
+        <div class="settings-social">
+          <ui-button-sprite [frame]="{name: 'social-fb', effect: 'none'}"></ui-button-sprite>
+          <ui-button-sprite [frame]="{name: 'social-twitter', effect: 'none'}"></ui-button-sprite>
+          <ui-button-sprite [frame]="{name: 'social-instagram', effect: 'none'}"></ui-button-sprite>
+        </div>
+      </ui-panel>
+
+      <div class="settings-links">
+        <ui-button variant="secondary">{{ t('gameInfo') }}</ui-button>
+        <ui-button variant="secondary">{{ t('community') }}</ui-button>
+        <ui-button variant="secondary">{{ t('aboutUs') }}</ui-button>
+        <ui-button variant="complementary" (pressed)="nav.go('utils/component-atlas-icon')" >{{ t('support') }}</ui-button>
+        <ui-button variant="complementary" (pressed)="nav.go('utils/game')">game tester</ui-button>
+        <ui-button variant="complementary" (pressed)="levelUpAllUserItems()">levelup</ui-button>
+        <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
+        <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>
+        <ui-button variant="complementary" (pressed)="breakAllUserEquip()">broke equip</ui-button>
+        <ui-button variant="complementary" [disabled]="resettingProgress()" (pressed)="resetUserProgress()">{{ resettingProgress() ? t('resettingProgress') : t('resetProgress') }}</ui-button>
+      </div>
+	  <div class="settings-links">
+	  <small>Version: v1.00</small>
+      <small>ID: 460003500F73289</small>
+	  </div>
+    </div>
+  </ion-content>
+  
+  <ion-footer>
+  <ion-toolbar>
+    <ui-bottom-nav />
+  </ion-toolbar>
+  </ion-footer>
+  `,
+  changeDetection: ChangeDetectionStrategy.OnPush,
+})
+export class SettingsPage {
+  readonly theme = inject(ThemeService);
+  readonly language = inject(LanguageService);
+  readonly nav = inject(AppNavigationService);
+  readonly gameState = inject(GameStateService);
+  readonly directRouteAccess = inject(DirectRouteAccessService);
+  private readonly heroProgress = inject(HeroProgressService);
+  private readonly statisticProgress = inject(StatisticProgressService);
+
+  readonly activeTheme = computed(() => this.theme.activeTheme());
+  readonly music = signal(true);
+  readonly sfx = signal(true);
+  readonly gameServiceModeLabel = computed(() => this.gameState.isMockMode() ? 'Mock' : 'Remote');
+  readonly directRouteAccessLabel = computed(() => this.directRouteAccess.enabled() ? 'Accesso diretto attivo' : 'Passa da boot');
+  readonly resettingProgress = signal(false);
+
+  t(key: string): string {
+    return this.language.t(key);
+  }
+
+  toggleMusic(): void {
+    this.music.update((value) => !value);
+  }
+
+  toggleSfx(): void {
+    this.sfx.update((value) => !value);
+  }
+
+  toggleService(): void {
+    this.gameState.toggleDataSourceMode();
+  }
+
+  toggleDirectRouteAccess(): void {
+    this.directRouteAccess.toggle();
+  }
+
+  previousTheme(): void {
+    this.shiftTheme(-1);
+  }
+
+  nextTheme(): void {
+    this.shiftTheme(1);
+  }
+
+  levelUpAllUserItems(): void {
+    this.heroProgress.fillAllExperienceForNextLevel();
+  }
+
+  boostAllStatistics(): void {
+    const statisticBoosts = STATISTIC_TYPES.reduce<Partial<Record<StatisticType, number>>>(
+      (updates, type) => ({
+        ...updates,
+        [type]: 50,
+      }),
+      {}
+    );
+
+    this.statisticProgress.incrementMany(statisticBoosts);
+  }
+
+  breakAllUserEquip(): void {
+    this.heroProgress.breakAllEquipDuration();
+  }
+
+  boostPlayerResources(): void {
+    const currentProgress = this.gameState.progress();
+
+    this.gameState.updateProgress({
+      ...currentProgress,
+      coins: currentProgress.coins + 2000,
+      gems: currentProgress.gems + 500,
+      dust: currentProgress.dust + 500,
+      lastUpdatedAt: new Date().toISOString(),
+    });
+  }
+
+  async resetUserProgress(): Promise<void> {
+    if (this.resettingProgress()) {
+      return;
+    }
+
+    this.resettingProgress.set(true);
+
+    try {
+      await this.gameState.resetUserProgress();
+    } finally {
+      this.resettingProgress.set(false);
+    }
+  }
+
+  private shiftTheme(direction: -1 | 1): void {
+    const index = THEMES.indexOf(this.activeTheme());
+    const nextIndex = (index + direction + THEMES.length) % THEMES.length;
+    this.theme.setTheme(THEMES[nextIndex]);
+  }
+}

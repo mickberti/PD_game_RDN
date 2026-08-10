@@ -1,0 +1,59 @@
+:host {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.08), transparent 35%),
+    linear-gradient(145deg, #26383b, #182326);
+  color: #ffffff;
+  font-family: system-ui, sans-serif;
+}
+.sprite-tester {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  color: #5e5e6b;
+
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    select,
+    input {
+      border: 1px solid #5e5e6b;
+      background: #181822;
+      color: #fff;
+      border-radius: 8px;
+      padding: 8px;
+    }
+  }
+
+  .preview-wrapper {
+    border: 1px solid #3c3c4c;
+    border-radius: 12px;
+    background: #111;
+    padding: 16px;
+    min-height: 280px;
+    display: grid;
+    place-items: center;
+  }
+
+  .panel {
+    border: 2px dashed #90caf9;
+    background: repeating-conic-gradient(#1f1f1f 0% 25%, #2f2f2f 0% 50%) 50% / 20px 20px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+
+  .sprite {
+    image-rendering: pixelated;
+  }
+}

@@ -1,0 +1,68 @@
+.ranking-list{
+	display: grid;
+	  gap: 13px;
+	  margin-top: 22px;
+	  position: relative;
+	  z-index: 1;
+}
+
+.renking-actions{
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 15px;
+
+	position: fixed;
+	  bottom: 15px;
+	  left: 50%;
+	  transform: translateX(-50%); 
+}
+
+.ranking-box{
+	display: grid;
+	  grid-template-columns: 56px auto 1fr;
+	  align-items: center;
+	  gap: 8px;
+
+	  background: var(--fantasy-border-primary);
+	  border: 3px solid var(--fantasy-surface-gold);
+	  color: var(--fantasy-surface-gold);
+	  
+}
+
+.rk-rank{
+	height: 72px;
+	  display: grid;
+	  place-items: center;
+	  font-size: 26px;
+	  background: var(--fantasy-surface-gold);
+	  border: 3px solid var(--fantasy-border-primary);
+	  color: var(--fantasy-text-cream);
+}
+
+.rk-icon{
+	
+	
+}
+
+.rk-desc{
+	clip-path: polygon(0 0, 92% 0, 100% 100%, 8% 100%);
+	box-shadow: 4px 4px 0 var(--shadow-rgba-22);
+	background: var(--color-secondary);
+}
+
+.rk-desc-title{
+	padding: 13px 25px;
+	  text-transform: uppercase;
+	  font-size: 22px;
+	  font-style: italic;
+
+}
+
+.rk-desc-subtitle{
+	padding: 0px 32px;
+	background: var(--surface-white-bg);
+	  color: var(--ink);
+
+	  box-shadow: var(--shadow-elevated-sm);
+}

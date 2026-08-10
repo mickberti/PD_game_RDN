@@ -1,0 +1,108 @@
+.icon {
+  width: 58px;
+  height: 58px;
+  background-repeat: no-repeat;
+  background-size: auto 100%;
+  display: inline-block;
+  flex: 0 0 auto;
+}
+
+.icon-xs {
+  width: 24px;
+  height: 24px;
+}
+
+.icon-sm {
+  width: 34px;
+  height: 34px;
+}
+
+.icon-lg {
+  width: 112px;
+  height: 112px;
+}
+
+
+/* CHEST */
+.icon-chest {
+  background-image: url("/assets/ui/fantasy/chest.png");
+  animation: chestAnim 1s steps(5) infinite;
+}
+
+
+/* GOLD */
+.icon-coin {
+  background-image: url("/assets/ui/fantasy/coin.png");
+  animation: goldAnim 0.8s steps(4) infinite;
+}
+
+
+/* HEART */
+.icon-heart {
+  background-image: url("/assets/ui/fantasy/heart.png");
+  animation: heartAnim 1s steps(4) infinite;
+}
+
+.icon-trophy {
+  background-image: url("/assets/ui/fantasy/trophy.png");
+  animation: trophy-pop 1.5s ease-in-out infinite;
+  background-size: contain;
+}
+
+/* HEART */
+
+/* ANIMAZIONI */
+
+@keyframes chestAnim {
+  from {
+    background-position: 0;
+  }
+  to {
+    background-position: -320px;
+  }
+}
+
+@keyframes chestAnimPro {
+  from {
+    background-position: 0;
+  }
+  to {
+    background-position: -384px;
+  }
+}
+
+@keyframes goldAnim {
+  from {
+    background-position: 0;
+  }
+  to {
+    background-position: -256px;
+  }
+}
+
+@keyframes goldAnimPro {
+  from {
+    background-position: 0;
+  }
+  to {
+    background-position: -384px;
+  }
+}
+
+@keyframes heartAnim {
+  from {
+    background-position: 0;
+  }
+  to {
+    background-position: -256px;
+  }
+}
+
+@keyframes heartAnimPro {
+  from {
+    background-position: 0;
+  }
+  to {
+    background-position: -384px;
+  }
+}

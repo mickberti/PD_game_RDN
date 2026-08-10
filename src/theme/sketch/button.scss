@@ -1,0 +1,294 @@
+
+//################################################
+//      UI-BUTTON
+//################################################
+
+.ui-button {
+	background-color: transparent;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	min-width: 80px;
+	height: 65px;
+
+	box-sizing: border-box;
+
+	border-style: solid;
+	border-width: 24px 40px;
+
+	border-image-slice: 24 48 24 48 fill;
+	border-image-repeat: stretch;
+
+	background: transparent;
+
+	color: white;
+	font-size: 18px;
+	font-weight: 700;
+	text-align: center;
+
+	cursor: pointer;
+	padding: 0px 0px 6px 0px;
+}
+
+.ui-button.active {
+	filter: brightness(1.8); /* Rende il colore più chiaro del 20% */
+	//transform: scale(1.05);   /* Effetto di ingrandimento */
+}	
+
+.ui-button:hover {
+  filter: brightness(1.2); /* Rende il colore più chiaro del 20% */
+  transform: scale(1.05);   /* Effetto di ingrandimento */
+}
+
+.ui-button:disabled {
+    /* Scurisce del 30% il colore originale del pulsante */
+    filter: brightness(70%); 
+    
+    /* Riduce leggermente la dimensione e scala l'elemento per renderlo inattivo */
+    transform: scale(0.95); 
+    
+    /* Rimuove l'interazione del cursore e lo rende un po' più trasparente */
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.ui-button.ui-button-xs{
+	height: 40px;
+	  border-width: 15px 10px;
+	  border-image-slice: 20 20 20 20 fill;
+	  padding: 0px 10px 6px 10px;
+}
+
+.ui-button.ui-button-sm{
+	height: 50px;
+	  border-width: 15px 10px;
+	  border-image-slice: 20 20 20 20 fill;
+	  padding: 0px 10px 0px 10px;
+}
+
+.ui-button.ui-button-md{
+	height: 55px;
+	  border-width: 15px 10px;
+	  border-image-slice: 20 20 20 20 fill;
+	  padding: 0px 10px 6px 10px;
+}
+
+.ui-button.ui-button-lg{
+	height: 60px;
+	  border-width: 15px 10px;
+	  border-image-slice: 20 20 20 20 fill;
+	  padding: 0px 10px 6px 10px;
+}
+
+.ui-button:active {
+	transform: translateY(3px) scale(.98);
+}
+
+
+.ui-button.primary {
+
+	border-image-source: url("/assets/ui/sketch/button/button3-set3.png");
+		
+}
+
+.ui-button.secondary {
+
+	border-image-source: url("/assets/ui/sketch/button/button2-set3.png");
+
+}
+
+.ui-button.complementary {
+
+	border-image-source: url("/assets/ui/sketch/button/button4-set3.png");
+
+}
+
+.ui-button.light {
+
+	border-image-source: url("/assets/ui/sketch/button/button2-set3.png");
+
+}
+
+.ui-button.dark {
+
+	border-image-source: url("/assets/ui/sketch/button/button1-set3.png");
+
+}
+
+.ui-button.lock {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+
+	min-width: 80px;
+	height: 65px;
+
+	box-sizing: border-box;
+
+	border-style: solid;
+	border-width: 24px 40px;
+
+	border-image-source: url("/assets/ui/sketch/button/button2-set3.png");
+	border-image-slice: 24 48 24 48 fill;
+	border-image-repeat: stretch;
+
+	background: transparent;
+
+	color: white;
+	font-size: 18px;
+	font-weight: 700;
+	text-align: center;
+
+	cursor: pointer;
+	padding: 0px 0px 6px 0px;
+}
+
+.ui-button.arrow-sx{
+	width: 56px;
+	height: 60px;
+	background-image: url("/assets/ui/sketch/panel-set1.png");
+	background-position: -27px -341px;
+	background-repeat: no-repeat;
+	transform: translate(0%, 0%) scale(0.7) scaleX(-1);
+}
+	
+.ui-button.arrow-dx{
+	width: 56px;
+	height: 60px;
+	background-image: url("/assets/ui/sketch/panel-set1.png");
+	background-position: -27px -341px;
+	background-repeat: no-repeat;
+	transform: translate(0%, 0%) scale(0.7);	
+}
+
+
+
+//################################################
+//      UI-BUTTON-SPRITE
+//################################################
+
+.ui-button-sprite {
+	background-color: transparent;
+}
+
+.ui-button-sprite.active {
+	filter: brightness(1.8); /* Rende il colore più chiaro del 20% */
+	//transform: scale(1.05);   /* Effetto di ingrandimento */
+}	
+
+.ui-button-sprite:hover {
+  filter: brightness(1.2); /* Rende il colore più chiaro del 20% */
+  transform: scale(1.05);   /* Effetto di ingrandimento */
+}
+
+.ui-button-sprite:disabled {
+    /* Scurisce del 30% il colore originale del pulsante */
+    filter: brightness(70%); 
+    
+    /* Riduce leggermente la dimensione e scala l'elemento per renderlo inattivo */
+    transform: scale(0.95); 
+    
+    /* Rimuove l'interazione del cursore e lo rende un po' più trasparente */
+    opacity: 0.8;
+    cursor: not-allowed;
+}
+
+.ui-button-sprite.ui-button-xs {
+	height: 25px;
+	width: 25px;
+}
+
+.ui-button-sprite.ui-button-sm {
+	height: 30px;
+	width: 30px;
+}
+
+.ui-button-sprite.ui-button-md {
+	height: 40px;
+	width: 40px;
+}
+
+.ui-button-sprite.ui-button-lg {
+	height: 50px;
+	width: 50px;
+}
+
+
+.toggle {
+	width: 56px;
+	height: 32px;
+	border-radius: 999px;
+	border: var(--fantasy-border-2-cream-alt);
+	background: var(--settings-card-bg);
+}
+
+.toggle span {
+	display: block;
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	background: var(--surface-white-bg);
+}
+
+.toggle.on {
+	background: var(--toggle-active-bg);
+}
+
+.toggle.on span {
+	margin-left: 24px;
+}
+
+//################################################
+//      UI-BUTTON PARTICLES
+//################################################
+
+.ui-button.ui-button-particle-mode,
+.ui-button-sprite.ui-button-particle-mode {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+}
+
+.ui-button .ui-button-content,
+.ui-button-sprite .ui-button-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: inherit;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.ui-button-sprite .ui-button-content {
+  display: block;
+}
+
+.ui-button-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ui-button-particle {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  margin-bottom: -14px;
+  pointer-events: none;
+}
+
+.ui-button-particle-dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #ffffff, #ffe06b 35%, #ff8a00 70%, transparent 72%);
+  box-shadow: 0 0 8px rgba(255, 218, 87, 0.9);
+}
