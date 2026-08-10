@@ -1,5 +1,5 @@
 import { EquipItem, HeroAttribute, HeroItem, HeroPowerMultiplier } from "../../models/game.models";
-import { HERO_POWER_CONFIG } from "../../game/phaser/config/game-variables.config";
+import { HERO_POWER_CONFIG } from "../../config/game-progression.config";
 
 const safeNumber = (value: number | undefined, fallback = 0): number => {
   return Number.isFinite(value) ? (value as number) : fallback;

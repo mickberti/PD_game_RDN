@@ -10,8 +10,8 @@ import {
   PricingService,
 } from "../economy/pricing.service";
 import { StatisticProgressService } from "./statistic-progress.service";
-import { GameResult } from "../../models/phaser-game-state.model";
-import { HERO_FATIGUE_GAMEPLAY_CONFIG } from "../../game/phaser/config/game-variables.config";
+import { GameResult } from "../../models/match-result.model";
+import { HERO_FATIGUE_GAMEPLAY_CONFIG } from "../../config/game-progression.config";
 
 @Injectable({ providedIn: "root" })
 export class HeroProgressService {

@@ -40,17 +40,6 @@
   box-shadow: var(--shadow-card-xl);
   z-index: 2;
 }
-.phaser-game-screen {
-    min-height: 100%;
-    padding-top: 10px;
-    padding-bottom: 18px;
-    background-image: none;
-}
-
-.phaser-game-screen .road-bg {
-    inset: 0 24%
-}
-
 .game-header {
     grid-template-columns: minmax(92px, 1fr) minmax(118px, 1.2fr) minmax(76px, .8fr) auto;
 }

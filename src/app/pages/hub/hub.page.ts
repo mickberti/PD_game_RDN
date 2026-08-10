@@ -14,7 +14,9 @@ import { ModeBoxComponent } from "../../shared/components/box/ui-mode-box.compon
 import { UIEventBoxComponent } from "../../shared/components/box/ui-event-box.component";
 import { UIEventDetailPopupComponent } from "../../shared/components/popup/ui-event-detail-popup.component";
 import { EventActivationService } from "../../core/services/progression/event-activation.service";
+import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 
+const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack"]);
 
 type HubListItem =
   | { type: "mode"; item: ModeItem }
@@ -81,15 +83,21 @@ export class HubPage {
   readonly floating = inject(FloatingNavigationService);
   readonly state = inject(GameStateService);
   private readonly eventActivation = inject(EventActivationService);
+  private readonly gameplaySession = inject(GameplaySessionService);
 
   readonly selectedEvent = signal<GameEvent | null>(null);
   readonly highlightEvents = computed(() => this.state.events().filter((event) => event.type === "highlight"));
-  readonly hubItems = computed<HubListItem[]>(() => this.buildHubItems(this.theme.modes(), this.highlightEvents()));
+  readonly hubItems = computed<HubListItem[]>(() => this.buildHubItems(
+    this.theme.modes().filter((mode) => ACTIVE_GAME_MODE_IDS.has(mode.id)),
+    this.highlightEvents(),
+  ));
 
   contextActions = this.floating.contextActions;
 
   openMode(mode: ModeItem): void {
-    this.nav.go(`/game-mode/${mode.id}`);
+    const matchLevel = this.state.progress().gameModeLevels?.[mode.id] ?? 1;
+    const session = this.gameplaySession.startSession(mode, matchLevel, mode.mastery ?? 1);
+    this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
   }
 
   openEvent(event: GameEvent): void {

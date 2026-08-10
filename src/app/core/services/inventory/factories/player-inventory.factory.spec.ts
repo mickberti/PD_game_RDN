@@ -1,4 +1,4 @@
-import { PLAYER_STATE_CONFIG } from "../../../game/phaser/config/game-variables.config";
+import { PLAYER_STATE_CONFIG } from "../../../config/game-progression.config";
 import { getChestItemsByLevel } from "../../../models/mock/fantasy/box-data";
 import { getEquipItemsByLevelAndMasteryAndType } from "../../../models/mock/fantasy/equip-data";
 import { getHeroItemsByLevelAndMasteryAndVariantAndStats } from "../../../models/mock/fantasy/hero-data";

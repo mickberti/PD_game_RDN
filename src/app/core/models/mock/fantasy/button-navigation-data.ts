@@ -53,13 +53,6 @@ export const fantasyBottomUtils	: BottomNavItem[] = [{
 		active: "active",
 		frame: {name: "settings", effect: "none" },
 	}, {
-		id: "gameplay-tester",
-		title: "game",
-		description: "Gameplay test launcher",
-		route: "/utils/game",
-		active: "active",
-		frame: {name: "controller", effect: "none" },
-	}, {
 		id: "mock",
 		title: "mock",
 		description: "mock",

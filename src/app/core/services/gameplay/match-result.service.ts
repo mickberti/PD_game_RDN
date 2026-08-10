@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 
 import { ChestItem } from '../../models/game.models';
 import { StatisticType } from '../../models/remote/progress.models';
-import { GameResult } from '../../models/phaser-game-state.model';
+import { GameResult } from '../../models/match-result.model';
 import { GameStateService } from '../state/game-state.service';
 import { InventoryMutationService } from '../inventory/inventory-mutation.service';
 import { StatisticProgressService } from '../progression/statistic-progress.service';

@@ -112,7 +112,7 @@ export class MockDataService {
       title: "Single Race",
       description: "Gara rapida arcade.",
       frame: { name: "crystal_single", effect: "none" },
-      route: "/game-mode",
+      route: "/gameplay",
       progress: null,
     },
     {
@@ -214,7 +214,7 @@ export class MockDataService {
       title: "Time Challenge",
       description: "Sfida veloce con timer e chest rara.",
       frame: { name: "crystal_single", effect: "none" },
-      route: "/game-mode",
+      route: "/gameplay",
       progress: null,
     },
     {

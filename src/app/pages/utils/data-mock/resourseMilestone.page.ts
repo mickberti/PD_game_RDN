@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, Input } from '@angular/core';
 import { IonContent, IonFooter, IonToolbar } from '@ionic/angular/standalone';
-import { EQUIP_LEVEL_FACTORS, HERO_LEVEL_FACTORS, HERO_STAT_FACTORS } from '../../../core/game/phaser/config/game-variables.config';
+import { EQUIP_LEVEL_FACTORS, HERO_LEVEL_FACTORS, HERO_STAT_FACTORS } from '../../../core/config/game-progression.config';
 import { PriceItem, ResourceItem, ResourceTypeId } from '../../../core/models/game.models';
 import { resourceItemsMock, resourceTypesMock } from '../../../core/models/mock/fantasy/resource-data';
 import { UiSpriteComponent } from '../../../shared/basic/ui-sprite.component';

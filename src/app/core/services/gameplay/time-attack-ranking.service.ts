@@ -13,7 +13,7 @@ import {
 import { PricingService } from "../economy/pricing.service";
 import { GameStateService } from "../state/game-state.service";
 import { HeroItem, ScoreItem } from "../../models/game.models";
-import { GameResult } from "../../models/phaser-game-state.model";
+import { GameResult } from "../../models/match-result.model";
 
 export interface TimeAttackRankingEntry {
   id: string;

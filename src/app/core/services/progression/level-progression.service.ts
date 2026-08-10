@@ -1,9 +1,9 @@
 import { Injectable, inject } from "@angular/core";
 import { AttributeType, BonusType, EquipItem, EquipType, HeroAttribute, HeroItem, Progress, ResourceItem, ResourceTypeId } from "../../models/game.models";
 import { PricingService, type LevelUpgradeCost, type UpgradePricingFactors } from "../economy/pricing.service";
-import { EQUIP_LEVEL_FACTORS, HERO_LEVEL_FACTORS, HERO_STAT_FACTORS, PROGRESSION_RESOURCE_CONFIG, type LevelProgressionFactors } from "../../game/phaser/config/game-variables.config";
+import { EQUIP_LEVEL_FACTORS, HERO_LEVEL_FACTORS, HERO_STAT_FACTORS, PROGRESSION_RESOURCE_CONFIG, type LevelProgressionFactors } from "../../config/game-progression.config";
 export type { LevelUpgradeCost } from "../economy/pricing.service";
-export type { LevelProgressionFactors } from "../../game/phaser/config/game-variables.config";
+export type { LevelProgressionFactors } from "../../config/game-progression.config";
 
 const clamp = (value: number, min: number, max: number): number => Math.max(min, Math.min(max, value));
 const safeNumber = (value: number | undefined, fallback = 0): number => Number.isFinite(value) ? (value as number) : fallback;

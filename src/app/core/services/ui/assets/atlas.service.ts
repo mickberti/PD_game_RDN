@@ -25,22 +25,6 @@ import { atlasData as atlasFantasyBgStoryDataSet1 } from 'src/assets/ui/fantasy_
 import { atlasData as atlasFantasyBgBadgesDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-badges-set1';
 import { atlasData as atlasFantasyBgHudsDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-hud-set1';
 
-import { atlasData as gameMinigameSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-minigame-set1';
-import { atlasData as gameMinigameSet2 } from 'src/assets/game/fantasy_bg/atlas/atlas-minigame-set2';
-import { atlasData as gameMinigameSet3 } from 'src/assets/game/fantasy_bg/atlas/atlas-minigame-set3';
-import { atlasData as gameFloorAtlas } from 'src/assets/game/fantasy_bg/atlas/atlas-game-pavimento-set1';
-import { atlasData as gameWallAtlas } from 'src/assets/game/fantasy_bg/atlas/atlas-game-walls-set1';
-import { atlasData as gamePropsAtlas } from 'src/assets/game/fantasy_bg/atlas/atlas-game-oggetti-set1';
-import { atlasData as gameActionAtlas } from 'src/assets/game/fantasy_bg/atlas/atlas-game-action-set1';
-import { atlasData as gameRuneAtlasSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-rune-set1';
-import { atlasData as gameRuneAtlasSet2 } from 'src/assets/game/fantasy_bg/atlas/atlas-rune-set2';
-import { atlasData as gameRuneAtlasSet3 } from 'src/assets/game/fantasy_bg/atlas/atlas-rune-set3';
-import { atlasData as gameTrapsDirAtlasSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-traps-dir-set1';
-
-
-
-import { HERO_GAME_ATLAS_OPTIONS } from 'src/app/core/game/phaser/config/hero-atlas.config';
-import { MONSTER_GAME_ATLAS_OPTIONS } from 'src/app/core/game/phaser/config/monster-atlas.config';
 
 
 export interface AtlasFrame {
@@ -111,11 +95,7 @@ export class AtlasService {
 	atlasFantasyBgEventDataSet1,
 	atlasFantasyBgStoryDataSet1,
 	atlasFantasyBgBadgesDataSet1,
-  atlasFantasyBgHudsDataSet1,
-	gameFloorAtlas,
-    gameWallAtlas,
-    gamePropsAtlas,
-    gameActionAtlas
+  atlasFantasyBgHudsDataSet1
   ];
   
   private readonly atlasDataSets: AtlasDataSet[] = [
@@ -147,33 +127,13 @@ export class AtlasService {
 	{ id: 'fantasy-bg-story-type-set1', label: 'Fantasy BG - Story Type Set 1', data: atlasFantasyBgStoryDataSet1 },
 	{ id: 'fantasy-bg-badges-type-set1', label: 'Fantasy BG - Badges Type Set 1', data: atlasFantasyBgBadgesDataSet1 },
 
-  { id: 'fantasy-bg-game-minigame-set1', label: 'Fantasy BG - Game Minigame Set 1', data: gameMinigameSet1 },
-  { id: 'fantasy-bg-game-minigame-set2', label: 'Fantasy BG - Game Minigame Set 2', data: gameMinigameSet2 },
-  { id: 'fantasy-bg-game-minigame-set3', label: 'Fantasy BG - Game Minigame Set 3', data: gameMinigameSet3 },
-	{ id: 'fantasy-bg-game-floor-set1', label: 'Fantasy BG - Game Floor Set 1', data: gameFloorAtlas },
-	{ id: 'fantasy-bg-game-walls-set1', label: 'Fantasy BG - Game Walls Set 1', data: gameWallAtlas },
-    { id: 'fantasy-bg-game-props-set1', label: 'Fantasy BG - Game Props Set 1', data: gamePropsAtlas },
-    { id: 'fantasy-bg-game-action-set1', label: 'Fantasy BG - Game Action Set 1', data: gameActionAtlas },
-    { id: 'fantasy-bg-game-rune-set1', label: 'Fantasy BG - Game Rune Set 1', data: gameRuneAtlasSet1 },
-    { id: 'fantasy-bg-game-rune-set2', label: 'Fantasy BG - Game Rune Set 1', data: gameRuneAtlasSet2 },
-    { id: 'fantasy-bg-game-rune-set3', label: 'Fantasy BG - Game Rune Set 1', data: gameRuneAtlasSet3 },
-    { id: 'fantasy-bg-game-traps-dir-set1', label: 'Fantasy BG - Game traps dir Set 1', data: gameTrapsDirAtlasSet1 }
   ];
-  
-  readonly configuredHeroAtlasOptions: AtlasConfigOption[] = HERO_GAME_ATLAS_OPTIONS.map((option) => ({
-	  id: option.id,
-	  label: option.label,
-	  data: option.atlasData as AtlasDataSet
-	}));
 
-  readonly configuredAtlasHeroOptions: AtlasConfigOption[] = [
-	...this.configuredHeroAtlasOptions,
-  	...MONSTER_GAME_ATLAS_OPTIONS.map((option) => ({
-	  id: option.id,
-	  label: option.label,
-	  data: option.atlasData as AtlasDataSet
-	})),
-	];
+  /**
+   * Compatibility list for the generic atlas utility. Removed hero and monster
+   * sheets now fall back to the remaining UI atlases.
+   */
+  readonly configuredAtlasHeroOptions: AtlasConfigOption[] = this.configuredAtlasOptions;
 
   /**
    * Risolve il frame di un atlas partendo dal nome logico usato dai componenti UI.

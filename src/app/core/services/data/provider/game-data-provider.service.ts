@@ -13,7 +13,7 @@ import { RemoteConfigService } from '../remote/config.service';
 import { ProgressService } from '../remote/progress.service';
 import { ShopService, resolveAvailableShopItems } from '../remote/shop.service';
 import { ItemService } from '../remote/item.service';
-import { PLAYER_STATE_CONFIG } from '../../../game/phaser/config/game-variables.config';
+import { PLAYER_STATE_CONFIG } from '../../../config/game-progression.config';
 import { TimeService } from '../../utils/time.service';
 import { getActiveGameEvents } from '../../utils/availability/game-event-availability.util';
 import { createInitialPlayerInventory } from '../../inventory/factories/player-inventory.factory';

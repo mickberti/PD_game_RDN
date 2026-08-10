@@ -29,7 +29,7 @@ import { ThemeService } from "../app/theme/theme.service";
 import { RemoteConfigDocument } from "../../models/remote/config.model";
 import { AvailabilityWindow, GameEvent } from "../../models/remote/event.model";
 
-import { PLAYER_STATE_CONFIG } from "../../game/phaser/config/game-variables.config";
+import { PLAYER_STATE_CONFIG } from "../../config/game-progression.config";
 import { EMPTY_GAME_CATALOG, GameCatalog } from "../../models/game-catalog.model";
 import { ProgressStoreService } from "./progress-store.service";
 import { buildShopItemsByProgress } from "../shop/shop-generation.service";

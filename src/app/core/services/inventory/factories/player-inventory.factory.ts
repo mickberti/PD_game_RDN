@@ -1,4 +1,4 @@
-import { PLAYER_STATE_CONFIG } from "../../../game/phaser/config/game-variables.config";
+import { PLAYER_STATE_CONFIG } from "../../../config/game-progression.config";
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from "../../../models/game.models";
 import { mockHeroItems } from "../../../models/mock/fantasy/hero-data";
 import { recalculateHeroProgression } from "../../progression/level-progression.service";

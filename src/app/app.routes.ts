@@ -64,14 +64,6 @@ export const routes: Routes = [
       import("./pages/utils/data-mock/resourseMilestone.page").then((m) => m.ResourseMilestonePage),
   },
   {
-    path: "utils/component-animation",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/components/animation/animation.page").then(
-        (m) => m.AnimationPage,
-      ),
-  },
-  {
     path: "utils/component-viewer-icons",
 	canActivate: [AdminGuard],
     loadComponent: () =>
@@ -105,30 +97,6 @@ export const routes: Routes = [
     data: { atlasScope: "heroes" },
   },
   {
-    path: "utils/frame-order",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/frame/frame-order/frame-order.page").then(
-        (m) => m.FrameOrderPage,
-      ),
-  },
-  {
-    path: "utils/frame-test",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/frame/frame-test/frame-test.page").then(
-        (m) => m.FrameTestPage,
-      ),
-  },
-  {
-    path: "utils/atlas-sequence",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/frame/atlas-sequence/atlas-sequence.page").then(
-        (m) => m.AtlasSequencePage,
-      ),
-  },
-  {
     path: "utils/frame-fix",
 	canActivate: [AdminGuard],
     loadComponent: () =>
@@ -137,51 +105,11 @@ export const routes: Routes = [
       ),
   },
   {
-    path: "utils/game/slot-machine-test",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/game/slot-machine-test.page").then(
-        (m) => m.SlotMachineTestPage,
-      ),
-  },
-  {
-    path: "utils/game/minigame/:type",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/game/minigame-player.page").then(
-        (m) => m.MinigamePlayerPage,
-      ),
-  },
-  {
-    path: "utils/game/effect-test",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/game/effect-test/effect-test.page").then(
-        (m) => m.EffectTestPage,
-      ),
-  },
-  {
-    path: "utils/game",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/game/gameplay-tester.page").then(
-        (m) => m.GameplayTesterPage,
-      ),
-  },
-  {
-    path: "game-mode/:modeId",
+    path: "gameplay",
 	canActivate: [AuthGuard],
     loadComponent: () =>
-      import("./pages/game-mode/game-mode.page").then(
-        (m) => m.GameModePage,
-      ),
-  },
-  {
-    path: "game-mode",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/game-mode/game-mode.page").then(
-        (m) => m.GameModePage,
+      import("./pages/gameplay/gameplay-page.component").then(
+        (m) => m.GameplayPageComponent,
       ),
   },
   {
@@ -230,30 +158,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import("./pages/hero-equip/hero-equip.page").then(
         (m) => m.HeroEquipPage,
-      ),
-  },
-  {
-    path: "gameplay",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/gameplay/phaser-game-launcher.page").then(
-        (m) => m.PhaserGameLauncherPage,
-      ),
-  },
-  {
-    path: "gameplay/time-attack",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/gameplay/phaser-game-page.component").then(
-        (m) => m.PhaserGamePageComponent,
-      ),
-  },
-  {
-    path: "gameplay/adventure",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/gameplay/phaser-adventure-game-page.component").then(
-        (m) => m.PhaserAdventureGamePageComponent,
       ),
   },
   {

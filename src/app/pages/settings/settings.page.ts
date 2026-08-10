@@ -66,7 +66,6 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
         <ui-button variant="secondary">{{ t('community') }}</ui-button>
         <ui-button variant="secondary">{{ t('aboutUs') }}</ui-button>
         <ui-button variant="complementary" (pressed)="nav.go('utils/component-atlas-icon')" >{{ t('support') }}</ui-button>
-        <ui-button variant="complementary" (pressed)="nav.go('utils/game')">game tester</ui-button>
         <ui-button variant="complementary" (pressed)="levelUpAllUserItems()">levelup</ui-button>
         <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
         <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>

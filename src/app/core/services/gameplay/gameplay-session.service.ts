@@ -1,7 +1,6 @@
 import { Injectable } from "@angular/core";
 import { ModeItem } from "../../models/game.models";
 import {
-  GameplayDebugMinigameType,
   GameplaySession,
   GameplaySessionLaunchOptions,
   GameplaySessionLaunchOverrides,
@@ -14,7 +13,6 @@ const GAMEPLAY_LEVEL_STORAGE_KEY = "activeMatchLevel";
 const GAMEPLAY_MASTERY_STORAGE_KEY = "activeMatchMastery";
 const GAMEPLAY_VARIANT_STORAGE_KEY = "activeMatchVariant";
 const GAMEPLAY_LAUNCH_OVERRIDES_STORAGE_KEY = "activeMatchLaunchOverrides";
-const GAMEPLAY_DEBUG_MINIGAME_STORAGE_KEY = "activeMatchDebugMinigame";
 
 @Injectable({ providedIn: "root" })
 export class GameplaySessionService {
@@ -32,7 +30,6 @@ export class GameplaySessionService {
     );
     this.persistSession(session);
     this.persistLaunchOverrides(options?.overrides ?? null);
-    this.persistDebugMinigame(options?.debugMinigame ?? null);
     return session;
   }
 
@@ -47,7 +44,7 @@ export class GameplaySessionService {
   }
 
   getRouteForVariant(variant: GameplaySessionVariant): string {
-    return `/gameplay/${variant}`;
+    return "/gameplay";
   }
 
   getLaunchOverrides(): GameplaySessionLaunchOverrides | undefined {
@@ -65,14 +62,6 @@ export class GameplaySessionService {
 
   updateLaunchOverrides(overrides: GameplaySessionLaunchOverrides | null): void {
     this.persistLaunchOverrides(overrides);
-  }
-
-  consumeDebugMinigame(): GameplayDebugMinigameType | null {
-    const value = localStorage.getItem(GAMEPLAY_DEBUG_MINIGAME_STORAGE_KEY);
-    localStorage.removeItem(GAMEPLAY_DEBUG_MINIGAME_STORAGE_KEY);
-    return value === "monster" || value === "trap" || value === "treasure"
-      ? value
-      : null;
   }
 
   resolveVariant(modeId: string | null | undefined): GameplaySessionVariant {
@@ -119,17 +108,6 @@ export class GameplaySessionService {
       GAMEPLAY_LAUNCH_OVERRIDES_STORAGE_KEY,
       JSON.stringify(overrides),
     );
-  }
-
-  private persistDebugMinigame(
-    debugMinigame: GameplayDebugMinigameType | null,
-  ): void {
-    if (!debugMinigame) {
-      localStorage.removeItem(GAMEPLAY_DEBUG_MINIGAME_STORAGE_KEY);
-      return;
-    }
-
-    localStorage.setItem(GAMEPLAY_DEBUG_MINIGAME_STORAGE_KEY, debugMinigame);
   }
 
   private readString(key: string, fallback: string): string {

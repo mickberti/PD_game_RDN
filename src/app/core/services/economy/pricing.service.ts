@@ -1,8 +1,8 @@
 import { ShopItem } from "../../models/shop.models";
 import { Injectable } from "@angular/core";
 import { ChestItem, EquipItem, HeroItem, PriceItem, PriceType, ResourceItem, ResourceTypeId, variantsType } from "../../models/game.models";
-import { PRICE_ATTRIBUTION_CONFIG } from "../../game/phaser/config/game-variables.config";
-export type { CurrencyPricingConfig, CatalogPricingConfig, PriceAttributionConfig } from "../../game/phaser/config/game-variables.config";
+import { PRICE_ATTRIBUTION_CONFIG } from "../../config/game-progression.config";
+export type { CurrencyPricingConfig, CatalogPricingConfig, PriceAttributionConfig } from "../../config/game-progression.config";
 
 /**
  * Rappresenta i saldi monetari standard del giocatore.

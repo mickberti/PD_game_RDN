@@ -10,9 +10,6 @@ interface UtilityHeaderLink {
 }
 
 const FRAME_LINKS: UtilityHeaderLink[] = [
-  { label: "Frame Order", route: "/utils/frame-order" },
-  { label: "Frame Test", route: "/utils/frame-test" },
-  { label: "Atlas Sequence", route: "/utils/atlas-sequence" },
   { label: "Frame Fix", route: "/utils/frame-fix" },  
   { label: "Frame Animation", route: "/utils/frame-animation" },
 ];
@@ -39,9 +36,6 @@ const DATA_LINKS: UtilityHeaderLink[] = [
 ];
 
 const GAME_LINKS: UtilityHeaderLink[] = [
-  { label: "Gameplay Tester", route: "/utils/game" },
-  { label: "Slot Machine Test", route: "/utils/game/slot-machine-test" },
-  { label: "Effect Test", route: "/utils/game/effect-test" },
 ];
 
 @Component({
