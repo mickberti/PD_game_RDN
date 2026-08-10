@@ -10,6 +10,10 @@
 @import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800;900&display=swap");
 
+app-gameplay .rnd-outer-ring { width: min(98vw, 590px) !important; z-index: 4; pointer-events: none; }
+app-gameplay .rnd-wheel { width: min(78vw, 470px) !important; }
+app-gameplay .rnd-wheel:not(.is-dragging) { transition: transform 300ms cubic-bezier(.16, 1.35, .3, 1) !important; }
+
 .game-result-banner {
   position: relative;
   z-index: 5;
@@ -82,4 +86,3 @@
   color: var(--accent-gold-bg);
   text-shadow: var(--text-shadow-strong);
 }
-
