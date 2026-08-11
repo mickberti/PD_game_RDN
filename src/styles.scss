@@ -21,7 +21,14 @@ app-gameplay .rnd-connection.active { color: #64ed87; background: linear-gradien
 app-gameplay .rnd-connection.next { color: #f0c84f; background: repeating-linear-gradient(#f0c84f 0 8px, transparent 8px 13px); }
 app-gameplay .rnd-result { position: fixed; z-index: 20; left: 50%; top: 50%; width: min(330px, calc(100vw - 32px)); transform: translate(-50%, -50%); padding: 24px; border: 2px solid #c89f50; border-radius: 14px; background: #171914; color: #f7dc91; text-align: center; box-shadow: 0 18px 70px #000c; }
 app-gameplay .rnd-result h2 { margin-top: 0; font: 900 24px Georgia, serif; }
+app-gameplay .rnd-stars { margin: 12px 0; color: #ffe17a; font-size: 30px; letter-spacing: 4px; text-shadow: 0 0 8px #b77b20; }
 app-gameplay .rnd-result button { min-height: 44px; margin: 4px; border: 1px solid #cfab5b; border-radius: 8px; background: #263a2b; color: #fff0bd; font: 700 14px Arial; padding: 0 12px; }
+app-gameplay .rnd-board .rnd-hud { position: absolute; z-index: 8; inset: 0 0 auto; width: 100%; }
+app-gameplay .rnd-bonuses { position: absolute; z-index: 8; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; gap: clamp(16px, 7vw, 46px); }
+app-gameplay .rnd-bonus { position: relative; display: grid; place-items: center; width: clamp(58px, 16vw, 82px); aspect-ratio: 1; border: 3px solid #907143; border-radius: 50%; background: radial-gradient(circle at 35% 25%, #5daa63, #162d1e 70%); color: #f6dc93; box-shadow: 0 0 14px #254e31; font: 900 28px Georgia, serif; }
+app-gameplay .rnd-bonus.hammer { background: radial-gradient(circle at 35% 25%, #d2a94e, #453015 70%); }
+app-gameplay .rnd-bonus.compass { background: radial-gradient(circle at 35% 25%, #70b692, #17372d 70%); }
+app-gameplay .rnd-bonus b { position: absolute; right: -5px; bottom: -7px; display: grid; place-items: center; width: 27px; aspect-ratio: 1; border: 2px solid #aa803d; border-radius: 50%; background: #241b12; color: #ffe29a; font: 900 14px Arial; }
 
 .game-result-banner {
   position: relative;

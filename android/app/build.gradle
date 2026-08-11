@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.mberti.tec.vgGameWorkflowUi"
+    namespace = "com.mberti.tec.p-d-game-rdn"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.mberti.tec.vgGameWorkflowUi"
+        applicationId "com.mberti.tec.p-d-game-rdn"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
