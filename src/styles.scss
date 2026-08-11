@@ -13,6 +13,15 @@
 app-gameplay .rnd-outer-ring { width: min(98vw, 590px) !important; z-index: 4; pointer-events: none; }
 app-gameplay .rnd-wheel { width: min(78vw, 470px) !important; }
 app-gameplay .rnd-wheel:not(.is-dragging) { transition: transform 300ms cubic-bezier(.16, 1.35, .3, 1) !important; }
+app-gameplay .rnd-operation-banner { position: absolute; left: 50%; top: 15%; min-width: 48px; padding: 3px 5px; border: 1px solid #d8b45a; border-radius: 5px; background: #151917; color: #f9ebbd; font: 700 11px Arial; text-align: center; white-space: nowrap; }
+app-gameplay .rnd-operation-banner[data-trend="zero"] { border-color: #8eea89; color: #d5ffd0; }
+app-gameplay .rnd-operation-banner[data-trend="farther"] { border-color: #ef8585; color: #ffd2d2; }
+app-gameplay .rnd-connection { position: absolute; left: calc(50% - 2px); bottom: 49%; width: 4px; height: 43%; border-radius: 4px; opacity: .9; box-shadow: 0 0 10px currentColor; }
+app-gameplay .rnd-connection.active { color: #64ed87; background: linear-gradient(#64ed87, #1d6940); }
+app-gameplay .rnd-connection.next { color: #f0c84f; background: repeating-linear-gradient(#f0c84f 0 8px, transparent 8px 13px); }
+app-gameplay .rnd-result { position: fixed; z-index: 20; left: 50%; top: 50%; width: min(330px, calc(100vw - 32px)); transform: translate(-50%, -50%); padding: 24px; border: 2px solid #c89f50; border-radius: 14px; background: #171914; color: #f7dc91; text-align: center; box-shadow: 0 18px 70px #000c; }
+app-gameplay .rnd-result h2 { margin-top: 0; font: 900 24px Georgia, serif; }
+app-gameplay .rnd-result button { min-height: 44px; margin: 4px; border: 1px solid #cfab5b; border-radius: 8px; background: #263a2b; color: #fff0bd; font: 700 14px Arial; padding: 0 12px; }
 
 .game-result-banner {
   position: relative;

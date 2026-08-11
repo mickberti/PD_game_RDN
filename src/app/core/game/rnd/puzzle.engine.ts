@@ -14,8 +14,10 @@ export class PuzzleEngine {
   getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): number | null {
     return level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null;
   }
-  previews(level: LevelDefinition, state: PuzzleState): AlignmentPreview[] {
-    return level.activeSlots.map((slot) => {
+  phaseIndex(level: LevelDefinition, impulses: number): number { return impulses % level.slotPhases.length; }
+  previews(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): AlignmentPreview[] {
+    const phase = level.slotPhases[modulo(this.phaseIndex(level, state.impulses) + phaseOffset, level.slotPhases.length)];
+    return phase.map((slot) => {
       const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation); const innerValue = this.getInnerValue(level, state, innerIndex); const outerValue = state.outerValues[slot.outerIndex]; const result = innerValue === null || outerValue === 0 ? outerValue : outerValue + innerValue;
       return { slot, innerIndex, innerValue, outerValue, result, active: innerValue !== null && outerValue !== 0, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" };
     });
@@ -32,5 +34,5 @@ export class PuzzleEngine {
   }
   serialize(state: PuzzleState): string { return JSON.stringify({ version: 1, ...snapshot(state) }); }
   deserialize(level: LevelDefinition, raw: string): PuzzleState { const parsed = JSON.parse(raw) as { version: number } & PuzzleSnapshot; if (parsed.version !== 1) throw new Error("Unsupported puzzle save version"); return restore(level, parsed, []); }
-  private assertLevel(level: LevelDefinition): void { if (level.positions < 4 || level.outerValues.length !== level.positions || level.activeSlots.some((slot) => slot.outerIndex < 0 || slot.outerIndex >= level.positions) || (level.variant === "persistent" ? level.innerValues.length !== level.positions : level.queues.length !== level.positions)) throw new Error(`Invalid RDN level ${level.id}`); }
+  private assertLevel(level: LevelDefinition): void { if (level.positions < 4 || level.outerValues.length !== level.positions || level.slotPhases.length === 0 || level.slotPhases.some((phase) => phase.some((slot) => slot.outerIndex < 0 || slot.outerIndex >= level.positions)) || (level.variant === "persistent" ? level.innerValues.length !== level.positions : level.queues.length !== level.positions)) throw new Error(`Invalid RDN level ${level.id}`); }
 }

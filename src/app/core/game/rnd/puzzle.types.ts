@@ -3,7 +3,7 @@ export type RotationDirection = "CW" | "CCW";
 export type PuzzleAction = { type: "ROTATE"; direction: RotationDirection; steps: number } | { type: "IMPULSE" } | { type: "UNDO" } | { type: "RESTART" };
 export interface PuzzleCost { impulses: number; rotationSteps: number; }
 export interface PuzzleSlot { outerIndex: number; phase?: number; }
-export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; activeSlots: PuzzleSlot[]; optimalCost?: PuzzleCost; tutorial?: string; }
+export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; /** Sequenza esplicita e interamente visibile di slot attivi a ogni impulso. */ slotPhases: PuzzleSlot[][]; optimalCost?: PuzzleCost; tutorial?: string; }
 export interface PersistentLevelDefinition extends BaseLevelDefinition { variant: "persistent"; innerValues: number[]; }
 export interface LoaderLevelDefinition extends BaseLevelDefinition { variant: "loader"; queues: number[][]; }
 export type LevelDefinition = PersistentLevelDefinition | LoaderLevelDefinition;

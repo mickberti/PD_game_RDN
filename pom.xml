@@ -2,9 +2,9 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<artifactId>vg-game-workflow-ui-angular</artifactId>
+	<artifactId>pd-game-rdn-angular</artifactId>
 	<packaging>jar</packaging>
-	<name>vg-game-workflow-ui-angular</name>
+	<name>pd-game-rdn-angular</name>
 	<!-- This configuration will download and install the node and npm as configured -->
 	<!-- in the pom file and npm install will install all modules listed as -->
 	<!-- dependencies in package.json and in the execution phase the final sources -->
