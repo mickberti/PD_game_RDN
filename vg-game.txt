@@ -99,34 +99,51 @@ pd-game-rnd
 
 {
   "project_info": {
-    "project_number": "926856915708",
-    "project_id": "p-d-game-rdn",
-    "storage_bucket": "p-d-game-rdn.firebasestorage.app"
+    "project_number": "594225946642",
+    "project_id": "pd-game-rdn",
+    "storage_bucket": "pd-game-rdn.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:926856915708:android:99d4d521ebf2a076204579",
+        "mobilesdk_app_id": "1:594225946642:android:a30df96d850ef7293138cb",
         "android_client_info": {
-          "package_name": "com.mberti.tec"
+          "package_name": "com.mberti.tec.pdGameRDN"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "594225946642-43kn8b3nh8vcjqj93uapfuefiademhg5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mberti.tec.pdGameRDN",
+            "certificate_hash": "1b35ff1d15d738a63d11040ab6c2397003b6ae05"
+          }
+        },
+        {
+          "client_id": "594225946642-qcc462fq8tkkp9208c70n9mar4o84dfj.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyB6VVTYheTQfh0D_HmLi4uQn7KIzWjEsL8"
+          "current_key": "AIzaSyC0C6Bl2WVT4IPYRvBMOO3P5oC7EHKALIU"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "594225946642-qcc462fq8tkkp9208c70n9mar4o84dfj.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
   ],
   "configuration_version": "1"
 }
-
 
 ===============================================================
 configurazione firestore
@@ -142,6 +159,7 @@ https://console.cloud.google.com/home/dashboard?project=progect_id
 https://console.cloud.google.com/apis/credentials
 
 nell'area id oauth 2.0 recuperare il client id e sostituirlo in environment.ts  webClientId
+!!! deve essere preso quello del webclient non android
 
 
 andare all'indirizzo
@@ -200,7 +218,7 @@ firebase appdistribution:distribute android/app/build/outputs/apk/debug/app-debu
 
 firebase appdistribution:distribute android/app/build/outputs/apk/debug/app-debug.apk --app 1:543668190170:android:d703e286c11c5c840edee3 --groups testers --release-notes "Il tuo messaggio di commit qui"
   
-firebase appdistribution:distribute android/app/build/outputs/apk/debug/app-debug.apk --app 1:926856915708:android:99d4d521ebf2a076204579 --groups testers --release-notes "Il tuo messaggio di commit qui"
+firebase appdistribution:distribute android/app/build/outputs/apk/debug/app-debug.apk --app 1:594225946642:android:a30df96d850ef7293138cb --groups testers --release-notes "Il tuo messaggio di commit qui"
 
 GENERAZIONE RILASCIO SU FIREBASE HOST
 ====================================================================

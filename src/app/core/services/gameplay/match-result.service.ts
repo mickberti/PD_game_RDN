@@ -156,7 +156,7 @@ export class MatchResultService {
       ...progress,
       gameModeLevels: {
         ...(progress.gameModeLevels ?? {}),
-        [modeId]: (progress.gameModeLevels?.[modeId] ?? 1) + 1,
+        [modeId]: (progress.gameModeLevels?.[modeId] ?? 0) + 1,
       },
       lastUpdatedAt: new Date().toISOString(),
     }));

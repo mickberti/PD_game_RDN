@@ -1,4 +1,4 @@
-import { AlignmentPreview, LevelDefinition, PuzzleAction, PuzzleSnapshot, PuzzleState } from "./puzzle.types";
+import { AlignmentPreview, LevelDefinition, PuzzleAction, PuzzleOperator, PuzzleSnapshot, PuzzleState } from "./puzzle.types";
 
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
 const snapshot = (state: PuzzleState): PuzzleSnapshot => ({ rotation: state.rotation, rotationTurns: state.rotationTurns, outerValues: [...state.outerValues], queueCursors: [...state.queueCursors], impulses: state.impulses, rotationSteps: state.rotationSteps, lastImpulseResults: [...state.lastImpulseResults], won: state.won });
@@ -11,14 +11,15 @@ export class PuzzleEngine {
     return { levelId: level.id, rotation: modulo(level.initialRotation, level.positions), rotationTurns: level.initialRotation, outerValues, queueCursors: Array(level.positions).fill(0), impulses: 0, rotationSteps: 0, lastImpulseResults: [], history: [], won: outerValues.every((value) => value === 0) };
   }
   getInnerIndex(level: LevelDefinition, outerIndex: number, rotation: number): number { return modulo(outerIndex - rotation, level.positions); }
-  getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): number | null {
+  getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null {
     return level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null;
   }
+  applyOperator(value: number, operator: PuzzleOperator): number { if (operator === "x2") return value * 2; if (operator === "divide2") return Math.trunc(value / 2); return value + operator; }
   phaseIndex(level: LevelDefinition, impulses: number): number { return impulses % level.slotPhases.length; }
   previews(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): AlignmentPreview[] {
     const phase = level.slotPhases[modulo(this.phaseIndex(level, state.impulses) + phaseOffset, level.slotPhases.length)];
     return phase.map((slot) => {
-      const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation); const innerValue = this.getInnerValue(level, state, innerIndex); const outerValue = state.outerValues[slot.outerIndex]; const result = innerValue === null || outerValue === 0 ? outerValue : outerValue + innerValue;
+      const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation); const innerValue = this.getInnerValue(level, state, innerIndex); const outerValue = state.outerValues[slot.outerIndex]; const result = innerValue === null || outerValue === 0 ? outerValue : this.applyOperator(outerValue, innerValue);
       return { slot, innerIndex, innerValue, outerValue, result, active: innerValue !== null && outerValue !== 0, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" };
     });
   }

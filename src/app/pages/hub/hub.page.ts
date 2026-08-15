@@ -15,6 +15,7 @@ import { UIEventBoxComponent } from "../../shared/components/box/ui-event-box.co
 import { UIEventDetailPopupComponent } from "../../shared/components/popup/ui-event-detail-popup.component";
 import { EventActivationService } from "../../core/services/progression/event-activation.service";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
+import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 
 const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack"]);
 
@@ -95,7 +96,8 @@ export class HubPage {
   contextActions = this.floating.contextActions;
 
   openMode(mode: ModeItem): void {
-    const matchLevel = this.state.progress().gameModeLevels?.[mode.id] ?? 1;
+    const completedLevel = Math.max(0, Math.min(RDN_MAX_LEVEL, this.state.progress().gameModeLevels?.[mode.id] ?? 0));
+    const matchLevel = Math.min(RDN_MAX_LEVEL, completedLevel + 1);
     const session = this.gameplaySession.startSession(mode, matchLevel, mode.mastery ?? 1);
     this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
   }

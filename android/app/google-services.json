@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "926856915708",
-    "project_id": "p-d-game-rdn",
-    "storage_bucket": "p-d-game-rdn.firebasestorage.app"
+    "project_number": "594225946642",
+    "project_id": "pd-game-rdn",
+    "storage_bucket": "pd-game-rdn.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:543668190170:android:d703e286c11c5c840edee3",
+        "mobilesdk_app_id": "1:594225946642:android:a30df96d850ef7293138cb",
         "android_client_info": {
-          "package_name": "com.mberti.tec.vgGameWorkflowUi"
+          "package_name": "com.mberti.tec.pdGameRDN"
         }
       },
       "oauth_client": [
         {
-          "client_id": "543668190170-mcefgr270k7t8oeqhevr4sgh39m4a9i0.apps.googleusercontent.com",
+          "client_id": "594225946642-43kn8b3nh8vcjqj93uapfuefiademhg5.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.mberti.tec.vgGameWorkflowUi",
+            "package_name": "com.mberti.tec.pdGameRDN",
             "certificate_hash": "1b35ff1d15d738a63d11040ab6c2397003b6ae05"
           }
         },
         {
-          "client_id": "543668190170-cdis5geelincbllvu79kplh8qn1a4mad.apps.googleusercontent.com",
+          "client_id": "594225946642-qcc462fq8tkkp9208c70n9mar4o84dfj.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyBnmnSRI8AjvC9tgidDFY7soTHPYcVDCvQ"
+          "current_key": "AIzaSyC0C6Bl2WVT4IPYRvBMOO3P5oC7EHKALIU"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "543668190170-cdis5geelincbllvu79kplh8qn1a4mad.apps.googleusercontent.com",
+              "client_id": "594225946642-qcc462fq8tkkp9208c70n9mar4o84dfj.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

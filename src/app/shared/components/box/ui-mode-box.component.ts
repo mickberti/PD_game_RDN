@@ -6,12 +6,12 @@ import { isAvailableNow } from "../../../core/services/utils/availability/availa
 import { UIProgressbarComponent } from "../../../shared/basic/ui-progress-bar.component";
 import { UIProgressStarsComponent } from "../../basic/ui-progress-stars.component";
 import { ModeMasteryProgressionService } from "../../../core/services/progression/mode-mastery-progression.service";
-import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
+import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
 
 @Component({
   selector: "ui-mode-box",
   standalone: true,
-  imports: [CommonModule, UiSpriteComponent, UIProgressbarComponent, UIProgressStarsComponent],
+  imports: [CommonModule, UIProgressbarComponent, UIProgressStarsComponent],
   template: `
     <button
       type="button"
@@ -20,7 +20,7 @@ import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
       [disabled]="!active()"
       (click)="select.emit(mode)"
     >
-      <ui-sprite class="mode-item__background" [frame]="mode.frame" [fit]="'cover'" [anchor]="'center'" />
+      <div class="mode-item__background" [style.background-image]="backgroundImage()" aria-hidden="true"></div>
       <ui-progress-stars class="mode-item__mastery" [mastery]="mastery()" direction="vertical" />
 
       <div class="mode-item__overlay">
@@ -28,6 +28,7 @@ import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
           <span class="mode-item__status" *ngIf="!active()">Non disponibile</span>
           <strong>{{ mode.title }}</strong>
           <span>{{ mode.description }}</span>
+		  <span class="mode-item__level">Livello {{ levelReached() }} / {{ maxLevel }}</span>
 		  <ui-progress-bar
 		    *ngIf="progress() as itemProgress"
 		    direction="horizontal"
@@ -68,6 +69,9 @@ import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
       inset: 0;
       width: 100%;
       height: 100%;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
     }
 
     .mode-item__overlay {
@@ -86,6 +90,7 @@ import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
     .mode-item__copy strong { font-size: 1.25rem; line-height: 1.1; }
     .mode-item__copy span { font-size: 0.9rem; line-height: 1.25; }
     .mode-item__status { width: fit-content; border-radius: 999px; padding: 3px 8px; background: rgba(0, 0, 0, 0.48); font-size: 0.72rem !important; text-transform: uppercase; letter-spacing: 0.06em; }
+    .mode-item__level { width: fit-content; border: 1px solid rgba(255, 213, 74, 0.76); border-radius: 999px; padding: 3px 8px; background: rgba(12, 8, 3, 0.58); color: #ffe39a; font-size: 0.78rem !important; font-weight: 800; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -95,12 +100,19 @@ export class ModeBoxComponent {
 
   private readonly state = inject(GameStateService);
   private readonly masteryProgression = inject(ModeMasteryProgressionService);
+  readonly maxLevel = RDN_MAX_LEVEL;
 
   readonly active = computed(() => isAvailableNow(this.mode?.availability));
+  readonly backgroundImage = computed(() => {
+    const filename = this.mode?.id === "time-attack" ? "game-set2.png" : "game-set3.png";
+    return `url('/assets/ui/fantasy_bg/${filename}')`;
+  });
 
   readonly masteryProgress = computed(() => this.masteryProgression.calculateFromNextMatchLevel(
-    this.state.progress().gameModeLevels?.[this.mode.id] ?? 1
+    this.levelReached() + 1
   ));
+
+  readonly levelReached = computed(() => Math.max(0, Math.min(this.maxLevel, this.state.progress().gameModeLevels?.[this.mode?.id] ?? 0)));
 
   readonly mastery = computed(() => this.masteryProgress().mastery);
 

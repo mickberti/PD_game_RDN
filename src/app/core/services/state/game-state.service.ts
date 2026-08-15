@@ -479,7 +479,6 @@ export class GameStateService {
     const shop = this.flattenPlayerShop(progress.shop);
 
     if (deferred) {
-      failures.push("shop");
       this.logger.logWarning(
         "[GameStateService] player shop regeneration deferred: catalog not ready",
       );
