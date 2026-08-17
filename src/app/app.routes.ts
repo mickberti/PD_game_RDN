@@ -113,6 +113,18 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "utils/rnd-solutions/adventure",
+    canActivate: [AdminGuard],
+    loadComponent: () => import("./pages/utils/rnd-solutions/rnd-solution-table.page").then((m) => m.RdnSolutionTablePage),
+    data: { variant: "adventure" },
+  },
+  {
+    path: "utils/rnd-solutions/time-attack",
+    canActivate: [AdminGuard],
+    loadComponent: () => import("./pages/utils/rnd-solutions/rnd-solution-table.page").then((m) => m.RdnSolutionTablePage),
+    data: { variant: "time-attack" },
+  },
+  {
     path: "stats-hero",
 	canActivate: [AuthGuard],
     loadComponent: () =>

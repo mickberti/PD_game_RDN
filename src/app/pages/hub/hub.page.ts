@@ -23,6 +23,12 @@ type HubListItem =
   | { type: "mode"; item: ModeItem }
   | { type: "event"; item: GameEvent };
 
+interface LevelPickerItem {
+  number: number;
+  unlocked: boolean;
+  stars: number;
+}
+
 @Component({
   selector: "app-hub",
   standalone: true,
@@ -39,7 +45,7 @@ type HubListItem =
         <section class="screen-list hub-list">
           @for (entry of hubItems(); track trackHubItem(entry)) {
             @if (entry.type === "mode") {
-              <ui-mode-box [mode]="entry.item" (select)="openMode($event)" />
+              <ui-mode-box [mode]="entry.item" (select)="openMode($event)" (selectLevels)="openLevelPicker($event)" />
             } @else {
 			  <ui-event-box  [event]="entry.item" (selected)="openEvent($event)" />
             }
@@ -55,6 +61,36 @@ type HubListItem =
           [onPrimaryAction]="activateEvent"
           [onDismiss]="closeEventDetail"
         />
+
+        @if (levelPickerMode(); as mode) {
+          <div class="level-picker-backdrop" role="presentation" (click)="closeLevelPicker()">
+            <section class="level-picker" role="dialog" aria-modal="true" [attr.aria-label]="'Livelli ' + mode.title" (click)="$event.stopPropagation()">
+              <header class="level-picker__header">
+                <div>
+                  <span>SELEZIONA LIVELLO</span>
+                  <h2>{{ mode.title }}</h2>
+                  <p>★ {{ totalStars(mode) }} / {{ maxGameStars }} stelle raccolte</p>
+                </div>
+                <button type="button" class="level-picker__close" (click)="closeLevelPicker()" aria-label="Chiudi selettore livelli">×</button>
+              </header>
+              <div class="level-picker__grid">
+                @for (level of levelsFor(mode); track level.number) {
+                  <button
+                    type="button"
+                    class="level-picker__level"
+                    [class.level-picker__level--locked]="!level.unlocked"
+                    [disabled]="!level.unlocked"
+                    (click)="openLevel(mode, level.number)"
+                    [attr.aria-label]="level.unlocked ? 'Gioca livello ' + level.number : 'Livello ' + level.number + ' bloccato'"
+                  >
+                    <strong>{{ level.number }}</strong>
+                    <span>{{ level.unlocked ? starLabel(level.stars) : '🔒' }}</span>
+                  </button>
+                }
+              </div>
+            </section>
+          </div>
+        }
       </div>
 
       <ui-floating-panel
@@ -76,6 +112,19 @@ type HubListItem =
   `,
   styles: [`
     .hub-list { display: grid; gap: 18px; padding-bottom: 96px; }
+    .level-picker-backdrop { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(3, 5, 10, .76); }
+    .level-picker { width: min(560px, 100%); max-height: min(680px, calc(100dvh - 40px)); overflow: auto; border: 2px solid #b98c38; border-radius: 22px; padding: 20px; color: #f7e9c7; background: linear-gradient(145deg, #292015, #0d1219); box-shadow: 0 20px 65px rgba(0, 0, 0, .65); }
+    .level-picker__header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 18px; }
+    .level-picker__header span { color: #e0b959; font-size: .72rem; font-weight: 800; letter-spacing: .12em; }
+    .level-picker__header h2 { margin: 4px 0; font-size: 1.5rem; }
+    .level-picker__header p { margin: 0; color: #ffdc6d; font-weight: 800; }
+    .level-picker__close { width: 36px; height: 36px; border: 1px solid #d9ad54; border-radius: 50%; color: #ffe8a0; background: rgba(0, 0, 0, .32); font-size: 1.5rem; }
+    .level-picker__grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .level-picker__level { display: grid; min-height: 65px; place-items: center; gap: 4px; border: 1px solid #bf9042; border-radius: 12px; color: #ffedbe; background: rgba(104, 69, 25, .42); }
+    .level-picker__level strong { font-size: 1.1rem; }
+    .level-picker__level span { min-height: 16px; color: #ffdc5f; font-size: .76rem; letter-spacing: -1px; }
+    .level-picker__level--locked { border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.35); background: rgba(0,0,0,.25); }
+    .level-picker__level--locked span { color: rgba(255,255,255,.32); letter-spacing: 0; }
   `],
 })
 export class HubPage {
@@ -87,6 +136,8 @@ export class HubPage {
   private readonly gameplaySession = inject(GameplaySessionService);
 
   readonly selectedEvent = signal<GameEvent | null>(null);
+  readonly levelPickerMode = signal<ModeItem | null>(null);
+  readonly maxGameStars = RDN_MAX_LEVEL * 3;
   readonly highlightEvents = computed(() => this.state.events().filter((event) => event.type === "highlight"));
   readonly hubItems = computed<HubListItem[]>(() => this.buildHubItems(
     this.theme.modes().filter((mode) => ACTIVE_GAME_MODE_IDS.has(mode.id)),
@@ -97,7 +148,47 @@ export class HubPage {
 
   openMode(mode: ModeItem): void {
     const completedLevel = Math.max(0, Math.min(RDN_MAX_LEVEL, this.state.progress().gameModeLevels?.[mode.id] ?? 0));
-    const matchLevel = Math.min(RDN_MAX_LEVEL, completedLevel + 1);
+    this.launchLevel(mode, Math.min(RDN_MAX_LEVEL, completedLevel + 1));
+  }
+
+  openLevelPicker(mode: ModeItem): void {
+    this.levelPickerMode.set(mode);
+  }
+
+  closeLevelPicker(): void {
+    this.levelPickerMode.set(null);
+  }
+
+  openLevel(mode: ModeItem, level: number): void {
+    if (level > this.unlockedThrough(mode)) return;
+    this.closeLevelPicker();
+    this.launchLevel(mode, level);
+  }
+
+  levelsFor(mode: ModeItem): LevelPickerItem[] {
+    const unlockedThrough = this.unlockedThrough(mode);
+    const stars = this.state.progress().gameModeLevelStars?.[mode.id] ?? {};
+    return Array.from({ length: RDN_MAX_LEVEL }, (_, index) => {
+      const number = index + 1;
+      return { number, unlocked: number <= unlockedThrough, stars: Math.max(0, Math.min(3, Number(stars[String(number)]) || 0)) };
+    });
+  }
+
+  totalStars(mode: ModeItem): number {
+    return Object.values(this.state.progress().gameModeLevelStars?.[mode.id] ?? {})
+      .reduce((total, stars) => total + Math.max(0, Math.min(3, Number(stars) || 0)), 0);
+  }
+
+  starLabel(stars: number): string {
+    return stars > 0 ? "★".repeat(stars) + "☆".repeat(3 - stars) : "☆☆☆";
+  }
+
+  private unlockedThrough(mode: ModeItem): number {
+    const completedLevel = Math.max(0, Math.min(RDN_MAX_LEVEL, this.state.progress().gameModeLevels?.[mode.id] ?? 0));
+    return Math.min(RDN_MAX_LEVEL, completedLevel + 1);
+  }
+
+  private launchLevel(mode: ModeItem, matchLevel: number): void {
     const session = this.gameplaySession.startSession(mode, matchLevel, mode.mastery ?? 1);
     this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
   }

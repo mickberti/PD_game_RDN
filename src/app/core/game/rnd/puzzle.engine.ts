@@ -1,23 +1,37 @@
 import { AlignmentPreview, LevelDefinition, PuzzleAction, PuzzleOperator, PuzzleSnapshot, PuzzleState } from "./puzzle.types";
 
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
-const snapshot = (state: PuzzleState): PuzzleSnapshot => ({ rotation: state.rotation, rotationTurns: state.rotationTurns, outerValues: [...state.outerValues], queueCursors: [...state.queueCursors], impulses: state.impulses, rotationSteps: state.rotationSteps, lastImpulseResults: [...state.lastImpulseResults], won: state.won });
-const restore = (level: LevelDefinition, value: PuzzleSnapshot, history: PuzzleSnapshot[]): PuzzleState => ({ levelId: level.id, ...value, outerValues: [...value.outerValues], queueCursors: [...value.queueCursors], lastImpulseResults: [...(value.lastImpulseResults ?? [])], history });
+const snapshot = (state: PuzzleState): PuzzleSnapshot => ({ rotation: state.rotation, rotationTurns: state.rotationTurns, outerValues: [...state.outerValues], queueCursors: [...state.queueCursors], impulses: state.impulses, phaseCursor: state.phaseCursor, rotationSteps: state.rotationSteps, lastImpulseResults: [...state.lastImpulseResults], won: state.won });
+const restore = (level: LevelDefinition, value: PuzzleSnapshot, history: PuzzleSnapshot[]): PuzzleState => ({ levelId: level.id, ...value, phaseCursor: value.phaseCursor ?? value.impulses, outerValues: [...value.outerValues], queueCursors: [...value.queueCursors], lastImpulseResults: [...(value.lastImpulseResults ?? [])], history });
 
 export class PuzzleEngine {
   createInitialState(level: LevelDefinition): PuzzleState {
     this.assertLevel(level);
     const outerValues = [...level.outerValues];
-    return { levelId: level.id, rotation: modulo(level.initialRotation, level.positions), rotationTurns: level.initialRotation, outerValues, queueCursors: Array(level.positions).fill(0), impulses: 0, rotationSteps: 0, lastImpulseResults: [], history: [], won: outerValues.every((value) => value === 0) };
+    return { levelId: level.id, rotation: modulo(level.initialRotation, level.positions), rotationTurns: level.initialRotation, outerValues, queueCursors: Array(level.positions).fill(0), impulses: 0, phaseCursor: 0, rotationSteps: 0, lastImpulseResults: [], history: [], won: outerValues.every((value) => value === 0) };
   }
   getInnerIndex(level: LevelDefinition, outerIndex: number, rotation: number): number { return modulo(outerIndex - rotation, level.positions); }
   getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null {
     return level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null;
   }
   applyOperator(value: number, operator: PuzzleOperator): number { if (operator === "x2") return value * 2; if (operator === "divide2") return Math.trunc(value / 2); return value + operator; }
-  phaseIndex(level: LevelDefinition, impulses: number): number { return impulses % level.slotPhases.length; }
+  phaseIndex(level: LevelDefinition, phaseCursor: number): number { return modulo(phaseCursor, level.slotPhases.length); }
+  /** Ignores scheduled phases whose targets were already solved by an earlier valid operation. */
+  private relevantPhaseIndex(level: LevelDefinition, state: PuzzleState, phaseOffset: number): number {
+    let index = this.phaseIndex(level, state.phaseCursor);
+    let remaining = phaseOffset;
+    for (let inspected = 0; inspected < level.slotPhases.length; inspected += 1) {
+      const phase = level.slotPhases[index];
+      if (phase.some((slot) => state.outerValues[slot.outerIndex] !== 0)) {
+        if (remaining === 0) return index;
+        remaining -= 1;
+      }
+      index = modulo(index + 1, level.slotPhases.length);
+    }
+    return index;
+  }
   previews(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): AlignmentPreview[] {
-    const phase = level.slotPhases[modulo(this.phaseIndex(level, state.impulses) + phaseOffset, level.slotPhases.length)];
+    const phase = level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)];
     return phase.map((slot) => {
       const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation); const innerValue = this.getInnerValue(level, state, innerIndex); const outerValue = state.outerValues[slot.outerIndex]; const result = innerValue === null || outerValue === 0 ? outerValue : this.applyOperator(outerValue, innerValue);
       return { slot, innerIndex, innerValue, outerValue, result, active: innerValue !== null && outerValue !== 0, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" };
@@ -29,10 +43,10 @@ export class PuzzleEngine {
     if (state.won) return state;
     const history = [...state.history, snapshot(state)];
     if (action.type === "ROTATE") { const steps = Math.max(0, Math.floor(action.steps)); const signed = action.direction === "CW" ? steps : -steps; return { ...state, rotation: modulo(state.rotation + signed, level.positions), rotationTurns: state.rotationTurns + signed, rotationSteps: state.rotationSteps + steps, history }; }
-    const previews = this.previews(level, state); const outerValues = [...state.outerValues]; const queueCursors = [...state.queueCursors];
+    const phaseCursor = this.relevantPhaseIndex(level, state, 0); const previews = this.previews(level, state); const outerValues = [...state.outerValues]; const queueCursors = [...state.queueCursors];
     const lastImpulseResults = previews.filter((preview) => preview.active).map((preview) => ({ outerIndex: preview.slot.outerIndex, result: preview.result, trend: preview.trend }));
     for (const preview of previews) if (preview.active && preview.innerValue !== null) { outerValues[preview.slot.outerIndex] = preview.result; if (level.variant === "loader") queueCursors[preview.innerIndex] += 1; }
-    return { ...state, outerValues, queueCursors, impulses: state.impulses + 1, lastImpulseResults, history, won: outerValues.every((value) => value === 0) };
+    return { ...state, outerValues, queueCursors, impulses: state.impulses + 1, phaseCursor: modulo(phaseCursor + 1, level.slotPhases.length), lastImpulseResults, history, won: outerValues.every((value) => value === 0) };
   }
   serialize(state: PuzzleState): string { return JSON.stringify({ version: 1, ...snapshot(state) }); }
   deserialize(level: LevelDefinition, raw: string): PuzzleState { const parsed = JSON.parse(raw) as { version: number } & PuzzleSnapshot; if (parsed.version !== 1) throw new Error("Unsupported puzzle save version"); return restore(level, parsed, []); }

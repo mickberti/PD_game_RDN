@@ -19,6 +19,14 @@ export const RDN_BOARD_LAYOUTS: Record<RdnBoardLayout["positions"], RdnBoardLayo
   8: { positions: 8, ring: { diameter: 2.18, offsetX: 0, offsetY: 0, angle: 0 }, gear: { diameter: 1.46, offsetX: 0, offsetY: 0, angle: 0 }, outerSlots: { radius: .91, angleOffset: 0, sphereRadius: .105, badgeOffsetX: -.09, badgeOffsetY: .105 }, innerSlots: { radius: .64, angleOffset: 0, sphereRadius: .095 }, impulse: { radius: .27, iconSize: .39 }, trail: { startRadius: .22, controlRadius: .60, bend: .08, sphereRadius: .15, glowWidth: .085, middleWidth: .05, coreWidth: .016 } },
 };
 
+/** Global presentation tuning, intentionally kept outside the scene for fast visual iteration. */
+export const RDN_PHASER_VISUAL_CONFIG = {
+  /** Percentage applied independently to width and height of the stretched background. */
+  backgroundScalePercent: 100,
+  /** Distance from the bottom edge for the three action buttons. */
+  actionButtonsBottomOffset: 75,
+} as const;
+
 export const getRdnBoardLayout = (positions: number): RdnBoardLayout => RDN_BOARD_LAYOUTS[positions as RdnBoardLayout["positions"]] ?? RDN_BOARD_LAYOUTS[6];
 export const rdnRingTextureKey = (layout: RdnBoardLayout, set: number): string => `rdn-ring-${layout.positions}-set${set}`;
 export const rdnGearTextureKey = (layout: RdnBoardLayout, set: number): string => `rdn-gear-${layout.positions}-set${set}`;

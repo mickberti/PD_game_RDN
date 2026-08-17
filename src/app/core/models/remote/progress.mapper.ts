@@ -54,6 +54,23 @@ const normalizeInventory = (progress?: LegacyGameProgressDocument | null): GameI
   };
 };
 
+const normalizeGameModeLevelStars = (value: unknown): Record<string, Record<string, number>> => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+
+  return Object.entries(value as Record<string, unknown>).reduce<Record<string, Record<string, number>>>((modes, [modeId, levels]) => {
+    if (!levels || typeof levels !== 'object' || Array.isArray(levels)) return modes;
+    const normalizedLevels = Object.entries(levels as Record<string, unknown>).reduce<Record<string, number>>((result, [level, stars]) => {
+      const numericStars = Number(stars);
+      if (Number.isFinite(numericStars) && numericStars >= 1) {
+        result[level] = Math.min(3, Math.floor(numericStars));
+      }
+      return result;
+    }, {});
+    if (Object.keys(normalizedLevels).length > 0) modes[modeId] = normalizedLevels;
+    return modes;
+  }, {});
+};
+
 export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | null): GameProgress => {
   const inventory = normalizeInventory(progress);
 
@@ -80,6 +97,7 @@ export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | nu
     gameModeLevels: {
       ...(progress?.gameModeLevels ?? {}),
     },
+    gameModeLevelStars: normalizeGameModeLevelStars(progress?.gameModeLevelStars),
     activatedEvents: {
       ...(progress?.activatedEvents ?? {}),
     },

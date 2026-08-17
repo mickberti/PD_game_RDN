@@ -1,4 +1,4 @@
-import { Injectable } from "@angular/core";
+import { Injectable, signal } from "@angular/core";
 import { ModeItem } from "../../models/game.models";
 import {
   GameplaySession,
@@ -16,6 +16,8 @@ const GAMEPLAY_LAUNCH_OVERRIDES_STORAGE_KEY = "activeMatchLaunchOverrides";
 
 @Injectable({ providedIn: "root" })
 export class GameplaySessionService {
+  private readonly activeSessionState = signal<GameplaySession>(this.readSession("adventure"));
+  readonly activeSession = this.activeSessionState.asReadonly();
   startSession(
     mode: ModeItem | null | undefined,
     matchLevel: number,
@@ -29,11 +31,18 @@ export class GameplaySessionService {
       options?.variant,
     );
     this.persistSession(session);
+    this.activeSessionState.set(session);
     this.persistLaunchOverrides(options?.overrides ?? null);
     return session;
   }
 
   getActiveSession(defaultVariant: GameplaySessionVariant = "time-attack"): GameplaySession {
+    const persisted = this.readSession(defaultVariant);
+    this.activeSessionState.set(persisted);
+    return persisted;
+  }
+
+  private readSession(defaultVariant: GameplaySessionVariant): GameplaySession {
     return {
       modeId: this.readString(GAMEPLAY_MODE_ID_STORAGE_KEY, "default"),
       modeTitle: this.readString(GAMEPLAY_MODE_TITLE_STORAGE_KEY, "Game Mode"),

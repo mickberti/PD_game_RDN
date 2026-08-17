@@ -82,6 +82,8 @@ export interface GameProgress {
   shop: PlayerShop;
   statistics: Record<StatisticType, number>;
   gameModeLevels: Record<string, number>;
+  /** Best star result for each completed RDN level, grouped by game mode. */
+  gameModeLevelStars: Record<string, Record<string, number>>;
   claimedStatisticAwardTiers: Partial<Record<StatisticType, number>>;
   purchasedShopItems?: Record<string, PurchasedShopItemProgress>;
   activatedEvents?: Record<string, ActivatedEventProgress>;
@@ -141,6 +143,7 @@ export const DEFAULT_GAME_PROGRESS: GameProgress = {
   dust: 0,
   statistics: DEFAULT_PLAYER_STATISTICS,
   gameModeLevels: {},
+  gameModeLevelStars: {},
   claimedStatisticAwardTiers: {},
   inventory: DEFAULT_GAME_INVENTORY,
   shop: DEFAULT_SHOP,

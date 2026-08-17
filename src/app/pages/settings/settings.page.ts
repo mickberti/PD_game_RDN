@@ -72,6 +72,14 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
         <ui-button variant="complementary" (pressed)="breakAllUserEquip()">broke equip</ui-button>
         <ui-button variant="complementary" [disabled]="resettingProgress()" (pressed)="resetUserProgress()">{{ resettingProgress() ? t('resettingProgress') : t('resetProgress') }}</ui-button>
       </div>
+      @if (isAdmin()) {
+        <ui-panel [variant]="'primary'" title="Strumenti amministratore">
+          <div class="settings-links">
+            <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/adventure')">Soluzioni Avventura</ui-button>
+            <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/time-attack')">Soluzioni Time Attack</ui-button>
+          </div>
+        </ui-panel>
+      }
 	  <div class="settings-links">
 	  <small>Version: v1.00</small>
       <small>ID: 460003500F73289</small>
@@ -97,6 +105,7 @@ export class SettingsPage {
   private readonly statisticProgress = inject(StatisticProgressService);
 
   readonly activeTheme = computed(() => this.theme.activeTheme());
+  readonly isAdmin = computed(() => this.gameState.player()?.role === 'admin');
   readonly music = signal(true);
   readonly sfx = signal(true);
   readonly gameServiceModeLabel = computed(() => this.gameState.isMockMode() ? 'Mock' : 'Remote');

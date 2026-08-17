@@ -13,11 +13,13 @@ import {
 import { IonContent } from "@ionic/angular/standalone";
 import * as Phaser from "phaser";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
+import { GameplaySession } from "../../core/models/gameplay-session.model";
 import { RdnPuzzleService } from "../../core/services/gameplay/rnd-puzzle.service";
 import { AppNavigationService } from "../../core/services/app/navigation/app-navigation.service";
 import { RdnPhaserScene } from "../../core/game/phaser/rnd-phaser.scene";
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 import { GameStateService } from "../../core/services/state/game-state.service";
+import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/rnd/puzzle-score.policy";
 
 @Component({
   selector: "app-gameplay",
@@ -55,9 +57,8 @@ import { GameStateService } from "../../core/services/state/game-state.service";
 export class GameplayPageComponent implements AfterViewInit {
   @ViewChild("gameHost", { static: true })
   private readonly host!: ElementRef<HTMLDivElement>;
-  private readonly session = inject(GameplaySessionService).getActiveSession(
-    "adventure",
-  );
+  private readonly gameplaySession = inject(GameplaySessionService);
+  private session: GameplaySession = this.gameplaySession.getActiveSession("adventure");
   private readonly puzzle = inject(RdnPuzzleService);
   private readonly state = inject(GameStateService);
   private readonly nav = inject(AppNavigationService);
@@ -70,8 +71,18 @@ export class GameplayPageComponent implements AfterViewInit {
   private timeAttackTimer?: ReturnType<typeof setInterval>;
   private readonly outcome = signal<"win" | "lose" | null>(null);
   private readonly timeRemaining = signal<number | null>(null);
+  private readonly showInfo = signal(false);
   constructor() {
     this.puzzle.load(this.session.variant, this.session.matchLevel);
+    effect(() => {
+      const nextSession = this.gameplaySession.activeSession();
+      if (this.sameSession(nextSession, this.session)) return;
+      this.session = nextSession;
+      this.puzzle.load(nextSession.variant, nextSession.matchLevel);
+      this.outcome.set(null);
+      this.showInfo.set(false);
+      this.resetTimeAttackTimer();
+    }, { injector: this.injector });
     this.destroyRef.onDestroy(() => {
       this.hostResizeObserver?.disconnect();
       if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
@@ -89,6 +100,8 @@ export class GameplayPageComponent implements AfterViewInit {
       continue: () => this.continue(),
       retry: () => this.restart(),
       exit: () => void this.nav.go("/hub"),
+      info: () => this.showInfo.set(true),
+      closeInfo: () => this.showInfo.set(false),
     });
     this.game = new Phaser.Game({
       type: Phaser.AUTO,
@@ -114,6 +127,7 @@ export class GameplayPageComponent implements AfterViewInit {
           nextPreviews: this.puzzle.nextPreviews(),
           outcome: this.outcome(),
           timeRemaining: this.timeRemaining(),
+          showInfo: this.showInfo(),
         };
         this.scene?.setModel(model);
       },
@@ -143,21 +157,27 @@ export class GameplayPageComponent implements AfterViewInit {
   ): void {
     this.puzzle.dispatch(action);
     this.outcome.set(null);
+    this.showInfo.set(false);
   }
   private impulse(): void {
     this.puzzle.dispatch({ type: "IMPULSE" });
-    if (this.puzzle.state().won) { this.recordCompletedLevel(); this.stopTimeAttackTimer(); }
+    const failed = hasPuzzleFailed(this.puzzle.level(), this.puzzle.state());
+    if (this.puzzle.state().won && !failed) {
+      this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state()));
+      this.stopTimeAttackTimer();
+    }
     this.outcome.set(
-      this.puzzle.state().won
+      failed
+        ? "lose"
+        : this.puzzle.state().won
         ? "win"
-        : this.puzzle.previews().some((preview) => preview.active)
-          ? null
-          : "lose",
+        : null,
     );
   }
   private restart(): void {
     this.puzzle.dispatch({ type: "RESTART" });
     this.outcome.set(null);
+    this.showInfo.set(false);
     this.resetTimeAttackTimer();
   }
   private continue(): void {
@@ -166,6 +186,7 @@ export class GameplayPageComponent implements AfterViewInit {
       Math.min(RDN_MAX_LEVEL, this.puzzle.level().number + 1),
     );
     this.outcome.set(null);
+    this.showInfo.set(false);
     this.resetTimeAttackTimer();
   }
   private resetTimeAttackTimer(): void {
@@ -186,14 +207,25 @@ export class GameplayPageComponent implements AfterViewInit {
     if (this.timeAttackTimer !== undefined) clearInterval(this.timeAttackTimer);
     this.timeAttackTimer = undefined;
   }
-  private recordCompletedLevel(): void {
+  private sameSession(a: GameplaySession, b: GameplaySession): boolean {
+    return a.modeId === b.modeId && a.matchLevel === b.matchLevel && a.mastery === b.mastery && a.variant === b.variant;
+  }
+  private recordCompletedLevel(stars: number): void {
     const completedLevel = this.puzzle.level().number;
     const modeId = this.session.modeId;
+    const levelKey = String(completedLevel);
     this.state.mutateProgress((progress) => ({
       ...progress,
       gameModeLevels: {
         ...(progress.gameModeLevels ?? {}),
         [modeId]: Math.max(0, Math.min(RDN_MAX_LEVEL, Math.max(progress.gameModeLevels?.[modeId] ?? 0, completedLevel))),
+      },
+      gameModeLevelStars: {
+        ...(progress.gameModeLevelStars ?? {}),
+        [modeId]: {
+          ...(progress.gameModeLevelStars?.[modeId] ?? {}),
+          [levelKey]: Math.max(progress.gameModeLevelStars?.[modeId]?.[levelKey] ?? 0, Math.max(1, Math.min(3, stars))),
+        },
       },
       lastUpdatedAt: new Date().toISOString(),
     }));

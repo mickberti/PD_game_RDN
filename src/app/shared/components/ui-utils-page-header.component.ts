@@ -36,6 +36,8 @@ const DATA_LINKS: UtilityHeaderLink[] = [
 ];
 
 const GAME_LINKS: UtilityHeaderLink[] = [
+  { label: "Soluzioni Avventura", route: "/utils/rnd-solutions/adventure" },
+  { label: "Soluzioni Time Attack", route: "/utils/rnd-solutions/time-attack" },
 ];
 
 @Component({

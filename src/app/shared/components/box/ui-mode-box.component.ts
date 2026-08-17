@@ -13,32 +13,25 @@ import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
   standalone: true,
   imports: [CommonModule, UIProgressbarComponent, UIProgressStarsComponent],
   template: `
-    <button
-      type="button"
-      class="mode-item"
-      [class.mode-item--inactive]="!active()"
-      [disabled]="!active()"
-      (click)="select.emit(mode)"
-    >
-      <div class="mode-item__background" [style.background-image]="backgroundImage()" aria-hidden="true"></div>
-      <ui-progress-stars class="mode-item__mastery" [mastery]="mastery()" direction="vertical" />
-
-      <div class="mode-item__overlay">
-        <div class="mode-item__copy">
-          <span class="mode-item__status" *ngIf="!active()">Non disponibile</span>
-          <strong>{{ mode.title }}</strong>
-          <span>{{ mode.description }}</span>
-		  <span class="mode-item__level">Livello {{ levelReached() }} / {{ maxLevel }}</span>
-		  <ui-progress-bar
-		    *ngIf="progress() as itemProgress"
-		    direction="horizontal"
-		    [progress]="itemProgress"
-		  />
+    <article class="mode-item" [class.mode-item--inactive]="!active()">
+      <button type="button" class="mode-item__launch" [disabled]="!active()" (click)="select.emit(mode)">
+        <div class="mode-item__background" [style.background-image]="backgroundImage()" aria-hidden="true"></div>
+        <ui-progress-stars class="mode-item__mastery" [mastery]="mastery()" direction="vertical" />
+        <div class="mode-item__overlay">
+          <div class="mode-item__copy">
+            <span class="mode-item__status" *ngIf="!active()">Non disponibile</span>
+            <strong>{{ mode.title }}</strong>
+            <span>{{ mode.description }}</span>
+            <span class="mode-item__level">Livello {{ playableLevel() }} / {{ maxLevel }}</span>
+            <span class="mode-item__stars">★ {{ totalStars() }} / {{ maxLevel * 3 }}</span>
+            <ui-progress-bar *ngIf="progress() as itemProgress" direction="horizontal" [progress]="itemProgress" />
+          </div>
         </div>
-
-
-      </div>
-    </button>
+      </button>
+      <button type="button" class="mode-item__levels" [disabled]="!active()" (click)="selectLevels.emit(mode)" aria-label="Scegli un livello">
+        ☷
+      </button>
+    </article>
   `,
   styles: [`
     :host { display: block; }
@@ -52,14 +45,22 @@ import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
       border: 0;
       border-radius: 24px;
       padding: 0;
+    }
+    .mode-item__launch {
+      display: block;
+      width: 100%;
+      min-height: 180px;
+      overflow: hidden;
+      border: 2px solid rgba(255, 213, 74, 0.85);
+      border-radius: 24px;
+      padding: 0;
       color: #fff;
       background: #151221;
       box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28);
       text-align: left;
-      border: 2px solid rgba(255, 213, 74, 0.85);
     }
 
-    .mode-item:not(:disabled) { cursor: pointer; }
+    .mode-item__launch:not(:disabled), .mode-item__levels:not(:disabled) { cursor: pointer; }
     .mode-item--inactive { filter: grayscale(0.8); opacity: 0.62; }
 
     .mode-item__mastery { position: absolute; top: 12px; right: 12px; z-index: 2; width: 36px; height: 36px; }
@@ -91,12 +92,15 @@ import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
     .mode-item__copy span { font-size: 0.9rem; line-height: 1.25; }
     .mode-item__status { width: fit-content; border-radius: 999px; padding: 3px 8px; background: rgba(0, 0, 0, 0.48); font-size: 0.72rem !important; text-transform: uppercase; letter-spacing: 0.06em; }
     .mode-item__level { width: fit-content; border: 1px solid rgba(255, 213, 74, 0.76); border-radius: 999px; padding: 3px 8px; background: rgba(12, 8, 3, 0.58); color: #ffe39a; font-size: 0.78rem !important; font-weight: 800; }
+    .mode-item__stars { width: fit-content; border-radius: 999px; padding: 3px 8px; background: rgba(38, 20, 2, .68); color: #ffd75d; font-size: .78rem !important; font-weight: 800; }
+    .mode-item__levels { position: absolute; z-index: 3; right: 12px; bottom: 12px; width: 42px; height: 42px; border: 1px solid rgba(255, 221, 119, .9); border-radius: 50%; color: #ffe8a1; background: rgba(17, 12, 5, .84); font-size: 1.45rem; line-height: 1; box-shadow: 0 3px 10px rgba(0, 0, 0, .55); }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ModeBoxComponent {
   @Input({ required: true }) mode!: ModeItem;
   @Output() select = new EventEmitter<ModeItem>();
+  @Output() selectLevels = new EventEmitter<ModeItem>();
 
   private readonly state = inject(GameStateService);
   private readonly masteryProgression = inject(ModeMasteryProgressionService);
@@ -113,6 +117,10 @@ export class ModeBoxComponent {
   ));
 
   readonly levelReached = computed(() => Math.max(0, Math.min(this.maxLevel, this.state.progress().gameModeLevels?.[this.mode?.id] ?? 0)));
+  /** The Hub shows the level that will actually start when this mode is selected. */
+  readonly playableLevel = computed(() => Math.min(this.maxLevel, this.levelReached() + 1));
+  readonly totalStars = computed(() => Object.values(this.state.progress().gameModeLevelStars?.[this.mode?.id] ?? {})
+    .reduce((total, stars) => total + Math.max(0, Math.min(3, Number(stars) || 0)), 0));
 
   readonly mastery = computed(() => this.masteryProgress().mastery);
 
