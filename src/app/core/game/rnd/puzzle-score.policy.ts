@@ -21,9 +21,18 @@ export const getPuzzleScorePolicy = (level: LevelDefinition): PuzzleScorePolicy 
 
 export const getPuzzleStars = (level: LevelDefinition, state: PuzzleState): number => {
   const policy = getPuzzleScorePolicy(level);
-  if (state.impulses <= policy.perfectImpulses && state.rotationSteps <= policy.perfectRotationSteps) return 3;
+  // Adventure rewards the solution length: rotations remain tactical and do not reduce stars.
+  if (state.impulses <= policy.perfectImpulses && (level.variant === "persistent" || state.rotationSteps <= policy.perfectRotationSteps)) return 3;
   if (state.impulses <= policy.twoStarImpulseLimit) return 2;
   return 1;
 };
 
-export const hasPuzzleFailed = (level: LevelDefinition, state: PuzzleState): boolean => state.impulses > getPuzzleScorePolicy(level).oneStarImpulseLimit;
+/** Adventure can fail only when its authored configuration declares a limit. */
+export const hasPuzzleFailed = (level: LevelDefinition, state: PuzzleState): boolean => {
+  if (level.variant === "persistent") {
+    const limits = level.adventure?.limits;
+    return (limits?.maxImpulses !== undefined && state.impulses > limits.maxImpulses)
+      || (limits?.maxRotationSteps !== undefined && state.rotationSteps > limits.maxRotationSteps);
+  }
+  return state.impulses > getPuzzleScorePolicy(level).oneStarImpulseLimit;
+};

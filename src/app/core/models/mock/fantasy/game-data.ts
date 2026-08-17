@@ -19,6 +19,15 @@ export const fantasyModes: ModeItem[] = [
 		progress: { descr: "",  current: 0, total: 1500, },
 		mastery: 1,
 	},
+	{
+		id: "free",
+		title: "Free",
+		description: "Puzzle illimitati senza vite o penalita.",
+		frame: { name: 'game-monster-portal', effect: 'none' },
+		route: "/gameplay",
+		progress: { descr: "", current: 0, total: 0 },
+		mastery: 1,
+	},
 	{	
 		id: "seasons",
 		title: "Seasons",

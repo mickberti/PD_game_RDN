@@ -81,6 +81,6 @@ export class RdnSolutionTablePage {
   readonly title = computed(() => this.variant === "adventure" ? "Soluzioni RDN · Avventura" : "Soluzioni RDN · Time Attack");
   readonly description = computed(() => "Catalogo dei 100 livelli, con sequenze per castone, rotazioni richieste e controllo di risolvibilità.");
 
-  operator(value: PuzzleOperator): string { return value === "x2" ? "×2" : value === "divide2" ? "÷2" : value > 0 ? `+${value}` : String(value); }
+  operator(value: PuzzleOperator): string { return value === "divide2" ? "÷2" : value > 0 ? `+${value}` : String(value); }
   operators(values: readonly PuzzleOperator[]): string { return values.map((value) => this.operator(value)).join(" · "); }
 }

@@ -13,6 +13,7 @@ const GAMEPLAY_LEVEL_STORAGE_KEY = "activeMatchLevel";
 const GAMEPLAY_MASTERY_STORAGE_KEY = "activeMatchMastery";
 const GAMEPLAY_VARIANT_STORAGE_KEY = "activeMatchVariant";
 const GAMEPLAY_LAUNCH_OVERRIDES_STORAGE_KEY = "activeMatchLaunchOverrides";
+const GAMEPLAY_LAUNCH_ID_STORAGE_KEY = "activeMatchLaunchId";
 
 @Injectable({ providedIn: "root" })
 export class GameplaySessionService {
@@ -30,9 +31,9 @@ export class GameplaySessionService {
       mastery,
       options?.variant,
     );
+    this.persistLaunchOverrides(options?.overrides ?? null);
     this.persistSession(session);
     this.activeSessionState.set(session);
-    this.persistLaunchOverrides(options?.overrides ?? null);
     return session;
   }
 
@@ -44,6 +45,7 @@ export class GameplaySessionService {
 
   private readSession(defaultVariant: GameplaySessionVariant): GameplaySession {
     return {
+      launchId: this.readString(GAMEPLAY_LAUNCH_ID_STORAGE_KEY, "restored"),
       modeId: this.readString(GAMEPLAY_MODE_ID_STORAGE_KEY, "default"),
       modeTitle: this.readString(GAMEPLAY_MODE_TITLE_STORAGE_KEY, "Game Mode"),
       matchLevel: this.readNumber(GAMEPLAY_LEVEL_STORAGE_KEY, 1),
@@ -74,7 +76,7 @@ export class GameplaySessionService {
   }
 
   resolveVariant(modeId: string | null | undefined): GameplaySessionVariant {
-    return modeId === "time-attack" ? "time-attack" : "adventure";
+    return modeId === "time-attack" ? "time-attack" : modeId === "free" ? "free" : "adventure";
   }
 
   private createSession(
@@ -84,6 +86,7 @@ export class GameplaySessionService {
     variant?: GameplaySessionVariant,
   ): GameplaySession {
     return {
+      launchId: this.createLaunchId(),
       modeId: mode?.id ?? "default",
       modeTitle: mode?.title ?? "Game Mode",
       matchLevel: this.normalizeNumber(matchLevel, 1),
@@ -93,6 +96,7 @@ export class GameplaySessionService {
   }
 
   private persistSession(session: GameplaySession): void {
+    localStorage.setItem(GAMEPLAY_LAUNCH_ID_STORAGE_KEY, session.launchId);
     localStorage.setItem(GAMEPLAY_MODE_ID_STORAGE_KEY, session.modeId);
     localStorage.setItem(GAMEPLAY_MODE_TITLE_STORAGE_KEY, session.modeTitle);
     localStorage.setItem(GAMEPLAY_LEVEL_STORAGE_KEY, String(session.matchLevel));
@@ -102,7 +106,7 @@ export class GameplaySessionService {
 
   private readVariant(fallback: GameplaySessionVariant): GameplaySessionVariant {
     const value = localStorage.getItem(GAMEPLAY_VARIANT_STORAGE_KEY);
-    return value === "time-attack" || value === "adventure" ? value : fallback;
+    return value === "time-attack" || value === "adventure" || value === "free" ? value : fallback;
   }
 
   private persistLaunchOverrides(
@@ -131,5 +135,9 @@ export class GameplaySessionService {
 
   private normalizeNumber(value: number, fallback: number): number {
     return Number.isFinite(value) && value > 0 ? Math.floor(value) : fallback;
+  }
+
+  private createLaunchId(): string {
+    return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
   }
 }

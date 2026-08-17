@@ -1,6 +1,7 @@
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { ShopItem } from '../shop.models';
 import { AvailabilityWindow } from './event.model';
+import { RdnActionLoadout } from '../../game/rnd/rdn-actions.config';
 
 export const STATISTIC_TYPES = [
   'enemiesKilled',
@@ -84,6 +85,7 @@ export interface GameProgress {
   gameModeLevels: Record<string, number>;
   /** Best star result for each completed RDN level, grouped by game mode. */
   gameModeLevelStars: Record<string, Record<string, number>>;
+  rdnActionLoadout?: RdnActionLoadout;
   claimedStatisticAwardTiers: Partial<Record<StatisticType, number>>;
   purchasedShopItems?: Record<string, PurchasedShopItemProgress>;
   activatedEvents?: Record<string, ActivatedEventProgress>;

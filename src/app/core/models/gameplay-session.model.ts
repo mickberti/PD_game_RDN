@@ -1,6 +1,10 @@
-export type GameplaySessionVariant = "time-attack" | "adventure";
+import { PuzzleDifficulty } from "../game/rnd/difficulty-profile.config";
+
+export type GameplaySessionVariant = "time-attack" | "adventure" | "free";
 
 export interface GameplaySession {
+  /** Changes on every launch, including when the player reopens the same mode. */
+  launchId: string;
   modeId: string;
   modeTitle: string;
   matchLevel: number;
@@ -9,7 +13,9 @@ export interface GameplaySession {
 }
 
 export interface GameplaySessionLaunchOverrides {
-  /** Spazio riservato ai parametri di lancio del prossimo motore di gioco. */
+  freeDifficulty?: PuzzleDifficulty;
+  freeSeed?: number;
+  freeSlotCount?: number;
 }
 
 export interface GameplaySessionLaunchOptions {

@@ -1,54 +1,47 @@
-import { AlignmentPreview, LevelDefinition, PuzzleAction, PuzzleOperator, PuzzleSnapshot, PuzzleState } from "./puzzle.types";
+import { AlignmentPreview, DEFAULT_PUZZLE_NUMBER_RANGE, FlowState, GameplayEvent, LevelDefinition, OperationAttemptResult, OperationRejectedReason, PuzzleAction, PuzzleOperator, PuzzleSnapshot, PuzzleState, QueueState } from "./puzzle.types";
 
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
-const snapshot = (state: PuzzleState): PuzzleSnapshot => ({ rotation: state.rotation, rotationTurns: state.rotationTurns, outerValues: [...state.outerValues], queueCursors: [...state.queueCursors], impulses: state.impulses, phaseCursor: state.phaseCursor, rotationSteps: state.rotationSteps, lastImpulseResults: [...state.lastImpulseResults], won: state.won });
-const restore = (level: LevelDefinition, value: PuzzleSnapshot, history: PuzzleSnapshot[]): PuzzleState => ({ levelId: level.id, ...value, phaseCursor: value.phaseCursor ?? value.impulses, outerValues: [...value.outerValues], queueCursors: [...value.queueCursors], lastImpulseResults: [...(value.lastImpulseResults ?? [])], history });
+const snapshot = (state: PuzzleState): PuzzleSnapshot => ({ rotation: state.rotation, rotationTurns: state.rotationTurns, outerValues: [...state.outerValues], targetVisualStates: [...state.targetVisualStates], queueCursors: [...state.queueCursors], consumedSpecialOperatorIndexes: [...state.consumedSpecialOperatorIndexes], impulses: state.impulses, phaseCursor: state.phaseCursor, rotationSteps: state.rotationSteps, lastImpulseResults: [...state.lastImpulseResults], lastOperationResults: [...state.lastOperationResults], lastGameplayEvents: [...state.lastGameplayEvents], won: state.won });
+const restore = (level: LevelDefinition, value: PuzzleSnapshot, history: PuzzleSnapshot[]): PuzzleState => ({ levelId: level.id, ...value, phaseCursor: value.phaseCursor ?? value.impulses, outerValues: [...value.outerValues], targetVisualStates: [...(value.targetVisualStates ?? value.outerValues.map((item) => item === 0 ? "OFF" : "ACTIVE"))], queueCursors: [...value.queueCursors], consumedSpecialOperatorIndexes: [...(value.consumedSpecialOperatorIndexes ?? [])], lastImpulseResults: [...(value.lastImpulseResults ?? [])], lastOperationResults: [...(value.lastOperationResults ?? [])], lastGameplayEvents: [...(value.lastGameplayEvents ?? [])], history });
 
+/** Pure puzzle-domain engine. Input, animation and rendering depend on its structured results. */
 export class PuzzleEngine {
-  createInitialState(level: LevelDefinition): PuzzleState {
-    this.assertLevel(level);
-    const outerValues = [...level.outerValues];
-    return { levelId: level.id, rotation: modulo(level.initialRotation, level.positions), rotationTurns: level.initialRotation, outerValues, queueCursors: Array(level.positions).fill(0), impulses: 0, phaseCursor: 0, rotationSteps: 0, lastImpulseResults: [], history: [], won: outerValues.every((value) => value === 0) };
-  }
+  createInitialState(level: LevelDefinition): PuzzleState { this.assertLevel(level); const outerValues = [...level.outerValues]; return { levelId: level.id, rotation: modulo(level.initialRotation, level.positions), rotationTurns: level.initialRotation, outerValues, targetVisualStates: Array(level.positions).fill("ACTIVE"), queueCursors: Array(level.positions).fill(0), consumedSpecialOperatorIndexes: [], impulses: 0, phaseCursor: 0, rotationSteps: 0, lastImpulseResults: [], lastOperationResults: [], lastGameplayEvents: [], history: [], won: false }; }
   getInnerIndex(level: LevelDefinition, outerIndex: number, rotation: number): number { return modulo(outerIndex - rotation, level.positions); }
-  getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null {
-    return level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null;
-  }
-  applyOperator(value: number, operator: PuzzleOperator): number { if (operator === "x2") return value * 2; if (operator === "divide2") return Math.trunc(value / 2); return value + operator; }
-  phaseIndex(level: LevelDefinition, phaseCursor: number): number { return modulo(phaseCursor, level.slotPhases.length); }
-  /** Ignores scheduled phases whose targets were already solved by an earlier valid operation. */
-  private relevantPhaseIndex(level: LevelDefinition, state: PuzzleState, phaseOffset: number): number {
-    let index = this.phaseIndex(level, state.phaseCursor);
-    let remaining = phaseOffset;
-    for (let inspected = 0; inspected < level.slotPhases.length; inspected += 1) {
-      const phase = level.slotPhases[index];
-      if (phase.some((slot) => state.outerValues[slot.outerIndex] !== 0)) {
-        if (remaining === 0) return index;
-        remaining -= 1;
-      }
-      index = modulo(index + 1, level.slotPhases.length);
-    }
-    return index;
-  }
-  previews(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): AlignmentPreview[] {
-    const phase = level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)];
-    return phase.map((slot) => {
-      const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation); const innerValue = this.getInnerValue(level, state, innerIndex); const outerValue = state.outerValues[slot.outerIndex]; const result = innerValue === null || outerValue === 0 ? outerValue : this.applyOperator(outerValue, innerValue);
-      return { slot, innerIndex, innerValue, outerValue, result, active: innerValue !== null && outerValue !== 0, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" };
+  getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null { const operator = level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null; return operator === "divide2" && state.consumedSpecialOperatorIndexes.includes(innerIndex) ? null : operator; }
+  queueStates(level: LevelDefinition, state: PuzzleState, previewCount = 2): readonly QueueState[] {
+    if (level.variant !== "loader") return [];
+    return level.queues.map((elements, innerIndex) => {
+      const currentIndex = state.queueCursors[innerIndex];
+      const remaining = elements.slice(currentIndex);
+      return { innerIndex, elements, currentIndex, current: remaining[0] ?? null, preview: remaining.slice(1, 1 + previewCount), remainingCount: remaining.length, exhausted: remaining.length === 0, refillRule: "none" };
     });
   }
-  apply(level: LevelDefinition, state: PuzzleState, action: PuzzleAction): PuzzleState {
-    if (action.type === "UNDO") { const previous = state.history.at(-1); return previous ? restore(level, previous, state.history.slice(0, -1)) : state; }
-    if (action.type === "RESTART") return this.createInitialState(level);
-    if (state.won) return state;
-    const history = [...state.history, snapshot(state)];
-    if (action.type === "ROTATE") { const steps = Math.max(0, Math.floor(action.steps)); const signed = action.direction === "CW" ? steps : -steps; return { ...state, rotation: modulo(state.rotation + signed, level.positions), rotationTurns: state.rotationTurns + signed, rotationSteps: state.rotationSteps + steps, history }; }
-    const phaseCursor = this.relevantPhaseIndex(level, state, 0); const previews = this.previews(level, state); const outerValues = [...state.outerValues]; const queueCursors = [...state.queueCursors];
-    const lastImpulseResults = previews.filter((preview) => preview.active).map((preview) => ({ outerIndex: preview.slot.outerIndex, result: preview.result, trend: preview.trend }));
-    for (const preview of previews) if (preview.active && preview.innerValue !== null) { outerValues[preview.slot.outerIndex] = preview.result; if (level.variant === "loader") queueCursors[preview.innerIndex] += 1; }
-    return { ...state, outerValues, queueCursors, impulses: state.impulses + 1, phaseCursor: modulo(phaseCursor + 1, level.slotPhases.length), lastImpulseResults, history, won: outerValues.every((value) => value === 0) };
+  /** The only place mathematical operations are evaluated. */
+  attemptOperation(level: LevelDefinition, outerIndex: number, value: number, operator: PuzzleOperator | null, specialAlreadyConsumed = false): OperationAttemptResult {
+    const reject = (reason: OperationRejectedReason): OperationAttemptResult => ({ outerIndex, operator, valid: false, previousValue: value, nextValue: value, rejectedReason: reason, resourceConsumed: false, events: ["OperationRejected"] });
+    if (operator === null) return reject("NO_OPERATOR"); if (value === 0) return reject("TARGET_ALREADY_RESOLVED"); if (operator === "divide2" && specialAlreadyConsumed) return reject("DIVIDE_BY_TWO_CONSUMED"); if (operator === "divide2" && (!Number.isInteger(value) || value % 2 !== 0)) return reject("DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER");
+    const nextValue = operator === "divide2" ? value / 2 : value + operator; const range = level.numberRange ?? DEFAULT_PUZZLE_NUMBER_RANGE;
+    if (nextValue < range.min || nextValue > range.max) return reject("RESULT_OUT_OF_RANGE");
+    const events: Array<OperationAttemptResult["events"][number]> = ["OperationApplied"]; if (operator === "divide2") events.push("SpecialResourceConsumed"); if (nextValue === 0) events.push("TargetReachedZero");
+    return { outerIndex, operator, valid: true, previousValue: value, nextValue, resourceConsumed: operator === "divide2", events };
   }
-  serialize(state: PuzzleState): string { return JSON.stringify({ version: 1, ...snapshot(state) }); }
-  deserialize(level: LevelDefinition, raw: string): PuzzleState { const parsed = JSON.parse(raw) as { version: number } & PuzzleSnapshot; if (parsed.version !== 1) throw new Error("Unsupported puzzle save version"); return restore(level, parsed, []); }
-  private assertLevel(level: LevelDefinition): void { if (level.positions < 4 || level.outerValues.length !== level.positions || level.slotPhases.length === 0 || level.slotPhases.some((phase) => phase.some((slot) => slot.outerIndex < 0 || slot.outerIndex >= level.positions)) || (level.variant === "persistent" ? level.innerValues.length !== level.positions : level.queues.length !== level.positions)) throw new Error(`Invalid RDN level ${level.id}`); }
+  phaseIndex(level: LevelDefinition, phaseCursor: number): number { return modulo(phaseCursor, level.slotPhases.length); }
+  private relevantPhaseIndex(level: LevelDefinition, state: PuzzleState, phaseOffset: number): number { let index = this.phaseIndex(level, state.phaseCursor); let remaining = phaseOffset; for (let inspected = 0; inspected < level.slotPhases.length; inspected += 1) { const phase = level.slotPhases[index]; if (phase.some((slot) => state.outerValues[slot.outerIndex] !== 0)) { if (remaining === 0) return index; remaining -= 1; } index = modulo(index + 1, level.slotPhases.length); } return index; }
+  flows(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): FlowState[] {
+    const maxFlows = Math.min(4, level.positions, Math.max(1, level.activeFlowCount ?? level.generation?.branchingFactor ?? 1));
+    return level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)].slice(0, maxFlows).map((slot) => { const sourceId = this.getInnerIndex(level, slot.outerIndex, state.rotation); const operator = this.getInnerValue(level, state, sourceId); const attempt = this.attemptOperation(level, slot.outerIndex, state.outerValues[slot.outerIndex], operator, state.consumedSpecialOperatorIndexes.includes(sourceId)); return { sourceId, targetId: slot.outerIndex, active: true, interactable: attempt.valid, blockedReason: attempt.rejectedReason }; });
+  }
+  previews(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): AlignmentPreview[] { const phase = level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)]; return phase.map((slot) => { const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation); const innerValue = this.getInnerValue(level, state, innerIndex); const outerValue = state.outerValues[slot.outerIndex]; const attempt = this.attemptOperation(level, slot.outerIndex, outerValue, innerValue, state.consumedSpecialOperatorIndexes.includes(innerIndex)); const result = attempt.nextValue; return { slot, innerIndex, innerValue, outerValue, result, active: attempt.valid, rejectedReason: attempt.rejectedReason, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" }; }); }
+  apply(level: LevelDefinition, state: PuzzleState, action: PuzzleAction): PuzzleState {
+    if (action.type === "UNDO") { const previous = state.history.at(-1); return previous ? restore(level, previous, state.history.slice(0, -1)) : state; } if (action.type === "RESTART") return this.createInitialState(level); if (state.won) return state;
+    const history = [...state.history, snapshot(state)]; if (action.type === "ROTATE") { const steps = Math.max(0, Math.floor(action.steps)); const signed = action.direction === "CW" ? steps : -steps; return { ...state, rotation: modulo(state.rotation + signed, level.positions), rotationTurns: state.rotationTurns + signed, rotationSteps: state.rotationSteps + steps, history }; }
+    const phaseCursor = this.relevantPhaseIndex(level, state, 0); const previews = this.previews(level, state); const outerValues = [...state.outerValues]; const targetVisualStates = [...state.targetVisualStates]; const queueCursors = [...state.queueCursors]; const consumedSpecialOperatorIndexes = [...state.consumedSpecialOperatorIndexes]; const lastOperationResults = previews.map((preview) => this.attemptOperation(level, preview.slot.outerIndex, preview.outerValue, preview.innerValue, consumedSpecialOperatorIndexes.includes(preview.innerIndex))); const lastGameplayEvents: GameplayEvent[] = [];
+    for (const result of lastOperationResults) if (result.valid) { const preview = previews.find((item) => item.slot.outerIndex === result.outerIndex)!; outerValues[result.outerIndex] = result.nextValue; lastGameplayEvents.push({ type: "OperationApplied", targetId: result.outerIndex, impulse: state.impulses + 1 }); if (result.nextValue === 0 && targetVisualStates[result.outerIndex] !== "OFF") { targetVisualStates[result.outerIndex] = "OFF"; lastGameplayEvents.push({ type: "TargetReachedZero", targetId: result.outerIndex, impulse: state.impulses + 1 }, { type: "TargetDeactivated", targetId: result.outerIndex, impulse: state.impulses + 1 }); } if (level.variant === "loader") queueCursors[preview.innerIndex] += 1; if (result.resourceConsumed) consumedSpecialOperatorIndexes.push(preview.innerIndex); }
+    const lastImpulseResults: PuzzleState["lastImpulseResults"] = lastOperationResults.filter((result) => result.valid).map((result) => ({ outerIndex: result.outerIndex, result: result.nextValue, trend: (result.nextValue === 0 ? "zero" : Math.abs(result.nextValue) < Math.abs(result.previousValue) ? "closer" : Math.abs(result.nextValue) === Math.abs(result.previousValue) ? "same" : "farther") as "zero" | "closer" | "same" | "farther" }));
+    return { ...state, outerValues, targetVisualStates, queueCursors, consumedSpecialOperatorIndexes, impulses: state.impulses + 1, phaseCursor: modulo(phaseCursor + 1, level.slotPhases.length), lastImpulseResults, lastOperationResults, lastGameplayEvents, history, won: outerValues.every((value) => value === 0) };
+  }
+  serialize(state: PuzzleState): string { return JSON.stringify({ version: 2, ...snapshot(state) }); }
+  deserialize(level: LevelDefinition, raw: string): PuzzleState { const parsed = JSON.parse(raw) as { version: number } & PuzzleSnapshot; if (parsed.version !== 1 && parsed.version !== 2) throw new Error("Unsupported puzzle save version"); return restore(level, parsed, []); }
+  private assertLevel(level: LevelDefinition): void { const range = level.numberRange ?? DEFAULT_PUZZLE_NUMBER_RANGE; if (!Number.isInteger(range.min) || !Number.isInteger(range.max) || range.min >= 0 || range.max <= 0 || range.min >= range.max || level.positions < 4 || level.outerValues.length !== level.positions || level.outerValues.some((value) => !Number.isInteger(value) || value === 0 || value < range.min || value > range.max) || level.slotPhases.length === 0 || level.slotPhases.some((phase) => phase.some((slot) => slot.outerIndex < 0 || slot.outerIndex >= level.positions)) || (level.variant === "persistent" ? level.innerValues.length !== level.positions : level.queues.length !== level.positions || level.queues.some((queue) => queue.some((operator) => operator === 0)))) throw new Error(`Invalid RDN level ${level.id}`); }
 }

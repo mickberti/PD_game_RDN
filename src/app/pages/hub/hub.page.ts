@@ -16,8 +16,9 @@ import { UIEventDetailPopupComponent } from "../../shared/components/popup/ui-ev
 import { EventActivationService } from "../../core/services/progression/event-activation.service";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
+import { PuzzleDifficulty } from "../../core/game/rnd/difficulty-profile.config";
 
-const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack"]);
+const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack", "free"]);
 
 type HubListItem =
   | { type: "mode"; item: ModeItem }
@@ -91,6 +92,16 @@ interface LevelPickerItem {
             </section>
           </div>
         }
+        @if (freeMode(); as mode) {
+          <div class="level-picker-backdrop" role="presentation" (click)="freeMode.set(null)">
+            <section class="level-picker" role="dialog" aria-modal="true" aria-label="Difficolta Free" (click)="$event.stopPropagation()">
+              <header class="level-picker__header"><div><span>FREE</span><h2>Scegli difficolta</h2><p>Partite illimitate, senza vite.</p></div></header>
+              <p class="free-picker__label">Gemme operative: {{ freeSlotCount() }}</p>
+              <div class="free-picker__slots">@for (count of freeSlotCounts; track count) { <button type="button" [class.free-picker__slot--selected]="freeSlotCount() === count" (click)="freeSlotCount.set(count)">{{ count }}</button> }</div>
+              <div class="level-picker__grid">@for (difficulty of freeDifficulties; track difficulty) { <button type="button" class="level-picker__level" (click)="startFree(mode, difficulty)"><strong>{{ difficulty }}</strong><span>{{ freeDescription(difficulty) }}</span></button> }</div>
+            </section>
+          </div>
+        }
       </div>
 
       <ui-floating-panel
@@ -125,6 +136,10 @@ interface LevelPickerItem {
     .level-picker__level span { min-height: 16px; color: #ffdc5f; font-size: .76rem; letter-spacing: -1px; }
     .level-picker__level--locked { border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.35); background: rgba(0,0,0,.25); }
     .level-picker__level--locked span { color: rgba(255,255,255,.32); letter-spacing: 0; }
+    .free-picker__label { margin: 8px 0; color: #ffdc6d; font-weight: 800; }
+    .free-picker__slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
+    .free-picker__slots button { min-height: 40px; border: 1px solid #bf9042; border-radius: 10px; color: #ffedbe; background: rgba(104, 69, 25, .42); font-weight: 800; }
+    .free-picker__slots .free-picker__slot--selected { border-color: #ffdc6d; background: rgba(178, 128, 33, .68); }
   `],
 })
 export class HubPage {
@@ -137,6 +152,10 @@ export class HubPage {
 
   readonly selectedEvent = signal<GameEvent | null>(null);
   readonly levelPickerMode = signal<ModeItem | null>(null);
+  readonly freeMode = signal<ModeItem | null>(null);
+  readonly freeDifficulties: readonly PuzzleDifficulty[] = ["EASY", "NORMAL", "HARD", "EXPERT"];
+  readonly freeSlotCounts = [4, 5, 6, 7, 8] as const;
+  readonly freeSlotCount = signal<number>(4);
   readonly maxGameStars = RDN_MAX_LEVEL * 3;
   readonly highlightEvents = computed(() => this.state.events().filter((event) => event.type === "highlight"));
   readonly hubItems = computed<HubListItem[]>(() => this.buildHubItems(
@@ -147,9 +166,16 @@ export class HubPage {
   contextActions = this.floating.contextActions;
 
   openMode(mode: ModeItem): void {
+    if (mode.id === "free") { this.freeMode.set(mode); return; }
     const completedLevel = Math.max(0, Math.min(RDN_MAX_LEVEL, this.state.progress().gameModeLevels?.[mode.id] ?? 0));
     this.launchLevel(mode, Math.min(RDN_MAX_LEVEL, completedLevel + 1));
   }
+
+  startFree(mode: ModeItem, difficulty: PuzzleDifficulty): void {
+    const session = this.gameplaySession.startSession(mode, 1, mode.mastery ?? 1, { variant: "free", overrides: { freeDifficulty: difficulty, freeSeed: Math.floor(Math.random() * 0x7fffffff), freeSlotCount: this.freeSlotCount() } });
+    this.freeMode.set(null); this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
+  }
+  freeDescription(difficulty: PuzzleDifficulty): string { return difficulty === "EASY" ? "Soluzioni brevi" : difficulty === "NORMAL" ? "Segni misti e DIV2" : difficulty === "HARD" ? "Piu flussi" : "Massima complessita"; }
 
   openLevelPicker(mode: ModeItem): void {
     this.levelPickerMode.set(mode);

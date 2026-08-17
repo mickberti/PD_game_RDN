@@ -1,19 +1,49 @@
 export type PuzzleVariant = "persistent" | "loader";
 export type RotationDirection = "CW" | "CCW";
 export type PuzzleAction = { type: "ROTATE"; direction: RotationDirection; steps: number } | { type: "IMPULSE" } | { type: "UNDO" } | { type: "RESTART" };
-/** A gear operator: signed additive values use magnitudes from 0 to 9. */
-export type PuzzleOperator = number | "x2" | "divide2";
-/** One independently solvable outer socket in the authored solution table. */
+
+/** A signed additive operand or the single-use DIV2 special. */
+export type PuzzleOperator = number | "divide2";
+/** Legacy level data used x2; it migrates safely to DIV2 and is never executed. */
+export type LegacyPuzzleOperator = PuzzleOperator | "x2";
+export const migrateLegacyPuzzleOperator = (operator: LegacyPuzzleOperator): PuzzleOperator => operator === "x2" ? "divide2" : operator;
+
+export type OperationRejectedReason = "NO_OPERATOR" | "TARGET_ALREADY_RESOLVED" | "DIVIDE_BY_TWO_CONSUMED" | "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" | "RESULT_OUT_OF_RANGE";
+export interface PuzzleNumberRange { min: number; max: number; policy: "reject"; }
+export const DEFAULT_PUZZLE_NUMBER_RANGE: PuzzleNumberRange = { min: -20, max: 20, policy: "reject" };
+export interface OperationAttemptResult { outerIndex: number; operator: PuzzleOperator | null; valid: boolean; previousValue: number; nextValue: number; rejectedReason?: OperationRejectedReason; resourceConsumed: boolean; events: readonly ("OperationApplied" | "SpecialResourceConsumed" | "TargetReachedZero" | "OperationRejected")[]; }
+
 export interface PuzzleSlotSolution { startValue: number; operators: PuzzleOperator[]; }
 export interface PuzzleSolutionMove { outerIndex: number; rotation: number; operator: PuzzleOperator; }
 export interface PuzzleCost { impulses: number; rotationSteps: number; }
 export interface PuzzleSlot { outerIndex: number; phase?: number; }
-/** Immutable feedback produced by the latest impulse, used by the presentation layer only. */
 export interface ImpulseResult { outerIndex: number; result: number; trend: "zero" | "closer" | "same" | "farther"; }
-export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; /** Sequenza esplicita e interamente visibile di slot attivi a ogni impulso. */ slotPhases: PuzzleSlot[][]; optimalCost?: PuzzleCost; tutorial?: string; /** Audit interno della soluzione generata, senza impatto sulla presentazione. */ solution?: PuzzleSlotSolution[]; solutionMoves?: PuzzleSolutionMove[]; }
-export interface PersistentLevelDefinition extends BaseLevelDefinition { variant: "persistent"; innerValues: PuzzleOperator[]; }
+/** Topology is independent from mathematical validity and can therefore remain visible when blocked. */
+export interface FlowState { sourceId: number; targetId: number; active: boolean; interactable: boolean; blockedReason?: OperationRejectedReason; }
+/** Read-only projection of a Time Attack operator queue. */
+export interface QueueState { innerIndex: number; elements: readonly PuzzleOperator[]; currentIndex: number; current: PuzzleOperator | null; preview: readonly PuzzleOperator[]; remainingCount: number; exhausted: boolean; refillRule: "none"; }
+export interface PuzzleGenerationMetadata { seed: number; generatorVersion: string; difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; estimatedMinimumSolutionLength: number; branchingFactor: number; featureFlags: readonly string[]; }
+/** Authored rules for an Adventure board. They are immutable and never live in global player progress. */
+export interface AdventureGameConfig {
+  version: 1;
+  seed: number;
+  levelVersion: string;
+  objectives: { readonly targetValues: readonly number[]; readonly requireAllTargetsZero: true };
+  limits?: { readonly maxImpulses?: number; readonly maxRotationSteps?: number };
+  enabledMechanics: readonly ("fixed-operators" | "special-inventory" | "rotation" | "impulse" | "lives" | "shield")[];
+  /** Counts only one-use operators; normal numeric operators are fixed and unlimited. */
+  specialInventory: Readonly<Partial<Record<"divide2", number>>>;
+  lives?: number;
+  shields?: number;
+}
+export type TargetVisualState = "ACTIVE" | "OFF";
+export interface GameplayEvent { type: "OperationApplied" | "TargetReachedZero" | "TargetDeactivated"; targetId: number; impulse: number; }
+
+export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; numberRange?: PuzzleNumberRange; activeFlowCount?: number; generation?: PuzzleGenerationMetadata; slotPhases: PuzzleSlot[][]; optimalCost?: PuzzleCost; tutorial?: string; solution?: PuzzleSlotSolution[]; solutionMoves?: PuzzleSolutionMove[]; }
+export interface PersistentLevelDefinition extends BaseLevelDefinition { variant: "persistent"; innerValues: PuzzleOperator[]; /** Present on authored Adventure levels; optional for isolated legacy fixtures. */ adventure?: AdventureGameConfig; }
 export interface LoaderLevelDefinition extends BaseLevelDefinition { variant: "loader"; queues: PuzzleOperator[][]; }
 export type LevelDefinition = PersistentLevelDefinition | LoaderLevelDefinition;
-export interface PuzzleState { levelId: string; rotation: number; rotationTurns: number; outerValues: number[]; queueCursors: number[]; impulses: number; /** Cursor della sequenza, separato dagli impulsi perché alcune fasi già risolte vengono saltate. */ phaseCursor: number; rotationSteps: number; lastImpulseResults: ImpulseResult[]; history: PuzzleSnapshot[]; won: boolean; }
-export interface PuzzleSnapshot { rotation: number; rotationTurns: number; outerValues: number[]; queueCursors: number[]; impulses: number; phaseCursor: number; rotationSteps: number; lastImpulseResults: ImpulseResult[]; won: boolean; }
-export interface AlignmentPreview { slot: PuzzleSlot; innerIndex: number; innerValue: PuzzleOperator | null; outerValue: number; result: number; active: boolean; trend: "zero" | "closer" | "same" | "farther"; }
+
+export interface PuzzleState { levelId: string; rotation: number; rotationTurns: number; outerValues: number[]; targetVisualStates: TargetVisualState[]; queueCursors: number[]; consumedSpecialOperatorIndexes: number[]; impulses: number; phaseCursor: number; rotationSteps: number; lastImpulseResults: ImpulseResult[]; lastOperationResults: OperationAttemptResult[]; lastGameplayEvents: GameplayEvent[]; history: PuzzleSnapshot[]; won: boolean; }
+export interface PuzzleSnapshot { rotation: number; rotationTurns: number; outerValues: number[]; targetVisualStates?: TargetVisualState[]; queueCursors: number[]; consumedSpecialOperatorIndexes?: number[]; impulses: number; phaseCursor: number; rotationSteps: number; lastImpulseResults: ImpulseResult[]; lastOperationResults?: OperationAttemptResult[]; lastGameplayEvents?: GameplayEvent[]; won: boolean; }
+export interface AlignmentPreview { slot: PuzzleSlot; innerIndex: number; innerValue: PuzzleOperator | null; outerValue: number; result: number; active: boolean; rejectedReason?: OperationRejectedReason; trend: "zero" | "closer" | "same" | "farther"; }

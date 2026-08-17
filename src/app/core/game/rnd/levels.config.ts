@@ -1,28 +1,28 @@
-import { LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
+import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
+import { PuzzleEngine } from "./puzzle.engine";
+import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 
 export const RDN_MAX_LEVEL = 100;
 
 /** Deterministic catalogue: a level always produces the same board and solution. */
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
 const random = (seed: number): (() => number) => { let state = seed >>> 0; return () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 0x1_0000_0000; }; };
-const positionsForLevel = (number: number): 4 | 5 | 6 | 8 => number <= 20 ? 4 : number <= 40 ? 5 : number <= 60 ? 6 : 8;
+const positionsForLevel = (number: number): 4 | 5 | 6 | 7 | 8 => number <= 20 ? 4 : number <= 40 ? 5 : number <= 60 ? 6 : 8;
 const impulsesPerValue = (number: number): number => number <= 3 ? 1 : Math.min(6, 2 + Math.floor((number - 4) / 16));
 const rotationDistance = (from: number, to: number, positions: number): number => Math.min(modulo(to - from, positions), modulo(from - to, positions));
 
-interface GeneratedBoard { positions: 4 | 5 | 6 | 8; initialRotation: number; innerValues: PuzzleOperator[]; loaderQueues: PuzzleOperator[][]; outerValues: number[]; slotPhases: Array<Array<{ outerIndex: number }>>; optimalCost: { impulses: number; rotationSteps: number }; solution: PuzzleSlotSolution[]; solutionMoves: PuzzleSolutionMove[]; }
+interface GeneratedBoard { positions: 4 | 5 | 6 | 7 | 8; initialRotation: number; innerValues: PuzzleOperator[]; loaderQueues: PuzzleOperator[][]; outerValues: number[]; slotPhases: Array<Array<{ outerIndex: number }>>; optimalCost: { impulses: number; rotationSteps: number }; solution: PuzzleSlotSolution[]; solutionMoves: PuzzleSolutionMove[]; seed: number; }
 interface ValuePlan { start: number; operators: PuzzleOperator[]; }
 
-/** Multipliers appear only in advanced levels and are forced into the generated solution. */
-const specialOperatorsForLevel = (level: number): PuzzleOperator[] => level >= 60 ? ["x2", "divide2"] : level >= 40 ? ["divide2"] : [];
+/** DIV2 is the only special operator and is introduced only in advanced levels. */
+const specialOperatorsForLevel = (level: number): PuzzleOperator[] => level >= 40 ? ["divide2"] : [];
 const gearOperators = (positions: number, level: number, specialOperators: readonly PuzzleOperator[]): PuzzleOperator[] => {
   const subtractorCount = positions - specialOperators.length;
   const maxMagnitude = Math.min(9, 2 + Math.floor((level - 1) / 12));
-  const magnitudes = Array.from({ length: subtractorCount }, (_, index) => index === 0 ? 1 : Math.min(maxMagnitude, index + 1));
-  // The late 8-socket board explicitly exposes the upper bound and the neutral operator.
-  if (positions === 8 && level >= 88) return [-1, -2, -3, -4, -9, 0, ...specialOperators];
-  return [...magnitudes.map((value) => -value), ...specialOperators];
+  const magnitudes = Array.from({ length: subtractorCount }, (_, index) => Math.min(maxMagnitude, 1 + Math.floor(index / 2)));
+  return [...magnitudes.map((value, index) => index % 2 === 0 ? -value : value), ...specialOperators];
 };
-const subtractors = (operators: PuzzleOperator[]): number[] => operators.filter((operator): operator is number => typeof operator === "number" && operator < 0);
+const additiveOperators = (operators: PuzzleOperator[]): number[] => operators.filter((operator): operator is number => typeof operator === "number" && operator !== 0);
 
 /** Produces a positive start value no greater than 20 which reaches zero in `count` subtractions. */
 const subtractivePlan = (count: number, available: number[], next: () => number, maximumStart = 20): ValuePlan => {
@@ -35,28 +35,29 @@ const subtractivePlan = (count: number, available: number[], next: () => number,
     values.push(selected);
     total += Math.abs(selected);
   }
-  return { start: total, operators: values };
+  // Additive operators must always move the generated target toward zero.
+  return { start: total * (values[0] < 0 ? 1 : -1), operators: values };
 };
 
-const planForValue = (impulses: number, available: number[], next: () => number, forcedOperator?: PuzzleOperator): ValuePlan => {
+const planForValue = (impulses: number, available: number[], next: () => number, maximumStart: number, forcedOperator?: PuzzleOperator): ValuePlan => {
   if (forcedOperator === "divide2") {
-    const remainder = next() < .5 ? 0 : 1;
-    const tail = subtractivePlan(impulses - 1, available, next, remainder === 0 ? 10 : 9);
-    return { start: tail.start * 2 + remainder, operators: ["divide2", ...tail.operators] };
+    const tail = subtractivePlan(impulses - 1, available, next, Math.floor(maximumStart / 2));
+    return { start: tail.start * 2, operators: ["divide2", ...tail.operators] };
   }
-  if (forcedOperator === "x2" && available.includes(-2)) {
-    return { start: impulses - 1, operators: ["x2", ...Array(impulses - 1).fill(-2)] };
-  }
-  return subtractivePlan(impulses, available, next);
+  return subtractivePlan(impulses, available, next, maximumStart);
 };
 
-const generateBoard = (number: number, seedOffset: number): GeneratedBoard => {
-  const positions = positionsForLevel(number);
+const generateBoard = (number: number, seedOffset: number, slotCount?: number): GeneratedBoard => {
+  const positions = slotCount && slotCount >= 4 && slotCount <= 8 ? slotCount as GeneratedBoard["positions"] : positionsForLevel(number);
   const impulses = impulsesPerValue(number);
-  const next = random(number * 977 + seedOffset);
+  const seed = number * 977 + seedOffset;
+  const next = random(seed);
   const specialOperators = specialOperatorsForLevel(number);
   const innerValues = gearOperators(positions, number, specialOperators);
-  const plans = Array.from({ length: positions }, (_, index) => planForValue(impulses, subtractors(innerValues), next, specialOperators[index]));
+  const allAdditives = additiveOperators(innerValues);
+  const range = DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange;
+  const maximumStart = Math.min(Math.abs(range.min), Math.abs(range.max));
+  const plans = Array.from({ length: positions }, (_, index) => planForValue(impulses, allAdditives.filter((operator) => index % 2 === 0 ? operator < 0 : operator > 0), next, maximumStart, specialOperators[index]));
   const loaderQueues = Array.from({ length: positions }, () => [] as PuzzleOperator[]);
   const cursors = Array<number>(positions).fill(0);
   const rotations: number[] = [];
@@ -83,19 +84,28 @@ const generateBoard = (number: number, seedOffset: number): GeneratedBoard => {
   let previousRotation = initialRotation;
   let rotationSteps = 0;
   for (const rotation of rotations) { rotationSteps += rotationDistance(previousRotation, rotation, positions); previousRotation = rotation; }
-  for (const queue of loaderQueues) if (queue.length === 0) queue.push(0);
-  return { positions, initialRotation, innerValues, loaderQueues, outerValues: plans.map((plan) => plan.start), slotPhases, optimalCost: { impulses: slotPhases.length, rotationSteps }, solution: plans.map((plan) => ({ startValue: plan.start, operators: [...plan.operators] })), solutionMoves };
+  return { positions, initialRotation, innerValues, loaderQueues, outerValues: plans.map((plan) => plan.start), slotPhases, optimalCost: { impulses: slotPhases.length, rotationSteps }, solution: plans.map((plan) => ({ startValue: plan.start, operators: [...plan.operators] })), solutionMoves, seed };
 };
 
-const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }, { outerIndex: 1 }, { outerIndex: 2 }, { outerIndex: 3 }]], optimalCost: { impulses: 1, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })) });
+const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }, { outerIndex: 1 }, { outerIndex: 2 }, { outerIndex: 3 }]], optimalCost: { impulses: 1, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })), seed: 0 });
+
+const generatedMetadata = (number: number, board: GeneratedBoard) => { const profile = DIFFICULTY_PROFILES[difficultyForLevel(number)]; return { seed: board.seed, generatorVersion: "rdn-generator-v2", difficulty: profile.id, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: profile.activeFlowCount, featureFlags: profile.featureFlags }; };
+const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameConfig => ({
+  version: 1,
+  seed: board.seed,
+  levelVersion: "rdn-adventure-v1",
+  objectives: { targetValues: [...board.outerValues], requireAllTargetsZero: true },
+  enabledMechanics: ["fixed-operators", "special-inventory", "rotation", "impulse"],
+  specialInventory: { divide2: board.innerValues.filter((operator) => operator === "divide2").length },
+});
 
 const persistent = (number: number): LevelDefinition => {
   const board = number <= 3 ? tutorialBoard() : generateBoard(number, 17);
-  return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1, variant: "persistent", ...board };
+  return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1, variant: "persistent", numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board };
 };
 const loader = (number: number): LevelDefinition => {
   const board = number <= 3 ? tutorialBoard() : generateBoard(number, 71);
-  return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1, variant: "loader", positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+  return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1, variant: "loader", numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
 };
 
 export const RDN_LEVELS: readonly LevelDefinition[] = [
@@ -104,8 +114,17 @@ export const RDN_LEVELS: readonly LevelDefinition[] = [
 ];
 export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): LevelDefinition => RDN_LEVELS.find((level) => level.variant === (variant === "adventure" ? "persistent" : "loader") && level.number === number) ?? RDN_LEVELS[0];
 
+/** Seedable entry point for replay, support and future ranked runs. */
+export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number): LevelDefinition => {
+  const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
+  const board = generateBoard(number, Math.trunc(seed), slotCount); const profile = DIFFICULTY_PROFILES[difficulty]; const generation = { ...generatedMetadata(number, board), seed: board.seed, difficulty };
+  return variant === "adventure"
+    ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1, variant: "persistent", numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
+    : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1, variant: "loader", numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+};
+
 export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; verified: boolean; }
-const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "x2" ? value * 2 : operator === "divide2" ? Math.trunc(value / 2) : value + operator;
+const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : value + operator;
 const verifiesSolution = (level: LevelDefinition): boolean => {
   const solution = level.solution ?? [];
   const moves = level.solutionMoves ?? [];
@@ -127,4 +146,19 @@ const verifiesSolution = (level: LevelDefinition): boolean => {
 export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = RDN_LEVELS.map((level) => ({ level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], verified: verifiesSolution(level) }));
 export const getRdnSolutionTable = (variant: "adventure" | "time-attack"): readonly PuzzleSolutionAudit[] => RDN_SOLUTION_TABLE.filter((row) => row.variant === variant);
 
+/** Replays every authored Adventure solution through the current engine rules. */
+export const validateAdventureLevelBatch = (): readonly { level: number; valid: boolean }[] => {
+  const engine = new PuzzleEngine();
+  return RDN_LEVELS.filter((level) => level.variant === "persistent").map((level) => {
+    let state = engine.createInitialState(level);
+    for (const move of level.solutionMoves ?? []) {
+      const delta = modulo(move.rotation - state.rotation, level.positions);
+      if (delta) state = engine.apply(level, state, { type: "ROTATE", direction: delta <= level.positions / 2 ? "CW" : "CCW", steps: delta <= level.positions / 2 ? delta : level.positions - delta });
+      state = engine.apply(level, state, { type: "IMPULSE" });
+    }
+    return { level: level.number, valid: state.won };
+  });
+};
+
 if (RDN_SOLUTION_TABLE.some((row) => !row.verified)) throw new Error("Invalid RDN solution table");
+if (validateAdventureLevelBatch().some((row) => !row.valid)) throw new Error("Invalid Adventure level batch");

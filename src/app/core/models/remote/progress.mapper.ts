@@ -1,5 +1,6 @@
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { DEFAULT_GAME_PROGRESS, DEFAULT_PLAYER_STATISTICS, GameInventory, GameProgress } from './progress.models';
+import { validateRdnActionLoadout } from '../../game/rnd/rdn-actions.config';
 
 export interface MockGameProgressSeed {
   resources?: ResourceItem[];
@@ -98,6 +99,7 @@ export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | nu
       ...(progress?.gameModeLevels ?? {}),
     },
     gameModeLevelStars: normalizeGameModeLevelStars(progress?.gameModeLevelStars),
+    rdnActionLoadout: validateRdnActionLoadout(progress?.rdnActionLoadout),
     activatedEvents: {
       ...(progress?.activatedEvents ?? {}),
     },
