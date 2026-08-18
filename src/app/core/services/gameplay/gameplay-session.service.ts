@@ -36,6 +36,10 @@ export class GameplaySessionService {
     this.activeSessionState.set(session);
     return session;
   }
+  startEffectPlayground(): GameplaySession {
+    const session: GameplaySession = { launchId: this.createLaunchId(), modeId: "effect-playground", modeTitle: "EFFECT PLAYGROUND", matchLevel: 1, mastery: 1, variant: "effect-playground" };
+    this.persistLaunchOverrides(null); this.persistSession(session); this.activeSessionState.set(session); return session;
+  }
 
   getActiveSession(defaultVariant: GameplaySessionVariant = "time-attack"): GameplaySession {
     const persisted = this.readSession(defaultVariant);
@@ -106,7 +110,7 @@ export class GameplaySessionService {
 
   private readVariant(fallback: GameplaySessionVariant): GameplaySessionVariant {
     const value = localStorage.getItem(GAMEPLAY_VARIANT_STORAGE_KEY);
-    return value === "time-attack" || value === "adventure" || value === "free" ? value : fallback;
+    return value === "time-attack" || value === "adventure" || value === "free" || value === "effect-playground" ? value : fallback;
   }
 
   private persistLaunchOverrides(

@@ -4,10 +4,12 @@ import { getPuzzleScorePolicy, getPuzzleStars } from "../rnd/puzzle-score.policy
 import { atlasData as gameActionAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-game-action-set1";
 import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-gem-set1";
 import { RDN_BOARD_LAYOUTS, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
+import { LevelEffectConfigResolver } from "../rnd/effects/level-effect-config.resolver";
+import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
 
 export interface RdnHudAction { icon: string; charges: number; disabled: boolean; }
-export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; }; outcome: "win" | "lose" | null; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
-export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): void; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; info(): void; closeInfo(): void; }
+export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; outcome: "win" | "lose" | null; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
+export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): void; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; info(): void; closeInfo(): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value > 0 ? `+${value}` : String(value);
 const VISUAL_SET_COUNT = 3;
 const BASE_SET_BY_VARIANT = { persistent: 1, loader: 2 } as const;
@@ -36,6 +38,9 @@ export class RdnPhaserScene extends Phaser.Scene {
   private lastZeroBurstKey = "";
   private lastOperationFloatKey = "";
   private operationFloatStartedAt = 0;
+  private readonly effectResolver = new LevelEffectConfigResolver();
+  private effectRenderer?: EffectPhaserRenderer;
+  private lastEffectVisualKey = "";
   /** Value spheres are outside the gear container so they can render above energy trails. */
   private innerSlots: Array<{ sphere: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text; badge?: Phaser.GameObjects.Container; localX: number; localY: number }> = [];
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
@@ -70,6 +75,8 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.trailFlows = [];
     for (const effect of this.trailEffects) this.tweens.killTweensOf(effect);
     this.trailEffects = [];
+    this.effectRenderer?.destroy();
+    this.effectRenderer = undefined;
     this.children.removeAll(true);
     this.innerSlots = [];
     this.addBackground(cx, height / 2, width, height, `rdn-bg-${visualSet}`);
@@ -81,11 +88,19 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.label(cx + width * .29, 46, "ROT.", 10, 0xf3d27c); this.label(cx + width * .29, 73, String(m.state.rotationSteps), 27, 0xf3d27c);
     this.button(width - 38, 48, "↻", () => this.actions.restart()); const info = this.add.circle(cx, 48, 27, 0x183e28).setStrokeStyle(2, 0x62cc83).setInteractive(); info.on("pointerdown", () => this.actions.info()); this.label(cx, 48, "i", 24, 0x9df3a8);
     this.addDecor(ringX, ringY, outerR * layout.ring.diameter, rdnRingTextureKey(layout, visualSet), layout.ring.angle); this.drawCountdownArc(ringX, ringY, outerR * layout.ring.diameter / 2, m); this.drawConnections(ringX, ringY, gearX, gearY, outerR, m);
-    for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, index, m.level.positions, layout.outerSlots.angleOffset); const preview = m.previews.find((item) => item.slot.outerIndex === index); this.sphere(point.x, point.y, outerR * layout.outerSlots.sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
+    const effectGemPositions = new Map<string, EffectGemPosition>();
+    for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, index, m.level.positions, layout.outerSlots.angleOffset); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
+    const resolvedEffects = this.effectResolver.resolve(m.level.effectConfiguration, m.level.positions).effects;
+    if (resolvedEffects.length) {
+      this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY));
+      this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime?.wallRemainingStrength);
+      const visualKey = `${m.level.id}-${m.state.impulses}`;
+      if (m.state.lastEffectEvents?.length && visualKey !== this.lastEffectVisualKey) { this.effectRenderer.play(m.state.lastEffectEvents); this.lastEffectVisualKey = visualKey; }
+    }
     const rejectedOperation = m.state.lastOperationResults.find((result) => !result.valid);
     if (rejectedOperation) this.label(cx, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset - 52, this.operationFeedback(rejectedOperation.rejectedReason), 12, 0xffcf75);
     else if (m.flows.find((flow) => !flow.interactable)?.blockedReason) this.label(cx, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset - 52, this.operationFeedback(m.flows.find((flow) => !flow.interactable)?.blockedReason), 12, 0xffcf75);
-    if (m.state.impulses === 0) { this.lastZeroBurstKey = ""; this.lastOperationFloatKey = ""; this.operationFloatStartedAt = 0; }
+    if (m.state.impulses === 0) { this.lastZeroBurstKey = ""; this.lastOperationFloatKey = ""; this.lastEffectVisualKey = ""; this.operationFloatStartedAt = 0; }
     const burstKey = `${m.level.id}-${m.state.impulses}`;
     if (m.state.impulses > 0 && burstKey !== this.lastZeroBurstKey) {
       for (const result of m.state.lastImpulseResults) if (result.result === 0) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, result.outerIndex, m.level.positions, layout.outerSlots.angleOffset); this.zeroBurst(point.x, point.y, outerR * layout.outerSlots.sphereRadius); }
@@ -117,6 +132,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       }
     }
     m.actions.forEach((action, index) => this.bonus(cx + (index - 1) * 95, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset, action, () => this.actions.action(index)));
+    if (m.playground) this.playgroundOverlay(width, height, m.playground);
     if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (m.showInfo) m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m);
   }
   private beginDrag(pointer: Phaser.Input.Pointer): void { if (this.busy || !this.model || this.model.outcome || this.model.showInfo) return; const dx = pointer.x - this.wheelCenter.x; const dy = pointer.y - this.wheelCenter.y; const distance = Math.hypot(dx, dy); if (distance > this.wheelCenter.radius || distance < this.wheelCenter.radius * .3) return; this.dragging = true; this.dragStart = Math.atan2(dy, dx); this.dragDelta = 0; }
@@ -170,7 +186,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: flow, progress: 1, delay, duration: 1450, repeat: -1, repeatDelay: 250, ease: "Sine.InOut", onUpdate: () => { const t = flow.progress; if (t < .72) { const p = t / .72; particle.setPosition(startX + (endX - startX) * p, startY + (endY - startY) * p); } else { const p = (t - .72) / .28; const a = startAngle + Math.PI + p * Math.PI * 2; particle.setPosition(sphereX + Math.cos(a) * sphereRadius, sphereY + Math.sin(a) * sphereRadius); } particle.setAlpha((.18 + Math.sin(t * Math.PI) * .45) * alpha); } });
   }
   /** Adventure uses set 1 and Time Attack set 2; later hundreds rotate through the remaining themes. */
-  private visualSet(level: LevelDefinition): number { const baseSet = BASE_SET_BY_VARIANT[level.variant]; return ((baseSet - 1 + Math.floor((level.number - 1) / 100)) % VISUAL_SET_COUNT) + 1; }
+  private visualSet(level: LevelDefinition): number { const baseSet = BASE_SET_BY_VARIANT[level.variant]; const levelNumber = Math.max(1, level.number); return ((baseSet - 1 + Math.floor((levelNumber - 1) / 100)) % VISUAL_SET_COUNT) + 1; }
   private addBackground(x: number, y: number, width: number, height: number, key: string): void { const background = this.add.image(x, y, key); const scale = RDN_PHASER_VISUAL_CONFIG.backgroundScalePercent / 100; background.setDisplaySize(width * scale, height * scale).setDepth(-4); }
   private addDecor(x: number, y: number, diameter: number, key: string, angle: number): void { const ring = this.add.image(x, y, key); ring.setScale(diameter / Math.max(ring.width, ring.height)).setAngle(angle); }
   private addGear(diameter: number, key: string): Phaser.GameObjects.Image { const gear = this.add.image(0, 0, key); return gear.setScale(diameter / Math.max(gear.width, gear.height)); }
@@ -200,6 +216,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
   }
   private formatTime(seconds: number): string { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; }
+  private playgroundOverlay(width: number, height: number, playground: NonNullable<RdnSceneModel["playground"]>): void { const x = width * .5; const y = height - 42; this.add.rectangle(x, y, Math.min(width - 20, 360), 58, 0x101c18, .9).setStrokeStyle(1, 0x6edfff).setDepth(30); this.label(x, y - 14, `EFFECT PLAYGROUND · ${playground.scenario}`, 11, 0x9cf5ff).setDepth(31); this.label(x, y + 7, playground.lines.slice(0, 2).join("  |  "), 9, 0xe6dfc3).setDepth(31); this.button(x - 145, y, "‹", () => this.actions.previousPlaygroundScenario?.(), 32); this.button(x + 145, y, "›", () => this.actions.nextPlaygroundScenario?.(), 32); }
   private operationFeedback(reason: AlignmentPreview["rejectedReason"]): string { return reason === "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" ? "DIV2 richiede un valore pari diverso da zero" : reason === "DIVIDE_BY_TWO_CONSUMED" ? "DIV2 gia usato" : reason === "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" ? "DIV3 richiede un multiplo di 3 diverso da zero" : reason === "DIVIDE_BY_THREE_CONSUMED" ? "DIV3 gia usato" : reason === "RESULT_OUT_OF_RANGE" ? "Mossa fuori intervallo" : "Mossa non disponibile"; }
   private freeInfoDialog(cx: number, cy: number, settings: NonNullable<RdnSceneModel["freeSettings"]>): void { const depth = 20; this.add.rectangle(cx, cy, 330, 238, 0x151914, .97).setStrokeStyle(3, 0xc49b50).setDepth(depth).setInteractive(); this.label(cx, cy - 84, "INFO FREE", 18, 0xf8dc8b).setDepth(depth + 1); this.label(cx, cy - 43, `Difficolta: ${settings.difficulty}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy - 14, `Gemme operative: ${settings.slotCount}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy + 22, "Partite illimitate", 13, 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 47, "Nessuna vita o penalita", 13, 0xe6dfc3).setDepth(depth + 1); this.button(cx, cy + 86, "X", () => this.actions.closeInfo(), depth + 2); }
   private label(x: number, y: number, value: string, size: number, color: number, digital = false): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: digital ? '"Carattere", cursive' : "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: digital ? "normal" : "bold", stroke: "#111814", strokeThickness: Math.max(2, Math.round(size * .14)) }).setOrigin(.5); }

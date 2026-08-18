@@ -21,6 +21,7 @@ import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/rnd/puzzle-score.policy";
 import { RDN_ACTION_CATALOG, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/rnd/rdn-actions.config";
+import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
 
 @Component({
   selector: "app-gameplay",
@@ -63,6 +64,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly puzzle = inject(RdnPuzzleService);
   private readonly state = inject(GameStateService);
   private readonly nav = inject(AppNavigationService);
+  private readonly playground = inject(EffectPlaygroundService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private game?: Phaser.Game;
@@ -114,6 +116,8 @@ export class GameplayPageComponent implements AfterViewInit {
       exit: () => this.exitGameplay(),
       info: () => this.showInfo.set(true),
       closeInfo: () => this.showInfo.set(false),
+      nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
+      previousPlaygroundScenario: () => this.changePlaygroundScenario(-1),
     });
     this.game = new Phaser.Game({
       type: Phaser.AUTO,
@@ -139,9 +143,10 @@ export class GameplayPageComponent implements AfterViewInit {
           nextPreviews: this.puzzle.nextPreviews(),
           flows: this.puzzle.flows(),
           queueStates: this.puzzle.queueStates(),
-          actions: this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, charges: instance.charges, disabled: instance.charges <= 0 || !RDN_ACTION_CATALOG[instance.id].modes.includes(this.session.variant) })),
-          modeLabel: this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
+          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, charges: instance.charges, disabled: instance.charges <= 0 || !RDN_ACTION_CATALOG[instance.id].modes.includes(this.session.variant as "adventure" | "time-attack" | "free") })),
+          modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
           freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4 } : undefined,
+          playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
           outcome: this.outcome(),
           timeRemaining: this.timeRemaining(),
           timeRemainingMs: this.timeRemainingMs(),
@@ -186,7 +191,7 @@ export class GameplayPageComponent implements AfterViewInit {
     const won = this.puzzle.state().won && !failed;
     const queuesExhausted = this.session.variant === "time-attack" && this.puzzle.queueStates().every((queue) => queue.exhausted);
     if (won) {
-      if (this.session.variant !== "free") this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state()));
+      if (this.session.variant !== "free" && this.session.variant !== "effect-playground") this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state()));
       this.stopTimeAttackTimer();
     }
     if (won) this.outcome.set("win");
@@ -202,6 +207,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.resetActionInstances();
   }
   private continue(): void {
+    if (this.session.variant === "effect-playground") { this.changePlaygroundScenario(1); return; }
     if (this.session.variant === "free") {
       const overrides = this.gameplaySession.getLaunchOverrides();
       this.puzzle.load("free", 1, overrides?.freeDifficulty ?? "EASY", Math.floor(Math.random() * 0x7fffffff), overrides?.freeSlotCount);
@@ -260,6 +266,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.actionInstances.set(loadout.actionIds.map((id) => ({ id, charges: RDN_ACTION_CATALOG[id].charges, cooldownUntil: 0 })));
   }
   private useAction(slot: number): void {
+    if (this.session.variant === "effect-playground") return;
     const instance = this.actionInstances()[slot];
     if (!instance || instance.charges <= 0) return;
     const definition = RDN_ACTION_CATALOG[instance.id];
@@ -271,8 +278,15 @@ export class GameplayPageComponent implements AfterViewInit {
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
   }
   private loadSessionPuzzle(session: GameplaySession): void {
+    if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();
     this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount);
+  }
+  private changePlaygroundScenario(direction: -1 | 1): void {
+    if (this.session.variant !== "effect-playground") return;
+    if (direction > 0) this.playground.next(); else this.playground.previous();
+    this.puzzle.loadDebugLevel(this.playground.level());
+    this.outcome.set(null); this.showInfo.set(false);
   }
   private exitGameplay(): void {
     // Leaving through the game UI always starts a fresh board on the next launch.

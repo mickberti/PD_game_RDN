@@ -35,6 +35,10 @@ export class RdnPuzzleService {
     this.state.set(this.engine.createInitialState(level));
     if (variant === "adventure") this.clearAdventureRun();
   }
+  /** Development-only caller supplies an isolated declarative level; it is never persisted as Adventure progress. */
+  loadDebugLevel(level: PersistentLevelDefinition): void {
+    this.freeMode = false; this.level.set(level); this.state.set(this.engine.createInitialState(level));
+  }
   dispatch(action: PuzzleAction): void {
     const level = this.level();
     const previous = this.state();

@@ -15,6 +15,8 @@ import { GameStateService } from "../../core/services/state/game-state.service";
 import { UIButtonSpriteComponent } from "src/app/shared/basic/ui-button-sprite.component";
 import { DirectRouteAccessService } from "../../core/services/app/navigation/direct-route-access.service";
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
+import { environment } from "../../../environments/environment";
+import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 
 const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
 
@@ -80,6 +82,7 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
             <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/time-attack')">Soluzioni Time Attack</ui-button>
             <ui-button variant="complementary" [disabled]="adminLevelActionPending()" (pressed)="resetRdnLevels()">Resetta livelli RDN</ui-button>
             <ui-button variant="complementary" [disabled]="adminLevelActionPending()" (pressed)="unlockAllRdnLevels()">Abilita tutti i livelli RDN</ui-button>
+            @if (effectPlaygroundAvailable()) { <ui-button variant="complementary" (pressed)="openEffectPlayground()">🧪 Effect Playground</ui-button> }
           </div>
         </ui-panel>
       }
@@ -106,6 +109,7 @@ export class SettingsPage {
   readonly directRouteAccess = inject(DirectRouteAccessService);
   private readonly heroProgress = inject(HeroProgressService);
   private readonly statisticProgress = inject(StatisticProgressService);
+  private readonly gameplaySession = inject(GameplaySessionService);
 
   readonly activeTheme = computed(() => this.theme.activeTheme());
   readonly isAdmin = computed(() => this.gameState.player()?.role === 'admin');
@@ -115,6 +119,7 @@ export class SettingsPage {
   readonly directRouteAccessLabel = computed(() => this.directRouteAccess.enabled() ? 'Accesso diretto attivo' : 'Passa da boot');
   readonly resettingProgress = signal(false);
   readonly adminLevelActionPending = signal(false);
+  readonly effectPlaygroundAvailable = computed(() => this.isAdmin() && !environment.production);
 
   t(key: string): string {
     return this.language.t(key);
@@ -197,6 +202,11 @@ export class SettingsPage {
 
   unlockAllRdnLevels(): void {
     this.updateRdnLevelAccess(RDN_MAX_LEVEL);
+  }
+  openEffectPlayground(): void {
+    if (!this.effectPlaygroundAvailable()) return;
+    this.gameplaySession.startEffectPlayground();
+    void this.nav.go("/utils/effect-playground");
   }
 
   private updateRdnLevelAccess(level: number): void {

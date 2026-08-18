@@ -1,6 +1,6 @@
 import { PuzzleDifficulty } from "../game/rnd/difficulty-profile.config";
 
-export type GameplaySessionVariant = "time-attack" | "adventure" | "free";
+export type GameplaySessionVariant = "time-attack" | "adventure" | "free" | "effect-playground";
 
 export interface GameplaySession {
   /** Changes on every launch, including when the player reopens the same mode. */
