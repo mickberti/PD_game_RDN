@@ -1,7 +1,7 @@
 import { PuzzleEngine } from "./puzzle.engine";
 import { LevelDefinition } from "./puzzle.types";
 
-const level = (outerValues: number[], innerValues: Array<number | "divide2">): LevelDefinition => ({ id: "spec", number: 1, title: "Spec", schemaVersion: 1, variant: "persistent", positions: 4, initialRotation: 0, outerValues, innerValues, slotPhases: [[{ outerIndex: 0 }]] });
+const level = (outerValues: number[], innerValues: Array<number | "divide2" | "divide3">): LevelDefinition => ({ id: "spec", number: 1, title: "Spec", schemaVersion: 1, variant: "persistent", positions: 4, initialRotation: 0, outerValues, innerValues, slotPhases: [[{ outerIndex: 0 }]] });
 
 describe("PuzzleEngine", () => {
   const engine = new PuzzleEngine();
@@ -14,6 +14,11 @@ describe("PuzzleEngine", () => {
   it("accepts even negative DIV2 values and rejects odd values without consuming it", () => {
     expect(engine.attemptOperation(level([-8, 1, 1, 1], ["divide2", 1, 1, 1]), 0, -8, "divide2")).toEqual(jasmine.objectContaining({ valid: true, nextValue: -4, resourceConsumed: true }));
     expect(engine.attemptOperation(level([-7, 1, 1, 1], ["divide2", 1, 1, 1]), 0, -7, "divide2")).toEqual(jasmine.objectContaining({ valid: false, nextValue: -7, resourceConsumed: false, rejectedReason: "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" }));
+  });
+
+  it("accepts DIV3 only for non-zero multiples of three and consumes it after use", () => {
+    expect(engine.attemptOperation(level([-9, 1, 1, 1], ["divide3", 1, 1, 1]), 0, -9, "divide3")).toEqual(jasmine.objectContaining({ valid: true, nextValue: -3, resourceConsumed: true }));
+    expect(engine.attemptOperation(level([-8, 1, 1, 1], ["divide3", 1, 1, 1]), 0, -8, "divide3")).toEqual(jasmine.objectContaining({ valid: false, nextValue: -8, resourceConsumed: false, rejectedReason: "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" }));
   });
 
   it("consumes DIV2 only after a valid impulse", () => {

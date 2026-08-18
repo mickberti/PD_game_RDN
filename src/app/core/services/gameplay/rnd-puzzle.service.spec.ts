@@ -28,4 +28,22 @@ describe("RdnPuzzleService Adventure run", () => {
     expect(new RdnPuzzleService().resumeAdventure(1)).toBeFalse();
     expect(localStorage.getItem(storageKey)).toBeNull();
   });
+
+  it("replaces a successfully used Free gear operator with a different one", () => {
+    const service = new RdnPuzzleService();
+    service.load("free", 1, "NORMAL", 12345, 4);
+    const move = service.level().solutionMoves?.[0];
+    expect(move).toBeDefined();
+    const positions = service.level().positions;
+    const rotation = service.state().rotation;
+    const clockwise = ((move!.rotation - rotation) % positions + positions) % positions;
+    if (clockwise) service.dispatch({ type: "ROTATE", direction: clockwise <= positions / 2 ? "CW" : "CCW", steps: clockwise <= positions / 2 ? clockwise : positions - clockwise });
+    const sourceIndex = ((move!.outerIndex - service.state().rotation) % positions + positions) % positions;
+    const levelBefore = service.level();
+    const before = levelBefore.variant === "persistent" ? levelBefore.innerValues[sourceIndex] : null;
+    service.dispatch({ type: "IMPULSE" });
+    expect(service.state().lastOperationResults.some((result) => result.valid)).toBeTrue();
+    const levelAfter = service.level();
+    expect(levelAfter.variant === "persistent" ? levelAfter.innerValues[sourceIndex] : null).not.toBe(before);
+  });
 });

@@ -3,36 +3,52 @@ import { PuzzleEngine } from "./puzzle.engine";
 import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 import { RDN_RELEASE } from "./rdn-release.config";
 
-export const RDN_MAX_LEVEL = 100;
+export const RDN_MAX_LEVEL = 200;
+export const RDN_MIN_SPHERES = 4;
+export const RDN_MAX_SPHERES = 8;
+/** Number of levels in each sphere-count band; recalculated when the catalogue size changes. */
+export const RDN_LEVELS_PER_SPHERE_INCREMENT = Math.ceil(RDN_MAX_LEVEL / (RDN_MAX_SPHERES - RDN_MIN_SPHERES + 1));
 
 /** Deterministic catalogue: a level always produces the same board and solution. */
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
 const random = (seed: number): (() => number) => { let state = seed >>> 0; return () => { state = (state * 1664525 + 1013904223) >>> 0; return state / 0x1_0000_0000; }; };
-const positionsForLevel = (number: number): 4 | 5 | 6 | 7 | 8 => number <= 20 ? 4 : number <= 40 ? 5 : number <= 60 ? 6 : 8;
-const impulsesPerValue = (number: number): number => number <= 3 ? 1 : Math.min(6, 2 + Math.floor((number - 4) / 16));
+export const rdnSphereCountForLevel = (number: number): 4 | 5 | 6 | 7 | 8 => {
+  const band = Math.min(RDN_MAX_SPHERES - RDN_MIN_SPHERES, Math.floor((Math.max(1, number) - 1) / RDN_LEVELS_PER_SPHERE_INCREMENT));
+  return (RDN_MIN_SPHERES + band) as 4 | 5 | 6 | 7 | 8;
+};
+/** Larger target values remain practical because later boards can use signed jumps up to 9. */
+const impulsesPerValue = (number: number): number => number <= 3 ? 1 : Math.min(11, 2 + Math.floor((number - 4) / 20));
 const rotationDistance = (from: number, to: number, positions: number): number => Math.min(modulo(to - from, positions), modulo(from - to, positions));
 
 interface GeneratedBoard { positions: 4 | 5 | 6 | 7 | 8; initialRotation: number; innerValues: PuzzleOperator[]; loaderQueues: PuzzleOperator[][]; outerValues: number[]; slotPhases: Array<Array<{ outerIndex: number }>>; optimalCost: { impulses: number; rotationSteps: number }; solution: PuzzleSlotSolution[]; solutionMoves: PuzzleSolutionMove[]; seed: number; }
 interface ValuePlan { start: number; operators: PuzzleOperator[]; }
 
-/** DIV2 is the only special operator and is introduced only in advanced levels. */
-const specialOperatorsForLevel = (level: number): PuzzleOperator[] => level >= 40 ? ["divide2"] : [];
-const gearOperators = (positions: number, level: number, specialOperators: readonly PuzzleOperator[]): PuzzleOperator[] => {
+/** Division specials are introduced gradually on advanced boards. */
+const specialOperatorsForLevel = (level: number): PuzzleOperator[] => [
+  ...(level >= 40 ? ["divide2" as const] : []),
+  ...(level >= 80 ? ["divide3" as const] : []),
+];
+const gearOperators = (positions: number, specialOperators: readonly PuzzleOperator[], next: () => number): PuzzleOperator[] => {
   const subtractorCount = positions - specialOperators.length;
-  const maxMagnitude = Math.min(9, 2 + Math.floor((level - 1) / 12));
-  const magnitudes = Array.from({ length: subtractorCount }, (_, index) => Math.min(maxMagnitude, 1 + Math.floor(index / 2)));
+  // Values are intentionally non-sequential: every gear can contain any signed 1..9.
+  const magnitudes = Array.from({ length: subtractorCount }, () => 1 + Math.floor(next() * 9));
   return [...magnitudes.map((value, index) => index % 2 === 0 ? -value : value), ...specialOperators];
 };
 const additiveOperators = (operators: PuzzleOperator[]): number[] => operators.filter((operator): operator is number => typeof operator === "number" && operator !== 0);
 
-/** Produces a positive start value no greater than 20 which reaches zero in `count` subtractions. */
+/** Builds a solvable sequence using only operators physically present in the generated gear. */
 const subtractivePlan = (count: number, available: number[], next: () => number, maximumStart = 20): ValuePlan => {
+  if (!available.length) throw new Error("RDN generator requires at least one compatible numeric operator");
+  const minimumMagnitude = Math.min(...available.map((value) => Math.abs(value)));
+  // Division tails can have a stricter range. Shorten only that target's plan instead
+  // of inventing a missing +/-1 operator or producing an out-of-range start value.
+  const safeCount = Math.max(1, Math.min(count, Math.floor(maximumStart / minimumMagnitude)));
   const values: number[] = [];
   let total = 0;
-  for (let index = 0; index < count; index += 1) {
-    const remaining = count - index - 1;
-    const candidates = available.filter((value) => total + Math.abs(value) + remaining <= maximumStart);
-    const selected = candidates[Math.floor(next() * candidates.length)] ?? -1;
+  for (let index = 0; index < safeCount; index += 1) {
+    const remaining = safeCount - index - 1;
+    const candidates = available.filter((value) => total + Math.abs(value) + remaining * minimumMagnitude <= maximumStart);
+    const selected = candidates[Math.floor(next() * candidates.length)] ?? available[0];
     values.push(selected);
     total += Math.abs(selected);
   }
@@ -41,20 +57,21 @@ const subtractivePlan = (count: number, available: number[], next: () => number,
 };
 
 const planForValue = (impulses: number, available: number[], next: () => number, maximumStart: number, forcedOperator?: PuzzleOperator): ValuePlan => {
-  if (forcedOperator === "divide2") {
-    const tail = subtractivePlan(impulses - 1, available, next, Math.floor(maximumStart / 2));
-    return { start: tail.start * 2, operators: ["divide2", ...tail.operators] };
+  if (forcedOperator === "divide2" || forcedOperator === "divide3") {
+    const divisor = forcedOperator === "divide2" ? 2 : 3;
+    const tail = subtractivePlan(impulses - 1, available, next, Math.floor(maximumStart / divisor));
+    return { start: tail.start * divisor, operators: [forcedOperator, ...tail.operators] };
   }
   return subtractivePlan(impulses, available, next, maximumStart);
 };
 
 const generateBoard = (number: number, seedOffset: number, slotCount?: number): GeneratedBoard => {
-  const positions = slotCount && slotCount >= 4 && slotCount <= 8 ? slotCount as GeneratedBoard["positions"] : positionsForLevel(number);
+  const positions = slotCount && slotCount >= RDN_MIN_SPHERES && slotCount <= RDN_MAX_SPHERES ? slotCount as GeneratedBoard["positions"] : rdnSphereCountForLevel(number);
   const impulses = impulsesPerValue(number);
   const seed = number * 977 + seedOffset;
   const next = random(seed);
   const specialOperators = specialOperatorsForLevel(number);
-  const innerValues = gearOperators(positions, number, specialOperators);
+  const innerValues = gearOperators(positions, specialOperators, next);
   const allAdditives = additiveOperators(innerValues);
   const range = DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange;
   const maximumStart = Math.min(Math.abs(range.min), Math.abs(range.max));
@@ -88,7 +105,8 @@ const generateBoard = (number: number, seedOffset: number, slotCount?: number): 
   return { positions, initialRotation, innerValues, loaderQueues, outerValues: plans.map((plan) => plan.start), slotPhases, optimalCost: { impulses: slotPhases.length, rotationSteps }, solution: plans.map((plan) => ({ startValue: plan.start, operators: [...plan.operators] })), solutionMoves, seed };
 };
 
-const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }, { outerIndex: 1 }, { outerIndex: 2 }, { outerIndex: 3 }]], optimalCost: { impulses: 1, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })), seed: 0 });
+/** The tutorial deliberately exposes one target per impulse: UI flow and applied operation stay identical. */
+const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }], [{ outerIndex: 1 }], [{ outerIndex: 2 }], [{ outerIndex: 3 }]], optimalCost: { impulses: 4, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })), seed: 0 });
 
 const generatedMetadata = (number: number, board: GeneratedBoard) => { const profile = DIFFICULTY_PROFILES[difficultyForLevel(number)]; return { seed: board.seed, generatorVersion: RDN_RELEASE.generatorVersion, balanceVersion: RDN_RELEASE.balanceVersion, difficulty: profile.id, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: profile.activeFlowCount, featureFlags: profile.featureFlags }; };
 const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameConfig => ({
@@ -97,7 +115,10 @@ const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameCo
   levelVersion: "rdn-adventure-v1",
   objectives: { targetValues: [...board.outerValues], requireAllTargetsZero: true },
   enabledMechanics: ["fixed-operators", "special-inventory", "rotation", "impulse"],
-  specialInventory: { divide2: board.innerValues.filter((operator) => operator === "divide2").length },
+  specialInventory: {
+    divide2: board.innerValues.filter((operator) => operator === "divide2").length,
+    divide3: board.innerValues.filter((operator) => operator === "divide3").length,
+  },
 });
 
 const persistent = (number: number): LevelDefinition => {
@@ -127,7 +148,7 @@ export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficul
 };
 
 export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; verified: boolean; }
-const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : value + operator;
+const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : value + operator;
 const verifiesSolution = (level: LevelDefinition): boolean => {
   const solution = level.solution ?? [];
   const moves = level.solutionMoves ?? [];
@@ -145,7 +166,7 @@ const verifiesSolution = (level: LevelDefinition): boolean => {
   }
   return values.every((value) => value === 0) && cursors.every((cursor, index) => cursor === solution[index].operators.length);
 };
-/** Inspectable solution tables for the 100 levels of both gameplay variants. */
+/** Inspectable solution tables for every authored level of both gameplay variants. */
 export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = RDN_LEVELS.map((level) => ({ level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], verified: verifiesSolution(level) }));
 export const getRdnSolutionTable = (variant: "adventure" | "time-attack"): readonly PuzzleSolutionAudit[] => RDN_SOLUTION_TABLE.filter((row) => row.variant === variant);
 

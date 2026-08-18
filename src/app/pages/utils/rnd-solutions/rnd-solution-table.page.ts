@@ -3,7 +3,7 @@ import { Component, computed, inject } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { IonContent, IonFooter, IonToolbar } from "@ionic/angular/standalone";
 import { PuzzleOperator } from "../../../core/game/rnd/puzzle.types";
-import { getRdnSolutionTable } from "../../../core/game/rnd/levels.config";
+import { getRdnSolutionTable, RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
 import { UIBottomUtilsComponent } from "../../../shared/components/ui-bottom-utils.component";
 import { UiUtilsPageHeaderComponent } from "../../../shared/components/ui-utils-page-header.component";
 
@@ -79,8 +79,8 @@ export class RdnSolutionTablePage {
   readonly rows = computed(() => getRdnSolutionTable(this.variant));
   readonly allVerified = computed(() => this.rows().every((row) => row.verified));
   readonly title = computed(() => this.variant === "adventure" ? "Soluzioni RDN · Avventura" : "Soluzioni RDN · Time Attack");
-  readonly description = computed(() => "Catalogo dei 100 livelli, con sequenze per castone, rotazioni richieste e controllo di risolvibilità.");
+  readonly description = computed(() => `Catalogo dei ${RDN_MAX_LEVEL} livelli, con sequenze per castone, rotazioni richieste e controllo di risolvibilità.`);
 
-  operator(value: PuzzleOperator): string { return value === "divide2" ? "÷2" : value > 0 ? `+${value}` : String(value); }
+  operator(value: PuzzleOperator): string { return value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value > 0 ? `+${value}` : String(value); }
   operators(values: readonly PuzzleOperator[]): string { return values.map((value) => this.operator(value)).join(" · "); }
 }

@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from "@angular/core";
 import { PuzzleEngine } from "../../game/rnd/puzzle.engine";
 import { generateRdnPuzzle, getRdnLevel } from "../../game/rnd/levels.config";
 import { PuzzleDifficulty } from "../../game/rnd/difficulty-profile.config";
-import { PuzzleAction, PuzzleState } from "../../game/rnd/puzzle.types";
+import { PersistentLevelDefinition, PuzzleAction, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
 interface AdventureRunSave {
@@ -17,6 +17,9 @@ interface AdventureRunSave {
 @Injectable({ providedIn: "root" })
 export class RdnPuzzleService {
   private readonly engine = new PuzzleEngine();
+  private freeMode = false;
+  private freeRerollState = 1;
+  private freeDifficulty: PuzzleDifficulty = "EASY";
   readonly level = signal(getRdnLevel("adventure"));
   readonly state = signal<PuzzleState>(this.engine.createInitialState(this.level()));
   readonly previews = computed(() => this.engine.previews(this.level(), this.state()));
@@ -25,16 +28,28 @@ export class RdnPuzzleService {
   readonly queueStates = computed(() => this.engine.queueStates(this.level(), this.state()));
   load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number): void {
     const level = variant === "free" ? generateRdnPuzzle("adventure", difficulty, seed, slotCount) : getRdnLevel(variant, number);
+    this.freeMode = variant === "free";
+    this.freeDifficulty = difficulty;
+    this.freeRerollState = (Math.trunc(seed) ^ 0x6d2b79f5) >>> 0 || 1;
     this.level.set(level);
     this.state.set(this.engine.createInitialState(level));
     if (variant === "adventure") this.clearAdventureRun();
   }
-  dispatch(action: PuzzleAction): void { this.state.update((state) => this.engine.apply(this.level(), state, action)); }
+  dispatch(action: PuzzleAction): void {
+    const level = this.level();
+    const previous = this.state();
+    const next = this.engine.apply(level, previous, action);
+    if (this.freeMode && action.type === "IMPULSE" && level.variant === "persistent") {
+      this.replaceUsedFreeOperators(level, previous, next);
+      return;
+    }
+    this.state.set(next);
+  }
 
   /** Persists only the active Adventure board; player progress remains separate. */
   saveAdventureRun(): void {
     const level = this.level();
-    if (level.variant !== "persistent" || !level.adventure) return;
+    if (this.freeMode || level.variant !== "persistent" || !level.adventure) return;
     const save: AdventureRunSave = {
       version: 1,
       levelId: level.id,
@@ -69,6 +84,36 @@ export class RdnPuzzleService {
   }
 
   clearAdventureRun(): void { localStorage.removeItem(ADVENTURE_RUN_STORAGE_KEY); }
+
+  /** Free mode recycles every successfully used gear gem into a different operator. */
+  private replaceUsedFreeOperators(level: PersistentLevelDefinition, previous: PuzzleState, next: PuzzleState): void {
+    const usedIndexes = new Set(next.lastOperationResults.filter((result) => result.valid).map((result) => ((result.outerIndex - previous.rotation) % level.positions + level.positions) % level.positions));
+    if (!usedIndexes.size) { this.state.set(next); return; }
+    const innerValues = [...level.innerValues];
+    for (const index of usedIndexes) innerValues[index] = this.nextFreeOperator(innerValues[index]);
+    this.level.set({ ...level, innerValues });
+    this.state.set({ ...next, consumedSpecialOperatorIndexes: next.consumedSpecialOperatorIndexes.filter((index) => !usedIndexes.has(index)) });
+  }
+
+  private nextFreeOperator(previous: PuzzleOperator): PuzzleOperator {
+    const maxMagnitude = this.freeDifficulty === "EASY" ? 2 : this.freeDifficulty === "NORMAL" ? 3 : this.freeDifficulty === "HARD" ? 5 : 7;
+    const candidates: PuzzleOperator[] = Array.from({ length: maxMagnitude }, (_, index) => index + 1).flatMap((value) => [-value, value]);
+    // Division specials may reappear in Free once an operator is consumed.
+    if (this.freeDifficulty !== "EASY") candidates.push("divide2");
+    if (this.freeDifficulty === "HARD" || this.freeDifficulty === "EXPERT") candidates.push("divide3");
+    const start = Math.floor(this.nextFreeRandom() * candidates.length);
+    for (let offset = 0; offset < candidates.length; offset += 1) {
+      const candidate = candidates[(start + offset) % candidates.length];
+      if (candidate !== previous) return candidate;
+    }
+    return -1;
+  }
+
+  private nextFreeRandom(): number {
+    this.freeRerollState = (this.freeRerollState * 1664525 + 1013904223) >>> 0;
+    return this.freeRerollState / 0x1_0000_0000;
+  }
+
   zeroActiveTarget(): boolean {
     const state = this.state(); const target = this.engine.flows(this.level(), state).find((flow) => flow.interactable)?.targetId;
     if (target === undefined || state.outerValues[target] === 0) return false;

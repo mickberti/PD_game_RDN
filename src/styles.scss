@@ -7,6 +7,15 @@
 @use  "theme/fantasy_bg";
 @use "theme/fantasy_bg/action-feedback-overlay";
 
+/* Carattere Regular — Robert Leuschke — SIL Open Font License (OFL-Carattere.txt). */
+@font-face {
+  font-family: "Carattere";
+  src: url("/assets/fonts/Carattere-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 @import url("https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Exo+2:wght@700;800;900&display=swap");
 

@@ -176,7 +176,7 @@ export class HubPage {
     const session = this.gameplaySession.startSession(mode, 1, mode.mastery ?? 1, { variant: "free", overrides: { freeDifficulty: difficulty, freeSeed: Math.floor(Math.random() * 0x7fffffff), freeSlotCount: this.freeSlotCount() } });
     this.freeMode.set(null); this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
   }
-  freeDescription(difficulty: PuzzleDifficulty): string { return difficulty === "EASY" ? "Soluzioni brevi" : difficulty === "NORMAL" ? "Segni misti e DIV2" : difficulty === "HARD" ? "Piu flussi" : "Massima complessita"; }
+  freeDescription(difficulty: PuzzleDifficulty): string { return difficulty === "EASY" ? "Soluzioni brevi" : difficulty === "NORMAL" ? "Segni misti e DIV2" : difficulty === "HARD" ? "Piu flussi e DIV3" : "Massima complessita"; }
 
   openLevelPicker(mode: ModeItem): void {
     this.levelPickerMode.set(mode);

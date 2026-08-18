@@ -2,14 +2,15 @@ export type PuzzleVariant = "persistent" | "loader";
 export type RotationDirection = "CW" | "CCW";
 export type PuzzleAction = { type: "ROTATE"; direction: RotationDirection; steps: number } | { type: "IMPULSE" } | { type: "UNDO" } | { type: "RESTART" };
 
-/** A signed additive operand or the single-use DIV2 special. */
-export type PuzzleOperator = number | "divide2";
+/** A signed additive operand or a single-use division special. */
+export type PuzzleOperator = number | "divide2" | "divide3";
+export type SpecialPuzzleOperator = Exclude<PuzzleOperator, number>;
 export type ColorId = "green" | "red" | "yellow" | "blue" | "cyan" | "purple";
 /** Legacy level data used x2; it migrates safely to DIV2 and is never executed. */
 export type LegacyPuzzleOperator = PuzzleOperator | "x2";
 export const migrateLegacyPuzzleOperator = (operator: LegacyPuzzleOperator): PuzzleOperator => operator === "x2" ? "divide2" : operator;
 
-export type OperationRejectedReason = "NO_OPERATOR" | "TARGET_ALREADY_RESOLVED" | "DIVIDE_BY_TWO_CONSUMED" | "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" | "RESULT_OUT_OF_RANGE" | "COLOR_MISMATCH";
+export type OperationRejectedReason = "NO_OPERATOR" | "TARGET_ALREADY_RESOLVED" | "DIVIDE_BY_TWO_CONSUMED" | "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" | "DIVIDE_BY_THREE_CONSUMED" | "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" | "RESULT_OUT_OF_RANGE" | "COLOR_MISMATCH";
 export interface PuzzleNumberRange { min: number; max: number; policy: "reject"; }
 export const DEFAULT_PUZZLE_NUMBER_RANGE: PuzzleNumberRange = { min: -20, max: 20, policy: "reject" };
 export interface OperationAttemptResult { outerIndex: number; operator: PuzzleOperator | null; valid: boolean; previousValue: number; nextValue: number; rejectedReason?: OperationRejectedReason; resourceConsumed: boolean; events: readonly ("OperationApplied" | "SpecialResourceConsumed" | "TargetReachedZero" | "OperationRejected")[]; }
@@ -35,7 +36,7 @@ export interface AdventureGameConfig {
   limits?: { readonly maxImpulses?: number; readonly maxRotationSteps?: number };
   enabledMechanics: readonly ("fixed-operators" | "special-inventory" | "rotation" | "impulse" | "lives" | "shield")[];
   /** Counts only one-use operators; normal numeric operators are fixed and unlimited. */
-  specialInventory: Readonly<Partial<Record<"divide2", number>>>;
+  specialInventory: Readonly<Partial<Record<SpecialPuzzleOperator, number>>>;
   lives?: number;
   shields?: number;
 }

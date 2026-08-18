@@ -25,7 +25,7 @@ export const RDN_PHASER_VISUAL_CONFIG = {
   /** Percentage applied independently to width and height of the stretched background. */
   backgroundScalePercent: 100,
   /** Distance from the bottom edge for the three action buttons. */
-  actionButtonsBottomOffset: 75,
+  actionButtonsBottomOffset: 85,
   /** Board radius caps preserve a 1:1 board on narrow, wide and tall screens. */
   boardWidthRadiusRatio: .46,
   boardHeightRadiusRatio: .31,
@@ -37,6 +37,7 @@ export const RDN_MOTION = {
   impulseChargeMs: 90,
   impulseDispatchDelayMs: 160,
   zeroImpactMs: 520,
+  operationFloatMs: 2060,
   maxZeroParticles: 28,
   blockedAlpha: .76,
 } as const;
