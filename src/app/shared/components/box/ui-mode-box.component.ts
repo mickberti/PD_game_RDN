@@ -28,7 +28,7 @@ import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
           </div>
         </div>
       </button>
-      <button type="button" class="mode-item__levels" [disabled]="!active()" (click)="selectLevels.emit(mode)" aria-label="Scegli un livello">
+      <button *ngIf="supportsLevelSelection()" type="button" class="mode-item__levels" [disabled]="!active()" (click)="selectLevels.emit(mode)" aria-label="Scegli un livello">
         ☷
       </button>
     </article>
@@ -107,8 +107,15 @@ export class ModeBoxComponent {
   readonly maxLevel = RDN_MAX_LEVEL;
 
   readonly active = computed(() => isAvailableNow(this.mode?.availability));
+  readonly supportsLevelSelection = computed(() => this.mode?.id === "adventure" || this.mode?.id === "time-attack");
   readonly backgroundImage = computed(() => {
-    const filename = this.mode?.id === "time-attack" ? "game-set2.png" : "game-set3.png";
+    const backgrounds: Readonly<Record<string, string>> = {
+      adventure: "game-set2.png",
+      "time-attack": "game-set3.png",
+      free: "game-set4.png",
+      ranked: "game-set5.png",
+    };
+    const filename = backgrounds[this.mode?.id] ?? "game-set2.png";
     return `url('/assets/ui/fantasy_bg/${filename}')`;
   });
 

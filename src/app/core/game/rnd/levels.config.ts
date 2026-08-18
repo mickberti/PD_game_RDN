@@ -1,6 +1,7 @@
 import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
 import { PuzzleEngine } from "./puzzle.engine";
 import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
+import { RDN_RELEASE } from "./rdn-release.config";
 
 export const RDN_MAX_LEVEL = 100;
 
@@ -89,7 +90,7 @@ const generateBoard = (number: number, seedOffset: number, slotCount?: number): 
 
 const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }, { outerIndex: 1 }, { outerIndex: 2 }, { outerIndex: 3 }]], optimalCost: { impulses: 1, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })), seed: 0 });
 
-const generatedMetadata = (number: number, board: GeneratedBoard) => { const profile = DIFFICULTY_PROFILES[difficultyForLevel(number)]; return { seed: board.seed, generatorVersion: "rdn-generator-v2", difficulty: profile.id, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: profile.activeFlowCount, featureFlags: profile.featureFlags }; };
+const generatedMetadata = (number: number, board: GeneratedBoard) => { const profile = DIFFICULTY_PROFILES[difficultyForLevel(number)]; return { seed: board.seed, generatorVersion: RDN_RELEASE.generatorVersion, balanceVersion: RDN_RELEASE.balanceVersion, difficulty: profile.id, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: profile.activeFlowCount, featureFlags: profile.featureFlags }; };
 const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameConfig => ({
   version: 1,
   seed: board.seed,
@@ -100,11 +101,13 @@ const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameCo
 });
 
 const persistent = (number: number): LevelDefinition => {
-  const board = number <= 3 ? tutorialBoard() : generateBoard(number, 17);
+  // Keep the first board as the one-step tutorial. Levels 2 and 3 must already
+  // be distinct playable boards, otherwise the solution catalogue repeats it too.
+  const board = number === 1 ? tutorialBoard() : generateBoard(number, 17);
   return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1, variant: "persistent", numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board };
 };
 const loader = (number: number): LevelDefinition => {
-  const board = number <= 3 ? tutorialBoard() : generateBoard(number, 71);
+  const board = number === 1 ? tutorialBoard() : generateBoard(number, 71);
   return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1, variant: "loader", numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
 };
 

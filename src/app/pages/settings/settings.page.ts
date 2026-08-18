@@ -14,6 +14,7 @@ import { STATISTIC_TYPES, StatisticType } from "../../core/models/remote/progres
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { UIButtonSpriteComponent } from "src/app/shared/basic/ui-button-sprite.component";
 import { DirectRouteAccessService } from "../../core/services/app/navigation/direct-route-access.service";
+import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 
 const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
 
@@ -77,6 +78,8 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
           <div class="settings-links">
             <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/adventure')">Soluzioni Avventura</ui-button>
             <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/time-attack')">Soluzioni Time Attack</ui-button>
+            <ui-button variant="complementary" [disabled]="adminLevelActionPending()" (pressed)="resetRdnLevels()">Resetta livelli RDN</ui-button>
+            <ui-button variant="complementary" [disabled]="adminLevelActionPending()" (pressed)="unlockAllRdnLevels()">Abilita tutti i livelli RDN</ui-button>
           </div>
         </ui-panel>
       }
@@ -111,6 +114,7 @@ export class SettingsPage {
   readonly gameServiceModeLabel = computed(() => this.gameState.isMockMode() ? 'Mock' : 'Remote');
   readonly directRouteAccessLabel = computed(() => this.directRouteAccess.enabled() ? 'Accesso diretto attivo' : 'Passa da boot');
   readonly resettingProgress = signal(false);
+  readonly adminLevelActionPending = signal(false);
 
   t(key: string): string {
     return this.language.t(key);
@@ -183,6 +187,41 @@ export class SettingsPage {
       await this.gameState.resetUserProgress();
     } finally {
       this.resettingProgress.set(false);
+    }
+  }
+
+  /** Admin-only development tools: affect Adventure and Time Attack, never Free or Ranked. */
+  resetRdnLevels(): void {
+    this.updateRdnLevelAccess(0);
+  }
+
+  unlockAllRdnLevels(): void {
+    this.updateRdnLevelAccess(RDN_MAX_LEVEL);
+  }
+
+  private updateRdnLevelAccess(level: number): void {
+    if (!this.isAdmin() || this.adminLevelActionPending()) return;
+    this.adminLevelActionPending.set(true);
+    try {
+      const progress = this.gameState.progress();
+      this.gameState.updateProgress({
+        ...progress,
+        gameModeLevels: {
+          ...(progress.gameModeLevels ?? {}),
+          adventure: level,
+          "time-attack": level,
+        },
+        gameModeLevelStars: level === 0
+          ? {
+              ...(progress.gameModeLevelStars ?? {}),
+              adventure: {},
+              "time-attack": {},
+            }
+          : progress.gameModeLevelStars,
+        lastUpdatedAt: new Date().toISOString(),
+      });
+    } finally {
+      this.adminLevelActionPending.set(false);
     }
   }
 

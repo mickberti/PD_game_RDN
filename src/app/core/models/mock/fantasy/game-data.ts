@@ -28,6 +28,15 @@ export const fantasyModes: ModeItem[] = [
 		progress: { descr: "", current: 0, total: 0 },
 		mastery: 1,
 	},
+	{
+		id: "ranked",
+		title: "Classificata",
+		description: "Confronta i migliori risultati della stagione.",
+		frame: { name: 'game-trophy-arena', effect: 'none' },
+		route: "/ranking",
+		progress: { descr: "", current: 0, total: 0 },
+		mastery: 1,
+	},
 	{	
 		id: "seasons",
 		title: "Seasons",

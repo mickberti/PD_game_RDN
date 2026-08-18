@@ -18,7 +18,7 @@ import { GameplaySessionService } from "../../core/services/gameplay/gameplay-se
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 import { PuzzleDifficulty } from "../../core/game/rnd/difficulty-profile.config";
 
-const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack", "free"]);
+const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack", "free", "ranked"]);
 
 type HubListItem =
   | { type: "mode"; item: ModeItem }
@@ -166,6 +166,7 @@ export class HubPage {
   contextActions = this.floating.contextActions;
 
   openMode(mode: ModeItem): void {
+    if (mode.id === "ranked") { this.nav.go("/ranking"); return; }
     if (mode.id === "free") { this.freeMode.set(mode); return; }
     const completedLevel = Math.max(0, Math.min(RDN_MAX_LEVEL, this.state.progress().gameModeLevels?.[mode.id] ?? 0));
     this.launchLevel(mode, Math.min(RDN_MAX_LEVEL, completedLevel + 1));

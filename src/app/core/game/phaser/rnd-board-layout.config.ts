@@ -26,6 +26,19 @@ export const RDN_PHASER_VISUAL_CONFIG = {
   backgroundScalePercent: 100,
   /** Distance from the bottom edge for the three action buttons. */
   actionButtonsBottomOffset: 75,
+  /** Board radius caps preserve a 1:1 board on narrow, wide and tall screens. */
+  boardWidthRadiusRatio: .46,
+  boardHeightRadiusRatio: .31,
+} as const;
+
+/** Shared canvas motion tokens; gameplay rules never depend on these timings. */
+export const RDN_MOTION = {
+  dragSnapMs: 260,
+  impulseChargeMs: 90,
+  impulseDispatchDelayMs: 160,
+  zeroImpactMs: 520,
+  maxZeroParticles: 28,
+  blockedAlpha: .76,
 } as const;
 
 export const getRdnBoardLayout = (positions: number): RdnBoardLayout => RDN_BOARD_LAYOUTS[positions as RdnBoardLayout["positions"]] ?? RDN_BOARD_LAYOUTS[6];
