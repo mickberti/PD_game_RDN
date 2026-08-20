@@ -24,6 +24,8 @@ import { atlasData as atlasFantasyBgEventDataSet1 } from 'src/assets/ui/fantasy_
 import { atlasData as atlasFantasyBgStoryDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-story-set1';
 import { atlasData as atlasFantasyBgBadgesDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-badges-set1';
 import { atlasData as atlasFantasyBgHudsDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-hud-set1';
+import { atlasData as atlasFantasyBgGemsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-gem-set1';
+import { atlasData as atlasFantasyBgEffectsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-effect-set1';
 
 
 
@@ -95,7 +97,9 @@ export class AtlasService {
 	atlasFantasyBgEventDataSet1,
 	atlasFantasyBgStoryDataSet1,
 	atlasFantasyBgBadgesDataSet1,
-  atlasFantasyBgHudsDataSet1
+  atlasFantasyBgHudsDataSet1,
+  atlasFantasyBgGemsDataSet1,
+  atlasFantasyBgEffectsDataSet1
   ];
   
   private readonly atlasDataSets: AtlasDataSet[] = [
@@ -126,6 +130,8 @@ export class AtlasService {
 	{ id: 'fantasy-bg-event-type-set1', label: 'Fantasy BG - Event Type Set 1', data: atlasFantasyBgEventDataSet1 },
 	{ id: 'fantasy-bg-story-type-set1', label: 'Fantasy BG - Story Type Set 1', data: atlasFantasyBgStoryDataSet1 },
 	{ id: 'fantasy-bg-badges-type-set1', label: 'Fantasy BG - Badges Type Set 1', data: atlasFantasyBgBadgesDataSet1 },
+  { id: 'fantasy-bg-gems-type-set1', label: 'Fantasy BG - Gems Type Set 1', data: atlasFantasyBgGemsDataSet1 },
+  { id: 'fantasy-bg-effects-type-set1', label: 'Fantasy BG - Effects Type Set 1', data: atlasFantasyBgEffectsDataSet1 },
 
   ];
 

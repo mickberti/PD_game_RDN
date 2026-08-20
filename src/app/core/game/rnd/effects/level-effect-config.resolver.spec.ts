@@ -71,6 +71,13 @@ describe("LevelEffectConfigResolver", () => {
     expect(invalid.issues).toContain("Flow rule maxDepth must be a non-negative integer");
   });
 
+  it("accepts the new GEM presets and rejects WALL plus ICE on one gem", () => {
+    const valid = resolver.resolve({ enabled: true, effects: [{ preset: "AMPLIFIER_X2", target: { type: EffectScope.GEM, gemIndex: 0 } }, { preset: "TIMER_3", target: { type: EffectScope.GEM, gemIndex: 1 } }, { preset: "CORRUPTION_1", target: { type: EffectScope.GEM, gemIndex: 2 } }] }, 4);
+    expect(valid.issues).toEqual([]);
+    const invalid = resolver.resolve({ enabled: true, effects: [{ preset: "WALL_2", target: { type: EffectScope.GEM, gemIndex: 0 } }, { preset: "ICE_1", target: { type: EffectScope.GEM, gemIndex: 0 } }] }, 4);
+    expect(invalid.issues).toContain("Gem 0 cannot contain both WALL and ICE.");
+  });
+
   it("resolves every isolated demo fixture without modifying the production level catalogue", () => {
     for (const level of Object.values(RDN_EFFECT_DEMO_LEVELS)) expect(resolver.resolve(level.effectConfiguration, level.positions).issues).toEqual([]);
   });

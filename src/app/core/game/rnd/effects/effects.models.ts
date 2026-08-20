@@ -9,6 +9,11 @@ export enum GemEffectType {
   SHIELD = "SHIELD",
   WALL = "WALL",
   MIRROR = "MIRROR",
+  AMPLIFIER = "AMPLIFIER",
+  INVERTER = "INVERTER",
+  ICE = "ICE",
+  TIMER = "TIMER",
+  CORRUPTION = "CORRUPTION",
 }
 
 export enum LinkEffectType {
@@ -33,11 +38,19 @@ export interface BaseEffectConfig {
   priority?: number;
 }
 
-export interface GemEffectConfig extends BaseEffectConfig {
+export interface ShieldEffectConfig extends BaseEffectConfig {
   scope: EffectScope.GEM;
-  type: GemEffectType;
-  strength?: number;
+  type: GemEffectType.SHIELD;
+  strength: number;
+  consumable?: boolean;
 }
+export interface BarrierEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.WALL | GemEffectType.ICE; strength: number; }
+export interface MirrorEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.MIRROR; }
+export interface AmplifierGemEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.AMPLIFIER; multiplier: number; }
+export interface InverterGemEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.INVERTER; }
+export interface TimerEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.TIMER; turns: number; }
+export interface CorruptionEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.CORRUPTION; amount: number; intervalTurns?: number; }
+export type GemEffectConfig = ShieldEffectConfig | BarrierEffectConfig | MirrorEffectConfig | AmplifierGemEffectConfig | InverterGemEffectConfig | TimerEffectConfig | CorruptionEffectConfig;
 
 export interface LinkEffectConfig extends BaseEffectConfig {
   scope: EffectScope.LINK;
@@ -121,9 +134,15 @@ export interface FlowEvent {
 
 export interface EffectRuntimeState {
   wallRemainingStrength: Readonly<Record<string, number>>;
+  iceRemainingStrength: Readonly<Record<string, number>>;
+  shieldRemainingStrength: Readonly<Record<string, number>>;
+  timerRemainingTurns: Readonly<Record<string, number>>;
+  completedTimerIds: readonly string[];
+  expiredTimerIds: readonly string[];
+  turn: number;
 }
 
-export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "SHIELD_ABSORBED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "GEM_VALUE_CHANGED";
+export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "SHIELD_ABSORBED" | "SHIELD_DEPLETED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "GEM_AMPLIFIER_APPLIED" | "GEM_INVERTER_APPLIED" | "ICE_HIT" | "ICE_BROKEN" | "TIMER_TICK" | "TIMER_EXPIRED" | "TIMER_COMPLETED" | "CORRUPTION_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "GEM_VALUE_CHANGED";
 export interface EffectEngineEvent {
   type: EffectEngineEventType;
   flowId?: string;
@@ -131,4 +150,19 @@ export interface EffectEngineEvent {
   linkId?: string;
   value?: number;
   generation: number;
+  incomingValue?: number;
+  absorbedValue?: number;
+  effectiveValue?: number;
+  remainingStrength?: number;
+  initialStrength?: number;
+  multiplier?: number;
+  valueBeforeOperation?: number;
+  valueAfterOperation?: number;
+  valueAfterInversion?: number;
+  remainingTurns?: number;
+  initialTurns?: number;
+  previousValue?: number;
+  newValue?: number;
+  amount?: number;
+  turn?: number;
 }

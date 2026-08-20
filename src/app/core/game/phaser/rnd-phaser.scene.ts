@@ -2,6 +2,7 @@ import * as Phaser from "phaser";
 import { AlignmentPreview, FlowState, LevelDefinition, PuzzleOperator, PuzzleState, QueueState } from "../rnd/puzzle.types";
 import { getPuzzleScorePolicy, getPuzzleStars } from "../rnd/puzzle-score.policy";
 import { atlasData as gameActionAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-game-action-set1";
+import { atlasData as effectAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-effect-set1";
 import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-gem-set1";
 import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
 import { LevelEffectConfigResolver } from "../rnd/effects/level-effect-config.resolver";
@@ -47,6 +48,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
+    this.load.atlas("rdn-effects", "assets/game/fantasy_bg/effect-set1.png", effectAtlas);
     this.load.atlas("rdn-gems", "assets/game/fantasy_bg/gem-set1.png", gemAtlas);
     for (let set = 1; set <= VISUAL_SET_COUNT; set += 1) {
       this.load.image(`rdn-bg-${set}`, `assets/game/bg/bg-set${set}.png`);
@@ -94,10 +96,11 @@ export class RdnPhaserScene extends Phaser.Scene {
     const resolvedEffects = this.effectResolver.resolve(m.level.effectConfiguration, m.level.positions).effects;
     if (resolvedEffects.length) {
       this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY), (effectId) => this.actions.linkInfo(effectId));
-      this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime?.wallRemainingStrength);
+      this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues);
       const visualKey = `${m.level.id}-${m.state.impulses}`;
       if (m.state.lastEffectEvents?.length && visualKey !== this.lastEffectVisualKey) { this.effectRenderer.play(m.state.lastEffectEvents); this.lastEffectVisualKey = visualKey; }
     }
+    this.targetEffectsHud(width, m, resolvedEffects);
     const rejectedOperation = m.state.lastOperationResults.find((result) => !result.valid);
     if (rejectedOperation) this.label(cx, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset - 52, this.operationFeedback(rejectedOperation.rejectedReason), 12, 0xffcf75);
     else if (m.flows.find((flow) => !flow.interactable)?.blockedReason) this.label(cx, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset - 52, this.operationFeedback(m.flows.find((flow) => !flow.interactable)?.blockedReason), 12, 0xffcf75);
@@ -179,12 +182,21 @@ export class RdnPhaserScene extends Phaser.Scene {
     const startX = sourceX + unitX * radius * config.startRadius; const startY = sourceY + unitY * radius * config.startRadius; const sphereRadius = radius * config.sphereRadius; const endX = point.x - unitX * sphereRadius; const endY = point.y - unitY * sphereRadius;
     const trace = (width: number, opacity: number): Phaser.GameObjects.Graphics => { const graphics = this.add.graphics().setDepth(1); graphics.lineStyle(width, color, opacity); graphics.lineBetween(startX, startY, endX, endY); graphics.strokeCircle(point.x, point.y, sphereRadius); return graphics; };
     const pulseGlow = trace(radius * config.glowWidth * widthMultiplier, animate ? alpha * .15 : alpha * .28).setAlpha(animate ? .28 : .58); if (animate) { this.trailEffects.push(pulseGlow); this.tweens.add({ targets: pulseGlow, alpha: .92, duration: 1050, ease: "Sine.InOut", yoyo: true, repeat: -1 }); }
-    trace(radius * config.middleWidth * widthMultiplier, animate ? alpha * .12 : alpha * .42); trace(radius * config.coreWidth * widthMultiplier, animate ? alpha * .43 : alpha * .78);
-    if (animate) for (let index = 0; index < 2; index += 1) this.animateTrailFlow(startX, startY, endX, endY, point.x, point.y, sphereRadius, angle, color, alpha, index * 520);
+    trace(radius * config.middleWidth * widthMultiplier, animate ? alpha * .22 : alpha * .42); trace(radius * config.coreWidth * widthMultiplier, animate ? alpha * .72 : alpha * .78);
+    if (animate) for (let index = 0; index < 3; index += 1) this.animateTrailFlow(startX, startY, endX, endY, point.x, point.y, sphereRadius, angle, color, alpha, index * 390);
   }
   private animateTrailFlow(startX: number, startY: number, endX: number, endY: number, sphereX: number, sphereY: number, sphereRadius: number, startAngle: number, color: number, alpha: number, delay: number): void {
-    const flow = { progress: 0 }; this.trailFlows.push(flow); const particle = this.add.circle(startX, startY, 3, color, alpha * .8).setDepth(3);
-    this.tweens.add({ targets: flow, progress: 1, delay, duration: 1450, repeat: -1, repeatDelay: 250, ease: "Sine.InOut", onUpdate: () => { const t = flow.progress; if (t < .72) { const p = t / .72; particle.setPosition(startX + (endX - startX) * p, startY + (endY - startY) * p); } else { const p = (t - .72) / .28; const a = startAngle + Math.PI + p * Math.PI * 2; particle.setPosition(sphereX + Math.cos(a) * sphereRadius, sphereY + Math.sin(a) * sphereRadius); } particle.setAlpha((.18 + Math.sin(t * Math.PI) * .45) * alpha); } });
+    const flow = { progress: 0 }; this.trailFlows.push(flow);
+    const halo = this.add.circle(startX, startY, 10, color, alpha * .12).setDepth(3);
+    const particle = this.add.circle(startX, startY, 4.6, 0xf3fff6, alpha).setStrokeStyle(2, color, 1).setDepth(4);
+    this.tweens.add({ targets: flow, progress: 1, delay, duration: 1450, repeat: -1, repeatDelay: 250, ease: "Sine.InOut", onUpdate: () => {
+      const t = flow.progress; let x: number; let y: number;
+      if (t < .72) { const p = t / .72; x = startX + (endX - startX) * p; y = startY + (endY - startY) * p; }
+      else { const p = (t - .72) / .28; const a = startAngle + Math.PI + p * Math.PI * 2; x = sphereX + Math.cos(a) * sphereRadius; y = sphereY + Math.sin(a) * sphereRadius; }
+      const intensity = .35 + Math.sin(t * Math.PI) * .65;
+      halo.setPosition(x, y).setScale(.75 + intensity * .9).setAlpha(intensity * alpha * .3);
+      particle.setPosition(x, y).setScale(.72 + intensity * .75).setAlpha(intensity * alpha);
+    } });
   }
   /** Adventure uses set 1 and Time Attack set 2; later hundreds rotate through the remaining themes. */
   private visualSet(level: LevelDefinition): number { const baseSet = BASE_SET_BY_VARIANT[level.variant]; const levelNumber = Math.max(1, level.number); return ((baseSet - 1 + Math.floor((levelNumber - 1) / 100)) % VISUAL_SET_COUNT) + 1; }
@@ -193,12 +205,12 @@ export class RdnPhaserScene extends Phaser.Scene {
   private addGear(diameter: number, key: string): Phaser.GameObjects.Image { const gear = this.add.image(0, 0, key); return gear.setScale(diameter / Math.max(gear.width, gear.height)); }
   private point(cx: number, cy: number, radius: number, index: number, total: number, angleOffset = 0): { x: number; y: number } { const a = -Math.PI / 2 + angleOffset * Math.PI / 180 + index * Math.PI * 2 / total; return { x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius }; }
   private gem(x: number, y: number, radius: number, _index: number, visualSet: number, off: boolean, special = false): Phaser.GameObjects.Image { const theme = GEM_THEME_CONFIG[visualSet as 1 | 2 | 3]; const frame = special ? "gem-sphere-purple" : theme.frame; const gem = this.add.image(x, y, "rdn-gems", frame).setDisplaySize(radius * 2.18, radius * 2.18); return off ? gem.setTint(0x858585).setAlpha(.78) : gem.setTint(theme.tint); }
-  private sphere(x: number, y: number, radius: number, value: number, off: boolean, index: number, visualSet: number, fontSize: number, reservedWidthRatio: number): Phaser.GameObjects.Image { const gem = this.gem(x, y, radius, index, visualSet, off); this.sphereLabel(x, y, off ? "0" : format(value), radius, off ? 0xe6e6e6 : 0xffffff, fontSize, reservedWidthRatio); return gem; }
+  private sphere(x: number, y: number, radius: number, value: number, off: boolean, index: number, visualSet: number, fontSize: number, reservedWidthRatio: number): Phaser.GameObjects.Image { const gem = this.gem(x, y, radius, index, visualSet, off).setDepth(6); this.sphereLabel(x, y, off ? "0" : format(value), radius, off ? 0xe6e6e6 : 0xffffff, fontSize, reservedWidthRatio).setDepth(7); return gem; }
   /** Every gem reserves -99, so signed one- and two-digit values share a stable visual scale. */
   private sphereLabel(x: number, y: number, value: string, radius: number, color: number, fontSize = Math.round(radius * 2.18 * .8), reservedWidthRatio = .8): Phaser.GameObjects.Text { const diameter = radius * 2.18; const text = this.label(x, y, "-99", Math.round(fontSize), color, true); const reservedWidth = text.width; text.setText(value); const scale = Math.min(1, diameter * reservedWidthRatio / reservedWidth); text.setScale(scale); return text; }
   private operationFloat(x: number, y: number, radius: number, operator: PuzzleOperator | null, elapsedMs = 0): void { if (operator === null) return; const verticalOffset = 10; const startY = y - radius * .9 - verticalOffset; const endY = y - radius * 2.45 - verticalOffset; const progress = Math.max(0, Math.min(1, elapsedMs / RDN_MOTION.operationFloatMs)); const text = this.sphereLabel(x, startY + (endY - startY) * progress, formatOperator(operator), radius * 1.15, operator === "divide2" || operator === "divide3" ? 0xdca8ff : 0xc5ffe0).setDepth(14); const scaleX = text.scaleX; const scaleY = text.scaleY; const initialScale = .78 + .22 * progress; text.setScale(scaleX * initialScale, scaleY * initialScale).setAlpha(1 - progress); this.tweens.add({ targets: text, y: endY, alpha: 0, scaleX, scaleY, duration: Math.max(1, RDN_MOTION.operationFloatMs - elapsedMs), ease: "Cubic.Out", onComplete: () => text.destroy() }); }
   private zeroBurst(x: number, y: number, radius: number): void { const flash = this.add.circle(x, y, radius, 0xd9fff3, 1).setDepth(10); const shockwave = this.add.circle(x, y, radius * .7, 0x64f4c8, 0).setStrokeStyle(Math.max(2, radius * .16), 0xb8ffe9, .95).setDepth(10); this.tweens.add({ targets: flash, scale: 5.2, alpha: 0, duration: RDN_MOTION.zeroImpactMs, ease: "Cubic.Out", onComplete: () => flash.destroy() }); this.tweens.add({ targets: shockwave, scale: 4.5, alpha: .86, duration: 120, ease: "Quad.Out", yoyo: true, hold: 70, onComplete: () => shockwave.destroy() }); for (let index = 0; index < RDN_MOTION.maxZeroParticles; index += 1) { const angle = index * Math.PI * 2 / RDN_MOTION.maxZeroParticles + Math.PI / RDN_MOTION.maxZeroParticles; const distance = radius * (2.1 + (index % 5) * .3); const spark = this.add.circle(x, y, Math.max(2, radius * (.1 + (index % 3) * .035)), 0x8dffe2, .98).setDepth(11); this.tweens.add({ targets: spark, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance, scale: .08, alpha: 0, duration: RDN_MOTION.zeroImpactMs, delay: index * 11, ease: "Cubic.Out", onComplete: () => spark.destroy() }); } }
-  private resultBadge(x: number, y: number, value: string, trend: AlignmentPreview["trend"]): void { const background = trend === "zero" ? 0x287a47 : trend === "closer" ? 0x176b79 : trend === "farther" ? 0x882f3b : 0x82652a; const icon = trend === "zero" ? "✓" : trend === "closer" ? "↓" : trend === "farther" ? "↑" : "•"; this.add.rectangle(x, y, 43, 18, background, .94).setStrokeStyle(1, 0xe1bd63); this.label(x, y, `${value}${icon}`, 10, 0xffffff); }
+  private resultBadge(x: number, y: number, value: string, trend: AlignmentPreview["trend"]): void { const background = trend === "zero" ? 0x287a47 : trend === "closer" ? 0x176b79 : trend === "farther" ? 0x882f3b : 0x82652a; const icon = trend === "zero" ? "✓" : trend === "closer" ? "↓" : trend === "farther" ? "↑" : "•"; this.add.rectangle(x, y, 43, 18, background, .94).setStrokeStyle(1, 0xe1bd63).setDepth(8); this.label(x, y, `${value}${icon}`, 10, 0xffffff).setDepth(9); }
   private queueBadge(x: number, y: number, remaining: number, exhausted: boolean): Phaser.GameObjects.Container { const color = exhausted ? 0x5d5d5d : 0x241b12; const border = exhausted ? 0x9a9a9a : 0xb18b48; const background = this.add.circle(0, 0, 11, color).setStrokeStyle(1, border); const text = this.label(0, 0, String(remaining), 11, exhausted ? 0xd8d8d8 : 0xffffff); return this.add.container(x, y, [background, text]).setDepth(6); }
   private drawCountdownArc(cx: number, cy: number, radius: number, model: RdnSceneModel): void {
     if (model.timeRemainingMs === null || model.timeRemainingMs === undefined || !model.timeTotalSeconds) return;
@@ -224,23 +236,46 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.add.rectangle(cx, cy, 354, 430, 0x101c18, .98).setStrokeStyle(2, 0x6edfff).setDepth(depth).setInteractive();
     this.label(cx, cy - 180, "LEGENDA EFFETTI", 18, 0x9cf5ff).setDepth(depth + 1);
     const rows: ReadonlyArray<readonly [string, string, number, string]> = [
-      ["SHIELD", "assorbe gli impatti fino alla forza indicata", 0x72dfff, "action-defense"],
-      ["WALL", "blocca il flusso; il numero mostra la resistenza", 0xbca477, "action-attack"],
-      ["MIRROR", "inverte il contributo ricevuto dalla gemma", 0xdba0ff, "action-ice"],
-      ["ECHO", "propaga lo stesso valore al bersaglio", 0x7edbff, "action-speed"],
-      ["AMPLIFY x2", "propaga il valore moltiplicato", 0xffcd62, "action-lightning"],
-      ["INVERT", "propaga il valore con segno invertito", 0xc890ff, "action-tornado"],
-      ["BOMB", "a zero colpisce le gemme adiacenti", 0xff9378, "action-fire"],
+      ["SHIELD", "assorbe gli impatti fino alla forza indicata", 0x72dfff, "shield"],
+      ["WALL", "blocca il flusso; il numero mostra la resistenza", 0xbca477, "wall"],
+      ["MIRROR", "inverte il contributo ricevuto dalla gemma", 0xdba0ff, "mirror-sign"],
+      ["ECHO", "propaga lo stesso valore al bersaglio", 0x7edbff, "echo-link"],
+      ["AMPLIFY x2", "propaga il valore moltiplicato", 0xffcd62, "double-link"],
+      ["INVERT", "propaga il valore con segno invertito", 0xc890ff, "mirror-link"],
+      ["BOMB", "a zero colpisce le gemme adiacenti", 0xff9378, "area-bomb"],
     ];
     rows.forEach(([name, description, color, icon], index) => {
       const y = cy - 135 + index * 42;
       this.effectLegendIcon(cx - 142, y, icon, color, depth + 1);
       this.label(cx - 124, y, name, 14, color).setOrigin(0, .5).setDepth(depth + 1);
-      this.label(cx - 8, y, description, 10, 0xe6dfc3).setOrigin(0, .5).setDepth(depth + 1);
+      this.add.text(cx - 8, y, description, { fontFamily: "Arial, Helvetica, sans-serif", fontSize: "12px", fontStyle: "bold", color: "#e6dfc3", stroke: "#111814", strokeThickness: 2, wordWrap: { width: 168, useAdvancedWrap: true } }).setOrigin(0, .5).setDepth(depth + 1);
     });
     this.label(cx, cy + 153, "Le particelle sugli archi mostrano la propagazione del flow.", 10, 0xe6dfc3).setDepth(depth + 1);
     this.button(cx, cy + 186, "x", () => this.actions.closeInfo(), depth + 2);
   }
+  /** Compact HUD for the first active target: it mirrors the gem info dialog and never decides rules. */
+  private targetEffectsHud(width: number, model: RdnSceneModel, effects: readonly ResolvedEffect[]): void {
+    const preview = model.previews.find((item) => item.active) ?? model.previews[0];
+    if (!preview) return;
+    const targetIndex = preview.slot.outerIndex;
+    const related = effects.filter((effect) => this.isEffectActive(effect, model.state.outerValues) && (effect.target.type === EffectScope.GEM ? effect.target.gem.index === targetIndex : effect.target.type === EffectScope.LINK ? effect.target.fromGem.index === targetIndex || effect.target.toGem.index === targetIndex : effect.target.sourceGem.index === targetIndex));
+    const x = width - 100; const y = 144; const cardWidth = 184; const cardHeight = related.length ? 82 : 60;
+    this.add.rectangle(x, y, cardWidth, cardHeight, 0x101c18, .88).setStrokeStyle(1, 0xc49b50, .9).setDepth(16);
+    this.label(x, y - cardHeight / 2 + 13, `BERSAGLIO ${targetIndex + 1}`, 10, 0xf8dc8b).setDepth(17);
+    const previewY = y - cardHeight / 2 + 31;
+    const previewColor = preview.trend === "zero" ? 0x287a47 : preview.trend === "closer" ? 0x176b79 : preview.trend === "farther" ? 0x882f3b : 0x82652a;
+    const previewIcon = preview.trend === "zero" ? "✓" : preview.trend === "closer" ? "↓" : preview.trend === "farther" ? "↑" : "•";
+    // Overlay the raw-operation label below with the complete, effect-aware result.
+    this.add.rectangle(x, previewY, cardWidth - 10, 24, 0x101c18, 1).setDepth(18);
+    this.label(x - 35, previewY, `${format(preview.outerValue)}  →`, 14, 0xe6dfc3).setDepth(19);
+    this.add.rectangle(x + 36, previewY, 43, 18, previewColor, .94).setStrokeStyle(1, 0xe1bd63).setDepth(19);
+    this.label(x + 36, previewY, `${format(preview.result)}${previewIcon}`, 10, 0xffffff).setDepth(20);
+    this.label(x, y - cardHeight / 2 + 31, `${format(preview.outerValue)}  →  ${format(preview.result)}`, 14, preview.result === 0 ? 0x9df3a8 : 0xffffff).setDepth(17);
+    if (!related.length) { this.label(x, y + 14, "Nessun effetto", 10, 0xe6dfc3).setDepth(17); return; }
+    const spacing = Math.min(34, (cardWidth - 28) / related.length);
+    related.slice(0, 5).forEach((effect, index) => this.targetEffectHudIcon(x - (Math.min(related.length, 5) - 1) * spacing / 2 + index * spacing, y + 20, effect, () => this.actions.gemInfo(targetIndex)));
+  }
+  private targetEffectHudIcon(x: number, y: number, effect: ResolvedEffect, action: () => void): void { const color = this.effectColor(effect); const background = this.add.circle(x, y, 13, 0x151917, .96).setStrokeStyle(1, color, 1).setDepth(17).setInteractive({ useHandCursor: true }); const icon = this.add.image(x, y, "rdn-effects", this.effectIconFrame(effect)).setDisplaySize(21, 21).setTint(color).setDepth(18); background.on("pointerdown", action); icon.setInteractive({ useHandCursor: true }).on("pointerdown", action); }
   private gemInfoDialog(cx: number, cy: number, model: RdnSceneModel, index: number): void {
     const depth = 20; const effects = this.effectsForGem(model, index);
     const height = Math.min(610, 200 + effects.length * 108);
@@ -254,7 +289,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       this.effectLegendIcon(cx - 126, y, this.effectIconFrame(effect), this.effectColor(effect), depth + 1);
       this.label(cx - 106, y, this.effectLabel(effect, model), 13, this.effectColor(effect)).setOrigin(0, .5).setDepth(depth + 1);
       const [nature, behavior, solution] = this.effectDetails(effect, model);
-      this.wrappedLabel(cx - 106, y + 16, `${nature}\n${behavior}\n${solution}`, 220, 10, 0xe6dfc3, depth + 1);
+      this.wrappedLabel(cx - 106, y + 16, `${nature}\n${behavior}\n${solution}`, 220, 13, 0xe6dfc3, depth + 1);
     });
     this.button(cx, cy + height / 2 - 34, "x", () => this.actions.closeInfo(), depth + 2);
   }
@@ -274,20 +309,26 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.label(cx, cy - 77, `Direzione: ${forwardOnly ? "origine → destinazione" : reverseOnly ? "destinazione → origine" : "bidirezionale"}`, 12, 0xe6dfc3).setDepth(depth + 1);
     this.label(cx, cy - 47, `Gemma ${fromIndex + 1}: ${format(model.state.outerValues[fromIndex])}   ·   Gemma ${toIndex + 1}: ${format(model.state.outerValues[toIndex])}`, 14, 0xffffff).setDepth(depth + 1);
     const [nature, behavior, solution] = this.effectDetails(effect, model);
-    this.wrappedLabel(cx - 145, cy - 18, `${nature}\n${behavior}\n${solution}`, 290, 12, 0xe6dfc3, depth + 1);
+    this.wrappedLabel(cx - 145, cy - 18, `${nature}\n${behavior}\n${solution}`, 290, 14, 0xe6dfc3, depth + 1);
     this.label(cx, cy + 124, "Tocca una gemma per vederne tutti gli effetti.", 10, 0xe6dfc3).setDepth(depth + 1);
     this.button(cx, cy + 151, "x", () => this.actions.closeInfo(), depth + 2);
   }
   private effectsForGem(model: RdnSceneModel, index: number): readonly ResolvedEffect[] {
-    return this.effectResolver.resolve(model.level.effectConfiguration, model.level.positions).effects.filter((effect) => effect.target.type === EffectScope.GEM ? effect.target.gem.index === index : effect.target.type === EffectScope.LINK ? effect.target.fromGem.index === index || effect.target.toGem.index === index : effect.target.sourceGem.index === index);
+    return this.effectResolver.resolve(model.level.effectConfiguration, model.level.positions).effects.filter((effect) => this.isEffectActive(effect, model.state.outerValues) && (effect.target.type === EffectScope.GEM ? effect.target.gem.index === index : effect.target.type === EffectScope.LINK ? effect.target.fromGem.index === index || effect.target.toGem.index === index : effect.target.sourceGem.index === index));
   }
-  private effectIconFrame(effect: ResolvedEffect): string { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? "action-defense" : effect.config.type === GemEffectType.WALL ? "action-attack" : "action-ice"; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? "action-speed" : effect.config.type === LinkEffectType.AMPLIFY ? "action-lightning" : "action-tornado"; return "action-fire"; }
-  private effectColor(effect: ResolvedEffect): number { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : 0xdba0ff; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff; return 0xff9378; }
-  private effectLabel(effect: ResolvedEffect, model: RdnSceneModel): string { if (effect.config.scope === EffectScope.GEM) { const detail = effect.config.type === GemEffectType.WALL ? model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? effect.config.strength ?? 1 : effect.config.strength; return `${effect.config.type}${detail === undefined ? "" : ` ${detail}`}`; } if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) return `${effect.config.type}${effect.config.multiplier ? ` x${effect.config.multiplier}` : ""} ${effect.target.fromGem.index + 1} -> ${effect.target.toGem.index + 1}`; if (effect.config.scope === EffectScope.AREA) return `${effect.config.type} raggio ${effect.config.radius ?? 1}`; return effect.config.type; }
+  private isEffectActive(effect: ResolvedEffect, values: readonly number[]): boolean { return effect.target.type === EffectScope.GEM ? values[effect.target.gem.index] !== 0 : effect.target.type === EffectScope.LINK ? values[effect.target.fromGem.index] !== 0 && values[effect.target.toGem.index] !== 0 : values[effect.target.sourceGem.index] !== 0; }
+  private effectIconFrame(effect: ResolvedEffect): string { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? "shield" : effect.config.type === GemEffectType.WALL ? "wall" : effect.config.type === GemEffectType.ICE ? "ice" : effect.config.type === GemEffectType.AMPLIFIER ? "amplifier" : effect.config.type === GemEffectType.INVERTER ? "inverter" : effect.config.type === GemEffectType.TIMER ? "timer" : effect.config.type === GemEffectType.CORRUPTION ? "corruption" : "mirror-sign"; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? "echo-link" : effect.config.type === LinkEffectType.AMPLIFY ? "double-link" : "mirror-link"; return "area-bomb"; }
+  private effectColor(effect: ResolvedEffect): number { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff; return 0xff9378; }
+  private effectLabel(effect: ResolvedEffect, model: RdnSceneModel): string { if (effect.config.scope === EffectScope.GEM) { const config = effect.config; const detail = config.type === GemEffectType.WALL ? model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.ICE ? model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.TIMER ? model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? config.turns : config.type === GemEffectType.AMPLIFIER ? `x${config.multiplier}` : config.type === GemEffectType.SHIELD ? config.strength : undefined; return `${config.type}${detail === undefined ? "" : ` ${detail}`}`; } if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) return `${effect.config.type}${effect.config.multiplier ? ` x${effect.config.multiplier}` : ""} ${effect.target.fromGem.index + 1} -> ${effect.target.toGem.index + 1}`; if (effect.config.scope === EffectScope.AREA) return `${effect.config.type} raggio ${effect.config.radius ?? 1}`; return effect.config.type; }
   private effectDetails(effect: ResolvedEffect, model: RdnSceneModel): readonly [string, string, string] {
     if (effect.config.scope === EffectScope.GEM) {
       if (effect.config.type === GemEffectType.SHIELD) { const strength = effect.config.strength ?? 1; return ["Natura: barriera difensiva.", `Fa: assorbe fino a ${strength} punti da ogni flusso in arrivo.`, "Soluzione: supera l'assorbimento con un impulso più forte."]; }
       if (effect.config.type === GemEffectType.WALL) { const remaining = model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? effect.config.strength ?? 1; return ["Natura: ostacolo consumabile.", `Fa: annulla un flusso; resistenza rimasta: ${remaining} colpi.`, "Soluzione: colpiscila fino a romperla, poi applica il valore."]; }
+      if (effect.config.type === GemEffectType.ICE) { const remaining = model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? effect.config.strength; return ["Natura: barriera di ghiaccio.", `Fa: annulla un flusso; gelo rimasto: ${remaining} colpi.`, "Soluzione: scongelala con gli impatti, poi applica il valore."]; }
+      if (effect.config.type === GemEffectType.AMPLIFIER) return ["Natura: amplificatore locale.", `Fa: moltiplica ogni contributo in arrivo per ${effect.config.multiplier}.`, "Soluzione: usa impulsi piccoli e calcola il valore amplificato."];
+      if (effect.config.type === GemEffectType.INVERTER) return ["Natura: invertitore locale.", "Fa: dopo l'operazione inverte il valore ottenuto dalla gemma.", "Soluzione: pianifica prima il valore intermedio e poi il suo segno."];
+      if (effect.config.type === GemEffectType.TIMER) return ["Natura: timer a turni.", `Fa: perde un turno per ogni impulso globale; rimasti ${model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? effect.config.turns}.`, "Soluzione: risolvi questa gemma prima della scadenza."];
+      if (effect.config.type === GemEffectType.CORRUPTION) return ["Natura: corruzione locale.", `Fa: ogni ${effect.config.intervalTurns ?? 1} turno aumenta il valore assoluto di ${effect.config.amount}.`, "Soluzione: risolvila rapidamente: a zero la corruzione si ferma."];
       return ["Natura: specchio numerico.", "Fa: inverte il segno di ogni flusso in arrivo.", "Soluzione: invia l'operazione dal segno opposto a quello desiderato."];
     }
     if (effect.config.scope === EffectScope.LINK) {
@@ -297,7 +338,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     return ["Natura: esplosione ad area.", `Fa: quando questa gemma arriva a zero, applica -${Math.abs(effect.config.strength ?? 1)} alle gemme entro raggio ${effect.config.radius ?? 1}.`, "Soluzione: portala a zero quando la riduzione ai vicini è utile."];
   }
-  private effectLegendIcon(x: number, y: number, frame: string, color: number, depth: number): void { const background = this.add.circle(x, y, 12, 0x101c18, .95).setStrokeStyle(1, color, .95).setDepth(depth); this.add.image(x, y, "rdn-actions", frame).setDisplaySize(18, 18).setTint(color).setDepth(depth + 1); background.setDepth(depth); }
+  private effectLegendIcon(x: number, y: number, frame: string, color: number, depth: number): void { const background = this.add.circle(x, y, 14, 0x101c18, .95).setStrokeStyle(1, color, .95).setDepth(depth); this.add.image(x, y, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color).setDepth(depth + 1); background.setDepth(depth); }
   private wrappedLabel(x: number, y: number, value: string, width: number, size: number, color: number, depth: number): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold", stroke: "#111814", strokeThickness: 1, lineSpacing: 3, wordWrap: { width } }).setOrigin(0, 0).setDepth(depth); }
   private operationFeedback(reason: AlignmentPreview["rejectedReason"]): string { return reason === "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" ? "DIV2 richiede un valore pari diverso da zero" : reason === "DIVIDE_BY_TWO_CONSUMED" ? "DIV2 gia usato" : reason === "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" ? "DIV3 richiede un multiplo di 3 diverso da zero" : reason === "DIVIDE_BY_THREE_CONSUMED" ? "DIV3 gia usato" : reason === "RESULT_OUT_OF_RANGE" ? "Mossa fuori intervallo" : "Mossa non disponibile"; }
   private freeInfoDialog(cx: number, cy: number, settings: NonNullable<RdnSceneModel["freeSettings"]>): void { const depth = 20; this.add.rectangle(cx, cy, 330, 262, 0x151914, .97).setStrokeStyle(3, 0xc49b50).setDepth(depth).setInteractive(); this.label(cx, cy - 96, "INFO FREE", 18, 0xf8dc8b).setDepth(depth + 1); this.label(cx, cy - 55, `Difficolta: ${settings.difficulty}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy - 26, `Gemme operative: ${settings.slotCount}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy + 3, `Effetti: ${settings.effectsEnabled ? "ATTIVI" : "DISATTIVI"}`, 14, settings.effectsEnabled ? 0x9df3a8 : 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 33, "Partite illimitate", 13, 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 58, "Nessuna vita o penalita", 13, 0xe6dfc3).setDepth(depth + 1); this.button(cx, cy + 98, "X", () => this.actions.closeInfo(), depth + 2); }

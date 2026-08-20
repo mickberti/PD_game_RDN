@@ -31,6 +31,11 @@ export class LevelEffectConfigResolver {
       const effect = this.resolveAssignment(assignment, gemCount, issues, index);
       if (effect) effects.push(effect);
     });
+    const gemTypesByIndex = new Map<number, Set<string>>();
+    for (const effect of effects) if (effect.target.type === EffectScope.GEM && effect.config.scope === EffectScope.GEM) {
+      const types = gemTypesByIndex.get(effect.target.gem.index) ?? new Set<string>(); types.add(effect.config.type); gemTypesByIndex.set(effect.target.gem.index, types);
+    }
+    for (const [index, types] of gemTypesByIndex) if (types.has("WALL") && types.has("ICE")) issues.push(`Gem ${index} cannot contain both WALL and ICE.`);
     return { effects, issues, flowRules: this.resolveFlowRules(configuration.flowRules, issues) };
   }
 
@@ -52,7 +57,10 @@ export class LevelEffectConfigResolver {
     const strength = "strength" in merged ? merged.strength : undefined;
     const radius = "radius" in merged ? merged.radius : undefined;
     const multiplier = "multiplier" in merged ? merged.multiplier : undefined;
-    if ((strength !== undefined && (!Number.isFinite(strength) || strength <= 0)) || (radius !== undefined && (!Number.isInteger(radius) || radius <= 0)) || (multiplier !== undefined && (!Number.isFinite(multiplier) || multiplier <= 0))) { issues.push(`Invalid effect override values: ${presetKey}`); return null; }
+    const turns = "turns" in merged ? merged.turns : undefined;
+    const amount = "amount" in merged ? merged.amount : undefined;
+    const intervalTurns = "intervalTurns" in merged ? merged.intervalTurns : undefined;
+    if ((strength !== undefined && (!Number.isFinite(strength) || strength <= 0)) || (radius !== undefined && (!Number.isInteger(radius) || radius <= 0)) || (multiplier !== undefined && (!Number.isFinite(multiplier) || multiplier <= 0)) || (turns !== undefined && (!Number.isInteger(turns) || turns <= 0)) || (amount !== undefined && (!Number.isFinite(amount) || amount <= 0)) || (intervalTurns !== undefined && (!Number.isInteger(intervalTurns) || intervalTurns <= 0))) { issues.push(`Invalid effect override values: ${presetKey}`); return null; }
     return merged;
   }
 

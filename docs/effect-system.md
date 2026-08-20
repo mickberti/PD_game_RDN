@@ -16,6 +16,32 @@ effectConfiguration: {
 }
 ```
 
+## GEM Effects
+
+Gli effetti `EffectScope.GEM` sono locali: trasformano solo il contributo ricevuto dalla propria gemma, il suo valore o il loro runtime. Non creano link, non propagano e non generano effetti AREA. Il motore li risolve in modo deterministico; Phaser riceve soltanto gli eventi semantici.
+
+| Effect | Phase | Parametri | Blocca operazione | Modifica operazione | Modifica valore autonomamente |
+| --- | --- | --- | --- | --- | --- |
+| SHIELD | BEFORE | `strength`, `consumable?` | no | sì | no |
+| WALL | BEFORE | `strength` | sì | no | no |
+| MIRROR | BEFORE | — | no | sì | no |
+| AMPLIFIER | BEFORE | `multiplier` | no | sì | no |
+| INVERTER | AFTER | — | no | no | sì |
+| ICE | BEFORE | `strength` | sì | no | no |
+| TIMER | TURN_END | `turns` | no | no | no |
+| CORRUPTION | TURN_END | `amount`, `intervalTurns?` | no | no | sì |
+
+Priority BEFORE: `WALL`/`ICE`, `SHIELD`, `MIRROR`, `AMPLIFIER`; una barriera blocca le fasi successive per quel contributo. `INVERTER` avviene dopo la mutazione. A fine impulso, dopo che Flow/Link/AREA sono stati risolti, viene applicata prima `CORRUPTION` e poi `TIMER` una sola volta.
+
+- **SHIELD** riduce il modulo del contributo; se `consumable`, una protezione usata perde un punto runtime. Eventi: `SHIELD_ABSORBED`, `SHIELD_DEPLETED`.
+- **WALL** e **ICE** assorbono un impatto per punto di resistenza. L’impatto che li rompe non modifica la gemma. Eventi distinti: `WALL_HIT`/`WALL_BROKEN`, `ICE_HIT`/`ICE_BROKEN`.
+- **MIRROR** inverte il segno del contributo; **AMPLIFIER** lo moltiplica. Eventi: `MIRROR_APPLIED`, `GEM_AMPLIFIER_APPLIED`.
+- **INVERTER** inverte il valore ottenuto dopo l’operazione, mantenendo `0`. Evento: `GEM_INVERTER_APPLIED`.
+- **TIMER** scala una sola volta per impulso globale, termina quando la gemma arriva a zero e altrimenti emette `TIMER_TICK`/`TIMER_EXPIRED`.
+- **CORRUPTION** aumenta il modulo della gemma ogni `intervalTurns`; non riattiva mai una gemma a zero. Evento: `CORRUPTION_APPLIED`.
+
+Preset disponibili: `SHIELD_1..3`, `WALL_2..4`, `MIRROR_1`, `AMPLIFIER_X2/X3`, `INVERTER_1`, `ICE_1..3`, `TIMER_3/5/7`, `CORRUPTION_1/2`.
+
 ## Link
 
 ```ts

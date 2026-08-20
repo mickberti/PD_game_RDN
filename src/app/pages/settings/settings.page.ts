@@ -119,7 +119,7 @@ export class SettingsPage {
   readonly directRouteAccessLabel = computed(() => this.directRouteAccess.enabled() ? 'Accesso diretto attivo' : 'Passa da boot');
   readonly resettingProgress = signal(false);
   readonly adminLevelActionPending = signal(false);
-  readonly effectPlaygroundAvailable = computed(() => this.isAdmin() && !environment.production);
+  readonly effectPlaygroundAvailable = computed(() => this.isAdmin());
 
   t(key: string): string {
     return this.language.t(key);
