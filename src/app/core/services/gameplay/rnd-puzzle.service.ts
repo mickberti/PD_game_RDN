@@ -26,8 +26,8 @@ export class RdnPuzzleService {
   readonly nextPreviews = computed(() => this.engine.previews(this.level(), this.state(), 1));
   readonly flows = computed(() => this.engine.flows(this.level(), this.state()));
   readonly queueStates = computed(() => this.engine.queueStates(this.level(), this.state()));
-  load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number): void {
-    const level = variant === "free" ? generateRdnPuzzle("adventure", difficulty, seed, slotCount) : getRdnLevel(variant, number);
+  load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number, freeEffectsEnabled = false): void {
+    const level = variant === "free" ? generateRdnPuzzle("adventure", difficulty, seed, slotCount, freeEffectsEnabled) : getRdnLevel(variant, number);
     this.freeMode = variant === "free";
     this.freeDifficulty = difficulty;
     this.freeRerollState = (Math.trunc(seed) ^ 0x6d2b79f5) >>> 0 || 1;

@@ -2,6 +2,8 @@ import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolutio
 import { PuzzleEngine } from "./puzzle.engine";
 import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 import { RDN_RELEASE } from "./rdn-release.config";
+import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, validateEffectComplexity } from "./effects/effect-progression.config";
+import { LevelEffectConfiguration } from "./effects/level-effects.types";
 
 export const RDN_MAX_LEVEL = 200;
 export const RDN_MIN_SPHERES = 4;
@@ -121,15 +123,55 @@ const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameCo
   },
 });
 
+const replaySolution = (level: LevelDefinition): ReturnType<PuzzleEngine["createInitialState"]> => {
+  const engine = new PuzzleEngine();
+  let state = engine.createInitialState(level);
+  for (const move of level.solutionMoves ?? []) {
+    const delta = modulo(move.rotation - state.rotation, level.positions);
+    if (delta) state = engine.apply(level, state, { type: "ROTATE", direction: delta <= level.positions / 2 ? "CW" : "CCW", steps: delta <= level.positions / 2 ? delta : level.positions - delta });
+    state = engine.apply(level, state, { type: "IMPULSE" });
+  }
+  return state;
+};
+
+/**
+ * Effects alter deltas, not the numeric generator.  Recalculate only the
+ * authored starting values against the canonical move sequence so an effected
+ * board retains a deterministic playable solution and cost.
+ */
+const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration | undefined): T => {
+  if (!configuration) return level;
+  const issues = validateEffectComplexity(configuration, `${level.variant} level ${level.number}`);
+  if (issues.length) throw new Error(issues.join(" "));
+  const range = level.numberRange ?? DIFFICULTY_PROFILES[difficultyForLevel(level.number)].numberRange;
+  let outerValues = [...level.outerValues];
+  for (let attempt = 0; attempt < 14; attempt += 1) {
+    const candidate = { ...level, outerValues, solution: level.solution?.map((slot, index) => ({ ...slot, startValue: outerValues[index] })), effectConfiguration: configuration } as T;
+    const result = replaySolution(candidate);
+    if (result.won) return candidate;
+    const recalculated = outerValues.map((value, index) => value - result.outerValues[index]);
+    if (recalculated.some((value) => !Number.isInteger(value) || value === 0 || value < range.min || value > range.max)) break;
+    if (recalculated.every((value, index) => value === outerValues[index])) break;
+    outerValues = recalculated;
+  }
+  // A tier is never allowed to ship an unsolvable generated board. The fallback
+  // remains deterministic and legacy-compatible; development tests flag it.
+  return level;
+};
+
+const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T): T => regenerateEffectAwareLevel(level, createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
+
 const persistent = (number: number): LevelDefinition => {
   // Keep the first board as the one-step tutorial. Levels 2 and 3 must already
   // be distinct playable boards, otherwise the solution catalogue repeats it too.
   const board = number === 1 ? tutorialBoard() : generateBoard(number, 17);
-  return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1, variant: "persistent", numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board };
+  const level = { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board };
+  return applyProgressionEffects("adventure", level);
 };
 const loader = (number: number): LevelDefinition => {
   const board = number === 1 ? tutorialBoard() : generateBoard(number, 71);
-  return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1, variant: "loader", numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+  const level = { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+  return applyProgressionEffects("time-attack", level);
 };
 
 export const RDN_LEVELS: readonly LevelDefinition[] = [
@@ -139,17 +181,21 @@ export const RDN_LEVELS: readonly LevelDefinition[] = [
 export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): LevelDefinition => RDN_LEVELS.find((level) => level.variant === (variant === "adventure" ? "persistent" : "loader") && level.number === number) ?? RDN_LEVELS[0];
 
 /** Seedable entry point for replay, support and future ranked runs. */
-export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number): LevelDefinition => {
+export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number, freeEffectsEnabled = false): LevelDefinition => {
   const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
   const board = generateBoard(number, Math.trunc(seed), slotCount); const profile = DIFFICULTY_PROFILES[difficulty]; const generation = { ...generatedMetadata(number, board), seed: board.seed, difficulty };
-  return variant === "adventure"
-    ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1, variant: "persistent", numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
-    : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1, variant: "loader", numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+  const level = variant === "adventure"
+    ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
+    : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+  return regenerateEffectAwareLevel(level, createFreeModeEffectConfiguration(difficulty, level.positions, generation.seed, freeEffectsEnabled));
 };
 
 export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; verified: boolean; }
 const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : value + operator;
 const verifiesSolution = (level: LevelDefinition): boolean => {
+  // Effected boards are validated through the real engine because link and area
+  // contributions intentionally make their solution non-local to one gem.
+  if (level.effectConfiguration?.enabled) return replaySolution(level).won;
   const solution = level.solution ?? [];
   const moves = level.solutionMoves ?? [];
   const requiredMoves = level.slotPhases.reduce((total, phase) => total + phase.length, 0);

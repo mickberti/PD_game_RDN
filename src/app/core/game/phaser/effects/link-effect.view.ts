@@ -7,7 +7,7 @@ export interface LinkEffectGeometry { from: Phaser.Math.Vector2; to: Phaser.Math
 /** Visual-only persistent link. It has no knowledge of gameplay values or propagation rules. */
 export class LinkEffectView extends Phaser.GameObjects.Container {
   readonly geometry: LinkEffectGeometry;
-  constructor(scene: Phaser.Scene, readonly effect: ResolvedEffect, geometry: LinkEffectGeometry) {
+  constructor(scene: Phaser.Scene, readonly effect: ResolvedEffect, geometry: LinkEffectGeometry, onInfo?: (effectId: string) => void) {
     super(scene); this.geometry = geometry; scene.add.existing(this); this.setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     const config = effect.config; if (config.scope !== EffectScope.LINK) return;
     const color = config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : config.type === LinkEffectType.INVERT ? 0xc890ff : 0x7edbff;
@@ -15,6 +15,7 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     if (config.type === LinkEffectType.ECHO) { graphic.lineStyle(1, color, .9); this.drawCurve(graphic, 4); }
     const midpoint = this.pointAt(.5); const symbol = config.type === LinkEffectType.AMPLIFY ? `×${config.multiplier ?? 1}` : config.type === LinkEffectType.INVERT ? "±" : "≋";
     const label = scene.add.text(midpoint.x, midpoint.y, `${symbol} ${config.direction === LinkDirection.FORWARD ? "→" : "↔"}`, { fontFamily: "Arial", fontSize: "20px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}`, stroke: "#111814", strokeThickness: 3 }).setOrigin(.5);
+    if (onInfo) label.setInteractive({ useHandCursor: true }).on("pointerdown", () => onInfo(effect.id));
     this.add([graphic, label]);
   }
   pointAt(t: number): Phaser.Math.Vector2 { const oneMinus = 1 - t; return new Phaser.Math.Vector2(oneMinus * oneMinus * this.geometry.from.x + 2 * oneMinus * t * this.geometry.control.x + t * t * this.geometry.to.x, oneMinus * oneMinus * this.geometry.from.y + 2 * oneMinus * t * this.geometry.control.y + t * t * this.geometry.to.y); }

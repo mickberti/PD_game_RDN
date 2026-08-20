@@ -80,6 +80,23 @@ Per aggiungere un preset esistente, inserirlo in `effect-presets.config.ts`. Per
 
 In sviluppo è possibile impostare `globalThis.__RDN_EFFECT_DEBUG__ = true`: il motore registra configurazioni non valide, eventi di flow e stato residuo dei muri. I demo isolati sono in `effect-demo-levels.config.ts` e non fanno parte di `RDN_LEVELS`.
 
+## Game Mode Effect Progression
+
+La configurazione centrale e dichiarativa e' in `effect-progression.config.ts`. Una configurazione esplicita su un livello ha sempre precedenza; in sua assenza il resolver di progressione produce una configurazione deterministica usando modalita', numero livello, seed e numero di gemme. Ogni configurazione e' validata: massimo **2 GEM**, **1 LINK** e **1 AREA**.
+
+| Range | GEM | LINK | AREA |
+| --- | --- | --- | --- |
+| 1-19 | nessuno | nessuno | nessuno |
+| 20 | Shield | nessuno | nessuno |
+| 40 | Wall | Echo | nessuno |
+| 60 | Shield / Wall / Mirror | Amplify x2 | nessuno |
+| 80 | tutti | Echo / Amplify / Invert | Bomb |
+| 81+ | tutti, bilanciati | massimo uno | massimo uno |
+
+Fino al livello 80 gli effetti sono presenti solo nei quattro livelli di introduzione 20, 40, 60 e 80. Da 81 in poi la progressione e' stabile e deterministica. I valori iniziali e la soluzione dei livelli con effetti vengono ricalcolati sulla sequenza di gioco reale; il generatore di gemme e le regole matematiche non vengono modificati.
+
+Time Attack usa lo stesso indice di livello e la stessa progressione. In Free, il selettore `Effetti: ON/OFF` e' disattivato di default: OFF mantiene il comportamento legacy; ON mappa `EASY`, `NORMAL`, `HARD`, `EXPERT` ai profili 20, 40, 60 e 81+ rispettivamente. La factory Free e' `createFreeModeEffectConfiguration` e non genera mai configurazioni oltre i limiti sopra indicati.
+
 ## Effect Playground
 
 Disponibile solo a un utente admin in ambiente development: **Settings → Strumenti amministratore → 🧪 Effect Playground**. La rotta è inoltre protetta e in produzione rimanda all'hub.

@@ -79,6 +79,8 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly timeRemaining = signal<number | null>(null);
   private readonly timeRemainingMs = signal<number | null>(null);
   private readonly showInfo = signal(false);
+  private readonly selectedGemIndex = signal<number | null>(null);
+  private readonly selectedLinkEffectId = signal<string | null>(null);
   private readonly actionInstances = signal<RdnActionInstance[]>([]);
   constructor() {
     this.loadSessionPuzzle(this.session);
@@ -115,7 +117,9 @@ export class GameplayPageComponent implements AfterViewInit {
       retry: () => this.restart(),
       exit: () => this.exitGameplay(),
       info: () => this.showInfo.set(true),
-      closeInfo: () => this.showInfo.set(false),
+      closeInfo: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(null); },
+      gemInfo: (index) => { this.showInfo.set(false); this.selectedLinkEffectId.set(null); this.selectedGemIndex.set(index); },
+      linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
       nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
       previousPlaygroundScenario: () => this.changePlaygroundScenario(-1),
     });
@@ -145,8 +149,10 @@ export class GameplayPageComponent implements AfterViewInit {
           queueStates: this.puzzle.queueStates(),
           actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, charges: instance.charges, disabled: instance.charges <= 0 || !RDN_ACTION_CATALOG[instance.id].modes.includes(this.session.variant as "adventure" | "time-attack" | "free") })),
           modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
-          freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4 } : undefined,
+          freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4, effectsEnabled: this.gameplaySession.getLaunchOverrides()?.freeEffectsEnabled ?? false } : undefined,
           playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
+          selectedGemIndex: this.selectedGemIndex(),
+          selectedLinkEffectId: this.selectedLinkEffectId(),
           outcome: this.outcome(),
           timeRemaining: this.timeRemaining(),
           timeRemainingMs: this.timeRemainingMs(),
@@ -183,6 +189,8 @@ export class GameplayPageComponent implements AfterViewInit {
     this.puzzle.saveAdventureRun();
     this.outcome.set(null);
     this.showInfo.set(false);
+    this.selectedGemIndex.set(null);
+    this.selectedLinkEffectId.set(null);
   }
   private impulse(): void {
     this.puzzle.dispatch({ type: "IMPULSE" });
@@ -203,6 +211,8 @@ export class GameplayPageComponent implements AfterViewInit {
     this.puzzle.saveAdventureRun();
     this.outcome.set(null);
     this.showInfo.set(false);
+    this.selectedGemIndex.set(null);
+    this.selectedLinkEffectId.set(null);
     this.resetTimeAttackTimer();
     this.resetActionInstances();
   }
@@ -210,7 +220,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (this.session.variant === "effect-playground") { this.changePlaygroundScenario(1); return; }
     if (this.session.variant === "free") {
       const overrides = this.gameplaySession.getLaunchOverrides();
-      this.puzzle.load("free", 1, overrides?.freeDifficulty ?? "EASY", Math.floor(Math.random() * 0x7fffffff), overrides?.freeSlotCount);
+      this.puzzle.load("free", 1, overrides?.freeDifficulty ?? "EASY", Math.floor(Math.random() * 0x7fffffff), overrides?.freeSlotCount, overrides?.freeEffectsEnabled ?? false);
       this.outcome.set(null); this.showInfo.set(false); return;
     }
     this.puzzle.load(
@@ -280,13 +290,13 @@ export class GameplayPageComponent implements AfterViewInit {
   private loadSessionPuzzle(session: GameplaySession): void {
     if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();
-    this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount);
+    this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount, overrides?.freeEffectsEnabled ?? false);
   }
   private changePlaygroundScenario(direction: -1 | 1): void {
     if (this.session.variant !== "effect-playground") return;
     if (direction > 0) this.playground.next(); else this.playground.previous();
     this.puzzle.loadDebugLevel(this.playground.level());
-    this.outcome.set(null); this.showInfo.set(false);
+    this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(null);
   }
   private exitGameplay(): void {
     // Leaving through the game UI always starts a fresh board on the next launch.

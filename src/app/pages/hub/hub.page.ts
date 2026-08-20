@@ -98,6 +98,17 @@ interface LevelPickerItem {
               <header class="level-picker__header"><div><span>FREE</span><h2>Scegli difficolta</h2><p>Partite illimitate, senza vite.</p></div></header>
               <p class="free-picker__label">Gemme operative: {{ freeSlotCount() }}</p>
               <div class="free-picker__slots">@for (count of freeSlotCounts; track count) { <button type="button" [class.free-picker__slot--selected]="freeSlotCount() === count" (click)="freeSlotCount.set(count)">{{ count }}</button> }</div>
+
+
+
+
+
+
+
+
+
+
+              <button type="button" class="free-picker__effects" [class.free-picker__effects--enabled]="freeEffectsEnabled()" (click)="toggleFreeEffects()">Effetti: {{ freeEffectsEnabled() ? 'ON' : 'OFF' }}</button>
               <div class="level-picker__grid">@for (difficulty of freeDifficulties; track difficulty) { <button type="button" class="level-picker__level" (click)="startFree(mode, difficulty)"><strong>{{ difficulty }}</strong><span>{{ freeDescription(difficulty) }}</span></button> }</div>
             </section>
           </div>
@@ -140,6 +151,8 @@ interface LevelPickerItem {
     .free-picker__slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px; }
     .free-picker__slots button { min-height: 40px; border: 1px solid #bf9042; border-radius: 10px; color: #ffedbe; background: rgba(104, 69, 25, .42); font-weight: 800; }
     .free-picker__slots .free-picker__slot--selected { border-color: #ffdc6d; background: rgba(178, 128, 33, .68); }
+    .free-picker__effects { width: 100%; margin: 0 0 16px; border: 1px solid #8aa89a; border-radius: 10px; background: #183e28; font-weight: 800; }
+    .free-picker__effects--enabled { border-color: #75e8a1; background: #247041; }
   `],
 })
 export class HubPage {
@@ -156,6 +169,7 @@ export class HubPage {
   readonly freeDifficulties: readonly PuzzleDifficulty[] = ["EASY", "NORMAL", "HARD", "EXPERT"];
   readonly freeSlotCounts = [4, 5, 6, 7, 8] as const;
   readonly freeSlotCount = signal<number>(4);
+  readonly freeEffectsEnabled = signal(false);
   readonly maxGameStars = RDN_MAX_LEVEL * 3;
   readonly highlightEvents = computed(() => this.state.events().filter((event) => event.type === "highlight"));
   readonly hubItems = computed<HubListItem[]>(() => this.buildHubItems(
@@ -173,9 +187,10 @@ export class HubPage {
   }
 
   startFree(mode: ModeItem, difficulty: PuzzleDifficulty): void {
-    const session = this.gameplaySession.startSession(mode, 1, mode.mastery ?? 1, { variant: "free", overrides: { freeDifficulty: difficulty, freeSeed: Math.floor(Math.random() * 0x7fffffff), freeSlotCount: this.freeSlotCount() } });
+    const session = this.gameplaySession.startSession(mode, 1, mode.mastery ?? 1, { variant: "free", overrides: { freeDifficulty: difficulty, freeSeed: Math.floor(Math.random() * 0x7fffffff), freeSlotCount: this.freeSlotCount(), freeEffectsEnabled: this.freeEffectsEnabled() } });
     this.freeMode.set(null); this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
   }
+  toggleFreeEffects(): void { this.freeEffectsEnabled.update((value) => !value); }
   freeDescription(difficulty: PuzzleDifficulty): string { return difficulty === "EASY" ? "Soluzioni brevi" : difficulty === "NORMAL" ? "Segni misti e DIV2" : difficulty === "HARD" ? "Piu flussi e DIV3" : "Massima complessita"; }
 
   openLevelPicker(mode: ModeItem): void {

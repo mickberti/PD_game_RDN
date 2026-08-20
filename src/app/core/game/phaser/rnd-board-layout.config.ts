@@ -20,6 +20,19 @@ export const RDN_BOARD_LAYOUTS: Record<RdnBoardLayout["positions"], RdnBoardLayo
   8: { positions: 8, ring: { diameter: 2.18, offsetX: 0, offsetY: 0, angle: 0 }, gear: { diameter: 1.46, offsetX: 0, offsetY: 0, angle: 0 }, outerSlots: { radius: .91, angleOffset: 0, sphereRadius: .105, badgeOffsetX: -.09, badgeOffsetY: .105 }, innerSlots: { radius: .64, angleOffset: 0, sphereRadius: .095 }, impulse: { radius: .27, iconSize: .39 }, trail: { startRadius: .22, controlRadius: .60, bend: .08, sphereRadius: .15, glowWidth: .085, middleWidth: .05, coreWidth: .016 } },
 };
 
+/**
+ * Number typography is defined per ring size, separately for outer and inner
+ * gems. Both reserve the width of a signed two-digit value (for example -99),
+ * keeping +1, -1 and +/-99 visually homogeneous instead of scaling per text.
+ */
+export const RDN_GEM_NUMERAL_CONFIG: Record<RdnBoardLayout["positions"], { outerFontSizeRatio: number; innerFontSizeRatio: number; reservedWidthRatio: number }> = {
+  4: { outerFontSizeRatio: .23, innerFontSizeRatio: .22, reservedWidthRatio: .90 },
+  5: { outerFontSizeRatio: .22, innerFontSizeRatio: .21, reservedWidthRatio: .90 },
+  6: { outerFontSizeRatio: .21, innerFontSizeRatio: .20, reservedWidthRatio: .89 },
+  7: { outerFontSizeRatio: .20, innerFontSizeRatio: .20, reservedWidthRatio: .88 },
+  8: { outerFontSizeRatio: .20, innerFontSizeRatio: .19, reservedWidthRatio: .87 },
+};
+
 /** Global presentation tuning, intentionally kept outside the scene for fast visual iteration. */
 export const RDN_PHASER_VISUAL_CONFIG = {
   /** Percentage applied independently to width and height of the stretched background. */

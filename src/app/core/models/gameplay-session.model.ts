@@ -16,6 +16,8 @@ export interface GameplaySessionLaunchOverrides {
   freeDifficulty?: PuzzleDifficulty;
   freeSeed?: number;
   freeSlotCount?: number;
+  /** Optional Free-only effects. Omitted/false preserves the legacy Free board. */
+  freeEffectsEnabled?: boolean;
 }
 
 export interface GameplaySessionLaunchOptions {

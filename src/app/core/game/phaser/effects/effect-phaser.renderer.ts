@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { EffectEngineEvent, EffectScope, GemEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
+import { EffectEngineEvent, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
 import { EFFECT_PHASER_VISUAL } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
 
@@ -8,19 +8,24 @@ export interface EffectGemPosition { x: number; y: number; radius: number; }
 /** Bridges semantic engine events to Phaser presentation only. */
 export class EffectPhaserRenderer {
   private readonly gemLayer: Phaser.GameObjects.Container;
+  private readonly markerLayer: Phaser.GameObjects.Container;
   private readonly linkLayer: Phaser.GameObjects.Container;
   private readonly flowLayer: Phaser.GameObjects.Container;
   private readonly links = new Map<string, LinkEffectView>();
-  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2) {
+  private readonly markerCounts = new Map<string, number>();
+  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string) => void) {
     this.linkLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     this.gemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.gemDepth);
+    this.markerLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.gemDepth + 2);
     this.flowLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.flowDepth);
   }
   renderPersistent(effects: readonly ResolvedEffect[], wallState: Readonly<Record<string, number>> = {}): void {
     for (const effect of effects) {
       if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) {
         const geometry = this.linkGeometry(effect); if (!geometry) continue;
-        const view = new LinkEffectView(this.scene, effect, geometry); this.linkLayer.add(view); this.links.set(effect.id, view);
+        const view = new LinkEffectView(this.scene, effect, geometry, this.onLinkInfo); this.linkLayer.add(view); this.links.set(effect.id, view);
+        this.drawEffectMarker(effect.target.fromGem.id, this.iconFrame(effect), this.iconColor(effect));
+        this.drawEffectMarker(effect.target.toGem.id, this.iconFrame(effect), this.iconColor(effect));
       }
       if (effect.config.scope === EffectScope.GEM && effect.target.type === EffectScope.GEM) this.drawGemEffect(effect, wallState[effect.id]);
       if (effect.config.scope === EffectScope.AREA && effect.target.type === EffectScope.AREA) this.drawBomb(effect);
@@ -38,7 +43,7 @@ export class EffectPhaserRenderer {
       case "BOMB_TRIGGERED": this.bombBurst(event.gemId); break;
     }
   }
-  destroy(): void { this.links.clear(); this.linkLayer.destroy(true); this.gemLayer.destroy(true); this.flowLayer.destroy(true); }
+  destroy(): void { this.links.clear(); this.markerCounts.clear(); this.linkLayer.destroy(true); this.gemLayer.destroy(true); this.markerLayer.destroy(true); this.flowLayer.destroy(true); }
   private linkGeometry(effect: ResolvedEffect): LinkEffectGeometry | null {
     if (effect.target.type !== EffectScope.LINK) return null; const from = this.gems.get(effect.target.fromGem.id); const to = this.gems.get(effect.target.toGem.id); if (!from || !to) return null;
     const start = new Phaser.Math.Vector2(from.x, from.y); const end = new Phaser.Math.Vector2(to.x, to.y); const midpoint = start.clone().add(end).scale(.5); let outward = midpoint.clone().subtract(this.center);
@@ -49,11 +54,34 @@ export class EffectPhaserRenderer {
   private drawGemEffect(effect: ResolvedEffect, wallRemaining?: number): void {
     if (effect.target.type !== EffectScope.GEM || effect.config.scope !== EffectScope.GEM) return; const gem = this.gems.get(effect.target.gem.id); if (!gem) return;
     const graphics = this.scene.add.graphics(); const radius = gem.radius;
-    if (effect.config.type === GemEffectType.SHIELD) { graphics.lineStyle(Math.max(2, radius * .09), 0x6edfff, .9); graphics.strokeCircle(gem.x, gem.y, radius * 1.26); this.gemLayer.add(graphics); this.gemLayer.add(this.badge(gem.x + radius * .74, gem.y - radius * .74, String(effect.config.strength ?? 1), 0x174e70)); return; }
-    if (effect.config.type === GemEffectType.WALL) { const remaining = wallRemaining ?? effect.config.strength ?? 1; graphics.lineStyle(Math.max(3, radius * .14), 0xb79a6c, .95); graphics.strokeCircle(gem.x, gem.y, radius * 1.13); for (let index = 0; index < Math.max(0, (effect.config.strength ?? 1) - remaining); index += 1) graphics.lineBetween(gem.x - radius * .55 + index * 5, gem.y - radius * .4, gem.x + radius * .25, gem.y + radius * .45); this.gemLayer.add(graphics); this.gemLayer.add(this.badge(gem.x + radius * .76, gem.y - radius * .76, String(remaining), 0x59432b)); return; }
-    graphics.lineStyle(Math.max(2, radius * .08), 0xd7a2ff, .9); graphics.lineBetween(gem.x - radius * .62, gem.y - radius * .62, gem.x + radius * .62, gem.y + radius * .62); graphics.lineBetween(gem.x - radius * .62, gem.y + radius * .62, gem.x + radius * .62, gem.y - radius * .62); this.gemLayer.add(graphics);
+    if (effect.config.type === GemEffectType.SHIELD) { graphics.lineStyle(Math.max(2, radius * .09), 0x6edfff, .9); graphics.strokeCircle(gem.x, gem.y, radius * 1.26); this.gemLayer.add(graphics); this.gemLayer.add(this.badge(gem.x + radius * .15, gem.y - radius * .98, String(effect.config.strength ?? 1), 0x174e70)); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect)); return; }
+    if (effect.config.type === GemEffectType.WALL) { const remaining = wallRemaining ?? effect.config.strength ?? 1; graphics.lineStyle(Math.max(3, radius * .14), 0xb79a6c, .95); graphics.strokeCircle(gem.x, gem.y, radius * 1.13); for (let index = 0; index < Math.max(0, (effect.config.strength ?? 1) - remaining); index += 1) graphics.lineBetween(gem.x - radius * .55 + index * 5, gem.y - radius * .4, gem.x + radius * .25, gem.y + radius * .45); this.gemLayer.add(graphics); this.gemLayer.add(this.badge(gem.x + radius * .15, gem.y - radius * .98, String(remaining), 0x59432b)); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect)); return; }
+    graphics.lineStyle(Math.max(2, radius * .08), 0xd7a2ff, .9); graphics.lineBetween(gem.x - radius * .62, gem.y - radius * .62, gem.x + radius * .62, gem.y + radius * .62); graphics.lineBetween(gem.x - radius * .62, gem.y + radius * .62, gem.x + radius * .62, gem.y - radius * .62); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect));
   }
-  private drawBomb(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA) return; const gem = this.gems.get(effect.target.sourceGem.id); if (!gem) return; const mark = this.scene.add.text(gem.x, gem.y - gem.radius * .68, "✹", { fontFamily: "Arial", fontSize: `${Math.max(13, gem.radius * .72)}px`, color: "#ff9378", stroke: "#35130e", strokeThickness: 3 }).setOrigin(.5); this.gemLayer.add(mark); }
+  private drawBomb(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA) return; const gem = this.gems.get(effect.target.sourceGem.id); if (!gem) return; const mark = this.scene.add.text(gem.x, gem.y - gem.radius * .68, "✹", { fontFamily: "Arial", fontSize: `${Math.max(13, gem.radius * .72)}px`, color: "#ff9378", stroke: "#35130e", strokeThickness: 3 }).setOrigin(.5); this.gemLayer.add(mark); this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect)); }
+  /** Reuses the existing action atlas until dedicated effect artwork is available. */
+  private iconFrame(effect: ResolvedEffect): string {
+    if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? "action-defense" : effect.config.type === GemEffectType.WALL ? "action-attack" : "action-ice";
+    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? "action-speed" : effect.config.type === LinkEffectType.AMPLIFY ? "action-lightning" : "action-tornado";
+    return "action-fire";
+  }
+  private iconColor(effect: ResolvedEffect): number {
+    if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : 0xdba0ff;
+    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff;
+    return 0xff9378;
+  }
+  /** Markers sit in the upper-right corner; further effects fan left to remain legible. */
+  private drawEffectMarker(gemId: string, frame: string, color: number): void {
+    const gem = this.gems.get(gemId); if (!gem) return;
+    const count = this.markerCounts.get(gemId) ?? 0; this.markerCounts.set(gemId, count + 1);
+    const offsets = [[.88, -.88], [.25, -1.02], [-.36, -.88]] as const;
+    const [offsetX, offsetY] = offsets[Math.min(count, offsets.length - 1)];
+    const size = Math.max(13, gem.radius * .72);
+    const x = gem.x + gem.radius * offsetX; const y = gem.y + gem.radius * offsetY;
+    const background = this.scene.add.circle(x, y, size * .56, 0x101c18, .92).setStrokeStyle(Math.max(1, size * .08), color, .95);
+    const icon = this.scene.add.image(x, y, "rdn-actions", frame).setDisplaySize(size, size).setTint(color);
+    this.markerLayer.add([background, icon]);
+  }
   private animateFlow(event: EffectEngineEvent): void { const link = event.linkId ? this.links.get(event.linkId) : undefined; if (!link || !event.gemId || link.effect.target.type !== EffectScope.LINK) return; const reverse = link.effect.target.fromGem.id === event.gemId; const from = reverse ? link.geometry.to : link.geometry.from; const particle = this.scene.add.circle(from.x, from.y, 4, 0xf5e58a, .98); this.flowLayer.add(particle); const progress = { value: 0 }; this.scene.tweens.add({ targets: progress, value: 1, duration: EFFECT_PHASER_VISUAL.flowDuration, ease: "Sine.InOut", onUpdate: () => { const point = link.pointAt(reverse ? 1 - progress.value : progress.value); particle.setPosition(point.x, point.y).setScale(1 + progress.value * (EFFECT_PHASER_VISUAL.flowParticleScale - 1)); }, onComplete: () => particle.destroy() }); }
   private pulseGem(gemId: string | undefined, color: number, scale = 1.25): void { const gem = gemId ? this.gems.get(gemId) : undefined; if (!gem) return; const pulse = this.scene.add.circle(gem.x, gem.y, gem.radius, color, .22); this.flowLayer.add(pulse); this.scene.tweens.add({ targets: pulse, scale, alpha: 0, duration: EFFECT_PHASER_VISUAL.gemHighlightDuration, onComplete: () => pulse.destroy() }); }
   private flashGem(gemId: string | undefined, color: number): void { this.pulseGem(gemId, color, 1.42); }
