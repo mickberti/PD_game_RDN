@@ -20,7 +20,7 @@ import { RdnPhaserScene } from "../../core/game/phaser/rnd-phaser.scene";
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/rnd/puzzle-score.policy";
-import { RDN_ACTION_CATALOG, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/rnd/rdn-actions.config";
+import { RDN_ACTION_CATALOG, RdnActionId, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/rnd/rdn-actions.config";
 import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
 
 @Component({
@@ -146,8 +146,9 @@ export class GameplayPageComponent implements AfterViewInit {
           previews: this.puzzle.previews(),
           nextPreviews: this.puzzle.nextPreviews(),
           flows: this.puzzle.flows(),
+          effectPreviewEvents: this.puzzle.effectPreviewEvents(),
           queueStates: this.puzzle.queueStates(),
-          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, charges: instance.charges, disabled: instance.charges <= 0 || !RDN_ACTION_CATALOG[instance.id].modes.includes(this.session.variant as "adventure" | "time-attack" | "free") })),
+          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, charges: instance.charges, disabled: instance.charges <= 0 || !RDN_ACTION_CATALOG[instance.id].modes.includes(this.session.variant as "adventure" | "time-attack" | "free") || !this.canUseAction(instance.id) })),
           modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
           freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4, effectsEnabled: this.gameplaySession.getLaunchOverrides()?.freeEffectsEnabled ?? false } : undefined,
           playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
@@ -280,13 +281,16 @@ export class GameplayPageComponent implements AfterViewInit {
     const instance = this.actionInstances()[slot];
     if (!instance || instance.charges <= 0) return;
     const definition = RDN_ACTION_CATALOG[instance.id];
-    if (!definition.modes.includes(this.session.variant) || this.outcome()) return;
+    if (!definition.modes.includes(this.session.variant) || this.outcome() || !this.canUseAction(instance.id)) return;
     let applied = false;
     if (instance.id === "zero") applied = this.puzzle.zeroActiveTarget();
-    if (instance.id === "freeze-time" && this.timeAttackEndAt !== undefined) { this.timeAttackEndAt += 5000; applied = true; }
+    if (instance.id === "invert") applied = this.puzzle.invertActiveTarget();
+    if (instance.id === "double") applied = this.puzzle.doubleActiveTarget();
+    if (instance.id === "skip") applied = this.puzzle.skipCurrentFlow();
     if (!applied) return;
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
   }
+  private canUseAction(id: RdnActionId): boolean { return id === "zero" ? this.puzzle.canZeroActiveTarget() : id === "invert" ? this.puzzle.canInvertActiveTarget() : id === "double" ? this.puzzle.canDoubleActiveTarget() : this.puzzle.canSkipCurrentFlow(); }
   private loadSessionPuzzle(session: GameplaySession): void {
     if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();

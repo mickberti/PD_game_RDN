@@ -53,11 +53,11 @@ describe("EffectFlowEngine", () => {
     expect(resolve([0, 0, 0, 0], [bidirectional], [{ gemId: "target-1", value: 2 }]).values.slice(0, 2)).toEqual([2, 2]);
   });
 
-  it("disconnects a link as soon as one of its gems reaches zero", () => {
+  it("continues through a link when its source gem reaches zero in the current impulse", () => {
     const echo = link("echo", 0, 1, LinkEffectType.ECHO, undefined, LinkDirection.FORWARD);
     const result = resolve([2, 5, 0, 0], [echo], [{ gemId: "target-0", value: -2 }]);
-    expect(result.values.slice(0, 2)).toEqual([0, 5]);
-    expect(result.events.some((event) => event.type === "FLOW_PROPAGATED")).toBeFalse();
+    expect(result.values.slice(0, 2)).toEqual([0, 3]);
+    expect(result.events.some((event) => event.type === "FLOW_PROPAGATED" && event.linkId === "echo")).toBeTrue();
   });
 
   it("supports a chain, a branch and converging paths without discarding the second arrival", () => {

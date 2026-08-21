@@ -9,6 +9,16 @@ describe("seeded RDN generation", () => {
     expect(first.generation).toEqual(second.generation);
   });
 
+  it("balances positive and negative numeric operations in generated Free queues", () => {
+    for (const difficulty of ["EASY", "NORMAL", "HARD", "EXPERT"] as const) {
+      const level = generateRdnPuzzle("time-attack", difficulty, 12345, 8);
+      if (level.variant !== "loader") { expect(level.variant).toBe("loader"); continue; }
+      const numeric = level.queues.flat().filter((operator): operator is number => typeof operator === "number");
+      const positive = numeric.filter((operator) => operator > 0).length; const negative = numeric.filter((operator) => operator < 0).length;
+      expect(Math.abs(positive - negative)).toBeLessThanOrEqual(1);
+    }
+  });
+
   it("verifies a known puzzle inside its controlled solver budget", () => {
     const level = getRdnLevel("adventure", 1);
     const result = solvePuzzle(level, { maxDepth: 6, maxVisitedStates: 500, timeoutMs: 1000 });

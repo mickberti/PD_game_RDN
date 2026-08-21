@@ -15,7 +15,7 @@ export class PuzzleEngine {
   createInitialState(level: LevelDefinition): PuzzleState { this.assertLevel(level); const outerValues = [...level.outerValues]; const modifierStates: TargetModifierState[] = outerValues.map((_, index) => { const modifiers = level.targetModifiers?.[index] ?? []; return { shield: modifiers.find((item) => item.type === "shield")?.strength ?? 0, lives: modifiers.find((item) => item.type === "multi-life")?.lives ?? 0 }; }); const resolution = this.effectResolver.resolve(level.effectConfiguration, level.positions); if (resolution.issues.length) logEffectDebug("configuration issues", { levelId: level.id, issues: resolution.issues }); const effectState = resolution.effects.length ? { effectRuntime: this.effectFlow.createRuntime(resolution.effects), lastEffectEvents: [] } : {}; return { levelId: level.id, rotation: modulo(level.initialRotation, level.positions), rotationTurns: level.initialRotation, outerValues, targetVisualStates: Array(level.positions).fill("ACTIVE"), modifierStates, queueCursors: Array(level.positions).fill(0), consumedSpecialOperatorIndexes: [], impulses: 0, phaseCursor: 0, rotationSteps: 0, lastImpulseResults: [], lastOperationResults: [], lastGameplayEvents: [], ...effectState, history: [], won: false }; }
   getInnerIndex(level: LevelDefinition, outerIndex: number, rotation: number): number { return modulo(outerIndex - rotation, level.positions); }
   isColorCompatible(level: LevelDefinition, outerIndex: number, innerIndex: number): boolean { return !level.targetColors || !level.operatorColors || level.targetColors[outerIndex] === level.operatorColors[innerIndex]; }
-  getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null { const operator = level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null; return (operator === "divide2" || operator === "divide3") && state.consumedSpecialOperatorIndexes.includes(innerIndex) ? null : operator; }
+  getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null { const operator = level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null; return typeof operator === "string" && state.consumedSpecialOperatorIndexes.includes(innerIndex) ? null : operator; }
   queueStates(level: LevelDefinition, state: PuzzleState, previewCount = 2): readonly QueueState[] {
     if (level.variant !== "loader") return [];
     return level.queues.map((elements, innerIndex) => {
@@ -27,11 +27,11 @@ export class PuzzleEngine {
   /** The only place mathematical operations are evaluated. */
   attemptOperation(level: LevelDefinition, outerIndex: number, value: number, operator: PuzzleOperator | null, specialAlreadyConsumed = false): OperationAttemptResult {
     const reject = (reason: OperationRejectedReason): OperationAttemptResult => ({ outerIndex, operator, valid: false, previousValue: value, nextValue: value, rejectedReason: reason, resourceConsumed: false, events: ["OperationRejected"] });
-    if (operator === null) return reject("NO_OPERATOR"); if (value === 0) return reject("TARGET_ALREADY_RESOLVED"); if (operator === "divide2" && specialAlreadyConsumed) return reject("DIVIDE_BY_TWO_CONSUMED"); if (operator === "divide3" && specialAlreadyConsumed) return reject("DIVIDE_BY_THREE_CONSUMED"); if (operator === "divide2" && (!Number.isInteger(value) || value % 2 !== 0)) return reject("DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER"); if (operator === "divide3" && (!Number.isInteger(value) || value % 3 !== 0)) return reject("DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE");
-    const nextValue = operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : value + operator; const range = level.numberRange ?? DEFAULT_PUZZLE_NUMBER_RANGE;
+    if (operator === null) return reject("NO_OPERATOR"); if (value === 0) return reject("TARGET_ALREADY_RESOLVED"); if (operator === "divide2" && specialAlreadyConsumed) return reject("DIVIDE_BY_TWO_CONSUMED"); if (operator === "divide3" && specialAlreadyConsumed) return reject("DIVIDE_BY_THREE_CONSUMED"); if ((operator === "zero" || operator === "invert" || operator === "skip") && specialAlreadyConsumed) return reject("SPECIAL_OPERATOR_CONSUMED"); if (operator === "divide2" && (!Number.isInteger(value) || value % 2 !== 0)) return reject("DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER"); if (operator === "divide3" && (!Number.isInteger(value) || value % 3 !== 0)) return reject("DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE");
+    const nextValue = operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : operator === "zero" ? 0 : operator === "invert" ? -value : operator === "skip" ? value : value + operator; const range = level.numberRange ?? DEFAULT_PUZZLE_NUMBER_RANGE;
     if (nextValue < range.min || nextValue > range.max) return reject("RESULT_OUT_OF_RANGE");
-    const events: Array<OperationAttemptResult["events"][number]> = ["OperationApplied"]; if (operator === "divide2" || operator === "divide3") events.push("SpecialResourceConsumed"); if (nextValue === 0) events.push("TargetReachedZero");
-    return { outerIndex, operator, valid: true, previousValue: value, nextValue, resourceConsumed: operator === "divide2" || operator === "divide3", events };
+    const events: Array<OperationAttemptResult["events"][number]> = ["OperationApplied"]; if (typeof operator === "string") events.push("SpecialResourceConsumed"); if (nextValue === 0) events.push("TargetReachedZero");
+    return { outerIndex, operator, valid: true, previousValue: value, nextValue, resourceConsumed: typeof operator === "string", events };
   }
   phaseIndex(level: LevelDefinition, phaseCursor: number): number { return modulo(phaseCursor, level.slotPhases.length); }
   private relevantPhaseIndex(level: LevelDefinition, state: PuzzleState, phaseOffset: number): number { let index = this.phaseIndex(level, state.phaseCursor); let remaining = phaseOffset; for (let inspected = 0; inspected < level.slotPhases.length; inspected += 1) { const phase = level.slotPhases[index]; if (phase.some((slot) => state.outerValues[slot.outerIndex] !== 0)) { if (remaining === 0) return index; remaining -= 1; } index = modulo(index + 1, level.slotPhases.length); } return index; }
@@ -63,6 +63,17 @@ export class PuzzleEngine {
       const result = flow.values[preview.slot.outerIndex];
       return { ...preview, result, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(preview.outerValue) ? "closer" : Math.abs(result) === Math.abs(preview.outerValue) ? "same" : "farther" };
     });
+  }
+  /** Read-only effect traversal used by the board to preview every link the next impulse will reach. */
+  effectPreviewEvents(level: LevelDefinition, state: PuzzleState): readonly import("./effects/effects.models").EffectEngineEvent[] {
+    if (!state.effectRuntime) return [];
+    const previews = this.previews(level, state);
+    const rawResults = previews.map((preview) => this.attemptOperation(level, preview.slot.outerIndex, preview.outerValue, preview.innerValue, state.consumedSpecialOperatorIndexes.includes(preview.innerIndex)));
+    const inputs = rawResults.filter((result) => result.valid).map((result) => ({ gemId: `target-${result.outerIndex}`, value: result.nextValue - result.previousValue }));
+    if (!inputs.length) return [];
+    const resolution = this.effectResolver.resolve(level.effectConfiguration, level.positions);
+    const resolvedGemIds = state.targetVisualStates.flatMap((visual, index) => visual === "OFF" ? [`target-${index}`] : []);
+    return this.effectFlow.resolve(state.outerValues, resolution.effects, state.effectRuntime, inputs, resolution.flowRules, state.impulses + 1, resolvedGemIds).events;
   }
   apply(level: LevelDefinition, state: PuzzleState, action: PuzzleAction): PuzzleState {
     if (action.type === "UNDO") { const previous = state.history.at(-1); return previous ? restore(level, previous, state.history.slice(0, -1)) : state; } if (action.type === "RESTART") return this.createInitialState(level); if (state.won) return state;

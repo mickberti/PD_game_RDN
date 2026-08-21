@@ -1,7 +1,6 @@
 import { Routes } from "@angular/router";
 import { AuthGuard } from "./core/guards/auth.guard";
 import { AdminGuard } from "./core/guards/admin.guard";
-import { EffectPlaygroundGuard } from "./core/guards/effect-playground.guard";
 import { AdminShellPage } from "./pages/utils/admin/admin-shell.page";
 
 export const routes: Routes = [
@@ -115,7 +114,8 @@ export const routes: Routes = [
   },
   {
     path: "utils/effect-playground",
-    canActivate: [AdminGuard, EffectPlaygroundGuard],
+    // The playground is an admin tool, including in the Capacitor production build.
+    canActivate: [AdminGuard],
     loadComponent: () => import("./pages/gameplay/gameplay-page.component").then((m) => m.GameplayPageComponent),
   },
   {

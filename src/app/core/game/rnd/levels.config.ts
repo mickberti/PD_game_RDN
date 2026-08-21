@@ -1,8 +1,10 @@
 import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
 import { PuzzleEngine } from "./puzzle.engine";
+import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
+import { EffectScope, GemEffectType, LinkEffectType } from "./effects/effects.models";
 import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 import { RDN_RELEASE } from "./rdn-release.config";
-import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, validateEffectComplexity } from "./effects/effect-progression.config";
+import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity } from "./effects/effect-progression.config";
 import { LevelEffectConfiguration } from "./effects/level-effects.types";
 
 export const RDN_MAX_LEVEL = 200;
@@ -26,10 +28,26 @@ interface GeneratedBoard { positions: 4 | 5 | 6 | 7 | 8; initialRotation: number
 interface ValuePlan { start: number; operators: PuzzleOperator[]; }
 
 /** Division specials are introduced gradually on advanced boards. */
-const specialOperatorsForLevel = (level: number): PuzzleOperator[] => [
-  ...(level >= 40 ? ["divide2" as const] : []),
-  ...(level >= 80 ? ["divide3" as const] : []),
-];
+/** One-use action specials share the gear with DIV2/DIV3; ×2 remains HUD-only. */
+const SPECIAL_OPERATOR_SPAWN_INTERVAL = 4;
+const DOUBLE_SPECIAL_OPERATOR_SPAWN_INTERVAL = 12;
+const specialOperatorsForLevel = (level: number, positions: number): PuzzleOperator[] => {
+  // A special is an occasional tactical event, never the default state of a board.
+  if (level < 20 || level % SPECIAL_OPERATOR_SPAWN_INTERVAL !== 0) return [];
+  const candidates: PuzzleOperator[] = [
+    ...(level >= 20 ? ["zero" as const] : []),
+    ...(level >= 30 ? ["invert" as const] : []),
+    ...(level >= 40 ? ["divide2" as const] : []),
+    ...(level >= 60 ? ["skip" as const] : []),
+    ...(level >= 80 ? ["divide3" as const] : []),
+  ];
+  // Boards up to seven spheres use exactly one special. Only an eight-sphere
+  // board can occasionally host two, while preserving numeric operators.
+  const requestedCount = positions === RDN_MAX_SPHERES && level % DOUBLE_SPECIAL_OPERATOR_SPAWN_INTERVAL === 0 ? 2 : 1;
+  const count = Math.min(candidates.length, requestedCount, Math.max(0, positions - 2));
+  const start = modulo(Math.floor(level / SPECIAL_OPERATOR_SPAWN_INTERVAL), Math.max(1, candidates.length));
+  return Array.from({ length: count }, (_, index) => candidates[(start + index) % candidates.length]);
+};
 const gearOperators = (positions: number, specialOperators: readonly PuzzleOperator[], next: () => number): PuzzleOperator[] => {
   const subtractorCount = positions - specialOperators.length;
   // Values are intentionally non-sequential: every gear can contain any signed 1..9.
@@ -37,6 +55,16 @@ const gearOperators = (positions: number, specialOperators: readonly PuzzleOpera
   return [...magnitudes.map((value, index) => index % 2 === 0 ? -value : value), ...specialOperators];
 };
 const additiveOperators = (operators: PuzzleOperator[]): number[] => operators.filter((operator): operator is number => typeof operator === "number" && operator !== 0);
+/** Assigns plan signs so all numeric queue entries are as close as possible to a 50/50 split. */
+const balancedPlanSigns = (plans: readonly ValuePlan[]): readonly boolean[] => {
+  const counts = plans.map((plan) => plan.operators.filter((operator): operator is number => typeof operator === "number").length);
+  const total = counts.reduce((sum, count) => sum + count, 0); const reachable: Array<readonly number[] | undefined> = Array(total + 1).fill(undefined); reachable[0] = [];
+  counts.forEach((count, index) => { for (let sum = total - count; sum >= 0; sum -= 1) if (reachable[sum] && !reachable[sum + count]) reachable[sum + count] = [...reachable[sum]!, index]; });
+  let selectedSum = 0;
+  for (let sum = 0; sum <= total; sum += 1) if (reachable[sum] && Math.abs(total - sum * 2) < Math.abs(total - selectedSum * 2)) selectedSum = sum;
+  const positivePlans = new Set(reachable[selectedSum]);
+  return plans.map((_, index) => positivePlans.has(index));
+};
 
 /** Builds a solvable sequence using only operators physically present in the generated gear. */
 const subtractivePlan = (count: number, available: number[], next: () => number, maximumStart = 20): ValuePlan => {
@@ -64,20 +92,37 @@ const planForValue = (impulses: number, available: number[], next: () => number,
     const tail = subtractivePlan(impulses - 1, available, next, Math.floor(maximumStart / divisor));
     return { start: tail.start * divisor, operators: [forcedOperator, ...tail.operators] };
   }
+  if (forcedOperator === "zero") {
+    const magnitude = 1 + Math.floor(next() * Math.max(1, maximumStart));
+    return { start: next() < .5 ? -magnitude : magnitude, operators: [forcedOperator] };
+  }
+  if (forcedOperator === "invert") {
+    const tail = subtractivePlan(Math.max(1, impulses - 1), available, next, maximumStart);
+    return { start: -tail.start, operators: [forcedOperator, ...tail.operators] };
+  }
+  if (forcedOperator === "skip") {
+    const tail = subtractivePlan(Math.max(1, impulses - 1), available, next, maximumStart);
+    return { start: tail.start, operators: [forcedOperator, ...tail.operators] };
+  }
   return subtractivePlan(impulses, available, next, maximumStart);
 };
 
-const generateBoard = (number: number, seedOffset: number, slotCount?: number): GeneratedBoard => {
+const generateBoard = (number: number, seedOffset: number, slotCount?: number, balanceQueueSigns = false): GeneratedBoard => {
   const positions = slotCount && slotCount >= RDN_MIN_SPHERES && slotCount <= RDN_MAX_SPHERES ? slotCount as GeneratedBoard["positions"] : rdnSphereCountForLevel(number);
   const impulses = impulsesPerValue(number);
   const seed = number * 977 + seedOffset;
   const next = random(seed);
-  const specialOperators = specialOperatorsForLevel(number);
+  const specialOperators = specialOperatorsForLevel(number, positions);
   const innerValues = gearOperators(positions, specialOperators, next);
   const allAdditives = additiveOperators(innerValues);
   const range = DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange;
   const maximumStart = Math.min(Math.abs(range.min), Math.abs(range.max));
-  const plans = Array.from({ length: positions }, (_, index) => planForValue(impulses, allAdditives.filter((operator) => index % 2 === 0 ? operator < 0 : operator > 0), next, maximumStart, specialOperators[index]));
+  const planForIndex = (index: number, positive: boolean) => planForValue(impulses, allAdditives.filter((operator) => positive ? operator > 0 : operator < 0), next, maximumStart, specialOperators[index]);
+  // Free boards use a temporary deterministic plan only to calculate the exact numeric queue weights,
+  // then regenerate their real plans with the closest possible positive/negative split.
+  const provisionalPlans = Array.from({ length: positions }, (_, index) => planForIndex(index, index % 2 !== 0));
+  const planSigns = balanceQueueSigns ? balancedPlanSigns(provisionalPlans) : provisionalPlans.map((_, index) => index % 2 !== 0);
+  const plans = balanceQueueSigns ? Array.from({ length: positions }, (_, index) => planForIndex(index, planSigns[index])) : provisionalPlans;
   const loaderQueues = Array.from({ length: positions }, () => [] as PuzzleOperator[]);
   const cursors = Array<number>(positions).fill(0);
   const rotations: number[] = [];
@@ -120,6 +165,9 @@ const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameCo
   specialInventory: {
     divide2: board.innerValues.filter((operator) => operator === "divide2").length,
     divide3: board.innerValues.filter((operator) => operator === "divide3").length,
+    zero: board.innerValues.filter((operator) => operator === "zero").length,
+    invert: board.innerValues.filter((operator) => operator === "invert").length,
+    skip: board.innerValues.filter((operator) => operator === "skip").length,
   },
 });
 
@@ -135,9 +183,32 @@ const replaySolution = (level: LevelDefinition): ReturnType<PuzzleEngine["create
 };
 
 /**
+ * Effects make a board harder to read and route even when the generated
+ * canonical solution still has the same number of impulses.  This allowance
+ * is part of the three-star target only: time limits and solver cost stay on
+ * the actual canonical solution.
+ */
+const effectStarAllowance = (configuration: LevelEffectConfiguration, positions: number): number => {
+  const effects = new LevelEffectConfigResolver().resolve(configuration, positions).effects;
+  return effects.reduce((total, effect) => {
+    if (effect.config.scope === EffectScope.GEM) {
+      const config = effect.config;
+      const weight = config.type === GemEffectType.SHIELD || config.type === GemEffectType.WALL || config.type === GemEffectType.ICE ? config.strength
+        : config.type === GemEffectType.AMPLIFIER ? Math.max(1, config.multiplier - 1)
+          : config.type === GemEffectType.TIMER || config.type === GemEffectType.CORRUPTION ? 2
+            : 1;
+      return total + weight;
+    }
+    if (effect.config.scope === EffectScope.LINK) return total + (effect.config.type === LinkEffectType.AMPLIFY ? 2 : 1);
+    return total + Math.max(2, Math.abs(effect.config.strength ?? 1) * (effect.config.radius ?? 1));
+  }, 0);
+};
+
+/**
  * Effects alter deltas, not the numeric generator.  Recalculate only the
  * authored starting values against the canonical move sequence so an effected
- * board retains a deterministic playable solution and cost.
+ * board retains a deterministic playable solution. Its star budget is then
+ * calibrated from the replayed route and the declared effect complexity.
  */
 const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration | undefined): T => {
   if (!configuration) return level;
@@ -148,7 +219,12 @@ const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configu
   for (let attempt = 0; attempt < 14; attempt += 1) {
     const candidate = { ...level, outerValues, solution: level.solution?.map((slot, index) => ({ ...slot, startValue: outerValues[index] })), effectConfiguration: configuration } as T;
     const result = replaySolution(candidate);
-    if (result.won) return candidate;
+    if (result.won) {
+      const allowance = effectStarAllowance(configuration, candidate.positions);
+      const canonicalImpulses = result.impulses;
+      const canonicalRotations = result.rotationSteps;
+      return { ...candidate, starCost: { impulses: canonicalImpulses + allowance, rotationSteps: canonicalRotations + Math.ceil(allowance / 2) } };
+    }
     const recalculated = outerValues.map((value, index) => value - result.outerValues[index]);
     if (recalculated.some((value) => !Number.isInteger(value) || value === 0 || value < range.min || value > range.max)) break;
     if (recalculated.every((value, index) => value === outerValues[index])) break;
@@ -159,7 +235,8 @@ const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configu
   return level;
 };
 
-const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T): T => regenerateEffectAwareLevel(level, createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
+/** Explicit checkpoint lessons take precedence over the deterministic progression. */
+const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T): T => regenerateEffectAwareLevel(level, explicitEffectConfigurationForLevel(level.number) ?? createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
 
 const persistent = (number: number): LevelDefinition => {
   // Keep the first board as the one-step tutorial. Levels 2 and 3 must already
@@ -183,7 +260,7 @@ export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): L
 /** Seedable entry point for replay, support and future ranked runs. */
 export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number, freeEffectsEnabled = false): LevelDefinition => {
   const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
-  const board = generateBoard(number, Math.trunc(seed), slotCount); const profile = DIFFICULTY_PROFILES[difficulty]; const generation = { ...generatedMetadata(number, board), seed: board.seed, difficulty };
+  const board = generateBoard(number, Math.trunc(seed), slotCount, true); const profile = DIFFICULTY_PROFILES[difficulty]; const generation = { ...generatedMetadata(number, board), seed: board.seed, difficulty };
   const level = variant === "adventure"
     ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
     : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
@@ -191,7 +268,7 @@ export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficul
 };
 
 export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; verified: boolean; }
-const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : value + operator;
+const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : operator === "zero" ? 0 : operator === "invert" ? -value : operator === "skip" ? value : value + operator;
 const verifiesSolution = (level: LevelDefinition): boolean => {
   // Effected boards are validated through the real engine because link and area
   // contributions intentionally make their solution non-local to one gem.

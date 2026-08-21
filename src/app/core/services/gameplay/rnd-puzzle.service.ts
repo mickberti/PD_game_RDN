@@ -25,6 +25,7 @@ export class RdnPuzzleService {
   readonly previews = computed(() => this.engine.previews(this.level(), this.state()));
   readonly nextPreviews = computed(() => this.engine.previews(this.level(), this.state(), 1));
   readonly flows = computed(() => this.engine.flows(this.level(), this.state()));
+  readonly effectPreviewEvents = computed(() => this.engine.effectPreviewEvents(this.level(), this.state()));
   readonly queueStates = computed(() => this.engine.queueStates(this.level(), this.state()));
   load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number, freeEffectsEnabled = false): void {
     const level = variant === "free" ? generateRdnPuzzle("adventure", difficulty, seed, slotCount, freeEffectsEnabled) : getRdnLevel(variant, number);
@@ -119,9 +120,33 @@ export class RdnPuzzleService {
   }
 
   zeroActiveTarget(): boolean {
-    const state = this.state(); const target = this.engine.flows(this.level(), state).find((flow) => flow.interactable)?.targetId;
+    const state = this.state(); const target = this.activeTargetIndex();
     if (target === undefined || state.outerValues[target] === 0) return false;
     this.state.set({ ...state, outerValues: state.outerValues.map((value, index) => index === target ? 0 : value), targetVisualStates: state.targetVisualStates.map((value, index) => index === target ? "OFF" : value), won: state.outerValues.every((value, index) => index === target || value === 0) });
+    return true;
+  }
+  invertActiveTarget(): boolean { return this.transformActiveTarget((value) => -value); }
+  doubleActiveTarget(): boolean { return this.transformActiveTarget((value) => value * 2); }
+  skipCurrentFlow(): boolean {
+    const state = this.state(); const level = this.level();
+    if (level.slotPhases.length < 2 || !this.engine.flows(level, state).some((flow) => flow.active)) return false;
+    this.state.set({ ...state, phaseCursor: state.phaseCursor + 1, lastImpulseResults: [], lastOperationResults: [], lastGameplayEvents: [] });
+    return true;
+  }
+  canZeroActiveTarget(): boolean { return this.activeTargetIndex() !== undefined; }
+  canInvertActiveTarget(): boolean { return this.activeTargetIndex() !== undefined; }
+  canDoubleActiveTarget(): boolean {
+    const target = this.activeTargetIndex(); if (target === undefined) return false;
+    const range = this.level().numberRange; const value = this.state().outerValues[target] * 2;
+    return !range || (value >= range.min && value <= range.max);
+  }
+  canSkipCurrentFlow(): boolean { const level = this.level(); return level.slotPhases.length > 1 && this.engine.flows(level, this.state()).some((flow) => flow.active); }
+  private activeTargetIndex(): number | undefined { return this.engine.flows(this.level(), this.state()).find((flow) => flow.interactable)?.targetId; }
+  private transformActiveTarget(transform: (value: number) => number): boolean {
+    const state = this.state(); const target = this.activeTargetIndex(); if (target === undefined) return false;
+    const value = transform(state.outerValues[target]); const range = this.level().numberRange;
+    if ((range && (value < range.min || value > range.max)) || value === 0) return false;
+    this.state.set({ ...state, outerValues: state.outerValues.map((item, index) => index === target ? value : item) });
     return true;
   }
 }

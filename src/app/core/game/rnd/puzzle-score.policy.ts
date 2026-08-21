@@ -7,10 +7,11 @@ export interface PuzzleScorePolicy {
   oneStarImpulseLimit: number;
 }
 
-/** Score limits scale with the authored solution complexity, not with fixed absolute numbers. */
+/** Score limits use the effect-aware star budget when a level has one. */
 export const getPuzzleScorePolicy = (level: LevelDefinition): PuzzleScorePolicy => {
-  const perfectImpulses = level.optimalCost?.impulses ?? 1;
-  const perfectRotationSteps = level.optimalCost?.rotationSteps ?? 0;
+  const scoreCost = level.starCost ?? level.optimalCost;
+  const perfectImpulses = scoreCost?.impulses ?? 1;
+  const perfectRotationSteps = scoreCost?.rotationSteps ?? 0;
   return {
     perfectImpulses,
     perfectRotationSteps,
