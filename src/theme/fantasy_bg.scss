@@ -51,8 +51,10 @@
 
 	background-image: var(--main-background-sfondo11);
 	background-repeat: no-repeat;
-	background-position: center;
-	background-size: cover;
+	background-position: center center;
+	/* Stretch the application artwork to the complete available page area. */
+	background-size: 100% 100%;
+	min-height: 100dvh;
 	/* Applica la sfocatura */
 	//backdrop-filter: blur(10px);
 	//-webkit-backdrop-filter: blur(10px); /* Supporto per Safari */

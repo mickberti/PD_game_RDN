@@ -14,7 +14,7 @@ import {
 	SimpleChanges
 } from '@angular/core';
 import { FrameItem } from '../../core/models/game.models';
-import { AtlasFrame, AtlasService } from '../../core/services/ui/assets/atlas.service';
+import { AtlasFrame, AtlasService, AtlasSource } from '../../core/services/ui/assets/atlas.service';
 import { ThemeService } from '../../core/services/app/theme/theme.service';
 
 type SpriteFit =
@@ -75,7 +75,11 @@ export class UiSpriteComponent implements AfterViewInit, OnDestroy{
 	 */
 	
 	@Input()
-	frame!: FrameItem;	
+	frame!: FrameItem;
+
+	/** Restricts frame resolution to a specific atlas when names may overlap. */
+	@Input()
+	atlasSource?: AtlasSource;
 	
 	@Input()
 	badge!: string;
@@ -341,7 +345,8 @@ export class UiSpriteComponent implements AfterViewInit, OnDestroy{
 
 		const frame =
 		  this.atlasService.resolveFrame(
-		    this.frame.name
+			this.frame.name,
+			this.atlasSource,
 		  );
 		this.frameSignal.set(frame);
 

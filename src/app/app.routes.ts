@@ -147,6 +147,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: "game-guide",
+    canActivate: [AuthGuard],
+    loadComponent: () =>
+      import("./pages/game-guide/game-guide.page").then((m) => m.GameGuidePage),
+  },
+  {
     path: "hero/:view",
   canActivate: [AuthGuard],
     loadComponent: () =>

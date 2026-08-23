@@ -8,12 +8,12 @@ export const fantasyBottomNav: BottomNavItem[] = [{
 	active: "active",
 	frame: {name: "icon-castle-s2", effect: "none" },
 }, {
-	id: "hero",
-	title: "Hero",
-	description: "Select and upgrade your hero",
-	route: "/hero",
+	id: "game-guide",
+	title: "Guida",
+	description: "Regole, effetti e modalità di gioco",
+	route: "/game-guide",
 	active: "active",
-	frame: {name: "icon-crown-s2", effect: "none" },
+	frame: {name: "scroll", effect: "none" },
 }, {
 	id: "inventory",
 	title: "Bag",

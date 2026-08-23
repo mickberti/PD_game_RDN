@@ -22,6 +22,7 @@ import { GameStateService } from "../../core/services/state/game-state.service";
 import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/rnd/puzzle-score.policy";
 import { RDN_ACTION_CATALOG, RdnActionId, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/rnd/rdn-actions.config";
 import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
+import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
 
 @Component({
   selector: "app-gameplay",
@@ -65,6 +66,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly state = inject(GameStateService);
   private readonly nav = inject(AppNavigationService);
   private readonly playground = inject(EffectPlaygroundService);
+  private readonly effectTutorial = inject(EffectTutorialService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private game?: Phaser.Game;
@@ -118,6 +120,7 @@ export class GameplayPageComponent implements AfterViewInit {
       exit: () => this.exitGameplay(),
       info: () => this.showInfo.set(true),
       closeInfo: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(null); },
+      dismissTutorial: (id) => this.effectTutorial.markSeen(id),
       gemInfo: (index) => { this.showInfo.set(false); this.selectedLinkEffectId.set(null); this.selectedGemIndex.set(index); },
       linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
       nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
@@ -152,6 +155,7 @@ export class GameplayPageComponent implements AfterViewInit {
           modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
           freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4, effectsEnabled: this.gameplaySession.getLaunchOverrides()?.freeEffectsEnabled ?? false } : undefined,
           playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
+          tutorial: this.session.variant === "effect-playground" ? null : this.effectTutorial.tutorialForLevel(this.puzzle.level()),
           selectedGemIndex: this.selectedGemIndex(),
           selectedLinkEffectId: this.selectedLinkEffectId(),
           outcome: this.outcome(),

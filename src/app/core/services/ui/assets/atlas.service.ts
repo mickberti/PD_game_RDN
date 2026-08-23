@@ -26,6 +26,7 @@ import { atlasData as atlasFantasyBgBadgesDataSet1 } from 'src/assets/ui/fantasy
 import { atlasData as atlasFantasyBgHudsDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-hud-set1';
 import { atlasData as atlasFantasyBgGemsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-gem-set1';
 import { atlasData as atlasFantasyBgEffectsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-effect-set1';
+import { atlasData as atlasGameActionsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-game-action-set1';
 
 
 
@@ -50,6 +51,7 @@ export interface AtlasConfigOption {
   label: string;
   data: AtlasDataSet;
 }
+export type AtlasSource = 'effects' | 'actions';
 interface AtlasDataSet {
   frames: Record<string, AtlasFrameEntry>;
   meta?: { image?: string; size?: { w: number; h: number } };
@@ -105,6 +107,10 @@ export class AtlasService {
   private readonly atlasDataSets: AtlasDataSet[] = [
     ...this.atlasFantasybgDataSets
   ];
+  private readonly namedAtlasDataSets: Readonly<Record<AtlasSource, AtlasDataSet>> = {
+    effects: atlasFantasyBgEffectsDataSet1,
+    actions: atlasGameActionsDataSet1,
+  };
 
   readonly configuredAtlasOptions: AtlasConfigOption[] = [
     { id: 'fantasy-bg-icons-set1', label: 'Fantasy BG - Icons Set 1', data: atlasFantasyBgIconDataSet1 },
@@ -147,8 +153,9 @@ export class AtlasService {
    * siano presenti e restituisce coordinate, dimensioni e path dell'atlas; se non trova
    * nulla usa il frame di fallback `not_found`.
    */
-  resolveFrame(frameName: string): AtlasFrame {
-    for (const atlas of this.atlasDataSets) {
+  resolveFrame(frameName: string, source?: AtlasSource): AtlasFrame {
+    const dataSets = source ? [this.namedAtlasDataSets[source]] : this.atlasDataSets;
+    for (const atlas of dataSets) {
       const frame = atlas.frames[frameName];
       if (!frame) {
 		//console.log("AtlasERVICE - not found ",frameName, atlas.meta?.image);
