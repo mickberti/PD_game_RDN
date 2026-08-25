@@ -107,7 +107,7 @@ interface GuideMode {
               <article class="effect-card" [style.--icon-color]="effect.color">
                 <ui-sprite
                   class="effect-icon"
-                  atlasSource="effects"
+                  [atlasSource]="'effects'"
                   [frame]="{ name: effect.iconFrame, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />
@@ -160,7 +160,7 @@ interface GuideMode {
               <article class="effect-card" [style.--icon-color]="effect.color">
                 <ui-sprite
                   class="effect-icon"
-                  atlasSource="effects"
+                  [atlasSource]="'effects'"
                   [frame]="{ name: effect.iconFrame, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />
@@ -187,7 +187,7 @@ interface GuideMode {
               <article class="effect-card" [style.--icon-color]="effect.color">
                 <ui-sprite
                   class="effect-icon"
-                  atlasSource="effects"
+                  [atlasSource]="'effects'"
                   [frame]="{ name: effect.iconFrame, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />

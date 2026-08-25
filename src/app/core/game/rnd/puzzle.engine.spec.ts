@@ -1,5 +1,6 @@
 import { PuzzleEngine } from "./puzzle.engine";
 import { LevelDefinition } from "./puzzle.types";
+import { EffectScope } from "./effects/effects.models";
 
 const level = (outerValues: number[], innerValues: Array<number | "divide2" | "divide3">): LevelDefinition => ({ id: "spec", number: 1, title: "Spec", schemaVersion: 1, variant: "persistent", positions: 4, initialRotation: 0, outerValues, innerValues, slotPhases: [[{ outerIndex: 0 }]] });
 
@@ -53,5 +54,24 @@ describe("PuzzleEngine", () => {
     const invalidDefinition: LevelDefinition = { ...definition, queues: [["divide2"], [], [], []] };
     const invalid = engine.apply(invalidDefinition, engine.createInitialState(invalidDefinition), { type: "IMPULSE" });
     expect(invalid.queueCursors[0]).toBe(0);
+  });
+
+  it("precomputes a direct impulse without mutating the source state", () => {
+    const definition = level([5, 1, 1, 1], [-2, 1, 1, 1]);
+    const initial = engine.createInitialState(definition);
+    const plan = engine.planImpulse(definition, initial);
+    expect(initial.outerValues).toEqual([5, 1, 1, 1]);
+    expect(plan.finalValues).toEqual(engine.apply(definition, initial, { type: "IMPULSE" }).outerValues);
+    expect(plan.impacts).toEqual(jasmine.arrayContaining([jasmine.objectContaining({ targetId: 0, previousValue: 5, operation: -2, resultValue: 3, generation: 0 })]));
+  });
+
+  it("precomputes linked impacts from the same initial state in deterministic order", () => {
+    const definition: LevelDefinition = { ...level([3, 5, 1, 1], [-1, 1, 1, 1]), effectConfiguration: { enabled: true, effects: [{ preset: "ECHO_LINK", target: { type: EffectScope.LINK, fromGemIndex: 0, toGemIndex: 1 } }] } };
+    const initial = engine.createInitialState(definition);
+    const first = engine.planImpulse(definition, initial);
+    const second = engine.planImpulse(definition, initial);
+    expect(first).toEqual(second);
+    expect(first.finalValues).toEqual([2, 4, 1, 1]);
+    expect(first.impacts).toEqual(jasmine.arrayContaining([jasmine.objectContaining({ targetId: 0, resultValue: 2, generation: 0 }), jasmine.objectContaining({ targetId: 1, resultValue: 4, generation: 1, linkId: "ECHO_LINK-0" })]));
   });
 });

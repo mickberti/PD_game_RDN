@@ -1,6 +1,6 @@
 export const atlasData = {
   "frames": {
-    "shield": {
+    "effect-shield": {
       "frame": {
         "x": 16,
         "y": 14,
@@ -20,7 +20,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "wall": {
+    "effect-wall": {
       "frame": {
         "x": 324,
         "y": 14,
@@ -40,7 +40,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "mirror-sign": {
+    "effect-mirror-sign": {
       "frame": {
         "x": 635,
         "y": 14,
@@ -60,7 +60,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "amplifier": {
+    "effect-amplifier": {
       "frame": {
         "x": 943,
         "y": 15,
@@ -80,7 +80,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "inverter": {
+    "effect-inverter": {
       "frame": {
         "x": 17,
         "y": 322,
@@ -100,7 +100,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "ice": {
+    "effect-ice": {
       "frame": {
         "x": 325,
         "y": 314,
@@ -120,7 +120,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "timer": {
+    "effect-timer": {
       "frame": {
         "x": 635,
         "y": 318,
@@ -140,7 +140,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "corruption": {
+    "effect-corruption": {
       "frame": {
         "x": 945,
         "y": 314,
@@ -160,7 +160,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "echo-link": {
+    "effect-echo-link": {
       "frame": {
         "x": 14,
         "y": 625,
@@ -180,7 +180,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "mirror-link": {
+    "effect-mirror-link": {
       "frame": {
         "x": 325,
         "y": 623,
@@ -200,7 +200,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "half-link": {
+    "effect-half-link": {
       "frame": {
         "x": 635,
         "y": 623,
@@ -220,7 +220,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "double-link": {
+    "effect-double-link": {
       "frame": {
         "x": 944,
         "y": 625,
@@ -240,7 +240,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "chain-link": {
+    "effect-chain-link": {
       "frame": {
         "x": 11,
         "y": 925,
@@ -260,7 +260,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "transfer-link": {
+    "effect-transfer-link": {
       "frame": {
         "x": 326,
         "y": 928,
@@ -280,7 +280,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "balance-link": {
+    "effect-balance-link": {
       "frame": {
         "x": 633,
         "y": 930,
@@ -300,7 +300,7 @@ export const atlasData = {
         "h": 256
       }
     },
-    "area-bomb": {
+    "effect-area-bomb": {
       "frame": {
         "x": 944,
         "y": 928,

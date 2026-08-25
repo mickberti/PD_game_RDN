@@ -23,7 +23,7 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     const direction = config.direction ?? LinkDirection.BIDIRECTIONAL; this.direction = direction;
     if (direction !== LinkDirection.REVERSE) this.drawArrow(graphic, this.pointAt(.93), this.tangentAt(.93), color);
     if (direction !== LinkDirection.FORWARD) this.drawArrow(graphic, this.pointAt(.07), this.tangentAt(.07).negate(), color);
-    const midpoint = this.pointAt(.5); const frame = config.type === LinkEffectType.ECHO ? "echo-link" : config.type === LinkEffectType.AMPLIFY ? "double-link" : "mirror-link";
+    const midpoint = this.pointAt(.5); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : "effect-mirror-link";
     const background = scene.add.circle(midpoint.x, midpoint.y, 17, 0x101c18, .94).setStrokeStyle(2, color, 1).setInteractive({ useHandCursor: true });
     const icon = scene.add.image(midpoint.x, midpoint.y - 2, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color);
     const directionLabel = scene.add.text(midpoint.x, midpoint.y + 17, direction === LinkDirection.FORWARD ? "→" : direction === LinkDirection.REVERSE ? "←" : "↔", { fontFamily: "Arial, Helvetica, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#ffffff", stroke: "#111814", strokeThickness: 3 }).setOrigin(.5);

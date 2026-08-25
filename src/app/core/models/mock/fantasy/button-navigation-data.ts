@@ -6,35 +6,35 @@ export const fantasyBottomNav: BottomNavItem[] = [{
 	description: "Select game mode",
 	route: "/hub",
 	active: "active",
-	frame: {name: "icon-castle-s2", effect: "none" },
+	frame: {name: "icon-home", effect: "none" },
 }, {
 	id: "game-guide",
 	title: "Guida",
 	description: "Regole, effetti e modalità di gioco",
 	route: "/game-guide",
 	active: "active",
-	frame: {name: "scroll", effect: "none" },
+	frame: {name: "icon-manual", effect: "none" },
 }, {
 	id: "inventory",
 	title: "Bag",
 	description: "View inventory",
 	route: "/inventory",
 	active: "active",
-	frame: {name: "icon-inventory-s2", effect: "none" },
+	frame: {name: "icon-inventory", effect: "none" },
 }, {
 	id: "reward",
 	title: "Reward",
 	description: "View reward and progress",
 	route: "/reward",
 	active: "active",
-	frame: {name: "icon-trophy-s2", effect: "none" },
+	frame: {name: "icon-trophy", effect: "none" },
 }, {
 	id: "shop",
 	title: "Shop",
 	description: "Buy coins and items",
 	route: "/shop",
 	active: "active",
-	frame: {name: "icon-shop-s2", effect: "none" },
+	frame: {name: "icon-shop", effect: "none" },
 	badge: true,
 }];
 
@@ -73,5 +73,5 @@ export const fantasyBottomUtils	: BottomNavItem[] = [{
 		description: "Back to hub",
 		route: "/hub",
 		active: "active",
-		frame: {name: "icon-castle-s2", effect: "none" },
+		frame: {name: "icon-home", effect: "none" },
 	}];

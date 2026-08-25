@@ -17,6 +17,7 @@ import { DirectRouteAccessService } from "../../core/services/app/navigation/dir
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 import { environment } from "../../../environments/environment";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
+import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
 
 const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
 
@@ -53,6 +54,23 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
           <ui-button-sprite [frame]="{name: 'play', effect: 'none'}" (pressed)="previousTheme()"></ui-button-sprite>
           <span class="s-desc-title">{{ activeTheme() }}</span>
           <ui-button-sprite [frame]="{name: 'play', effect: 'none'}" (pressed)="nextTheme()"></ui-button-sprite>
+        </div>
+      </ui-panel>
+
+      <ui-panel [variant]="'primary'" title="Ripristina tutorial">
+        <p class="s-desc-title">Ripristina solo le spiegazioni: progressi, stelle, punteggi e salvataggi non vengono modificati.</p>
+        <div class="settings-links">
+          <ui-button variant="secondary" (pressed)="resetTutorialMode('adventure')">Ripristina Avventura</ui-button>
+          <ui-button variant="secondary" (pressed)="resetTutorialMode('time-attack')">Ripristina Time Attack</ui-button>
+          <ui-button variant="secondary" (pressed)="resetTutorialMode('free')">Ripristina Free</ui-button>
+          <ui-button variant="complementary" (pressed)="resetAllTutorials()">Ripristina tutti i tutorial</ui-button>
+        </div>
+        <div class="settings-links">
+          @for (tutorial of effectTutorial.tutorialEntries(); track tutorial.id) {
+            <ui-button variant="secondary" [disabled]="!tutorial.seen" (pressed)="resetTutorial(tutorial.id)">
+              {{ tutorial.seen ? 'Ripristina' : 'Da mostrare' }} · {{ tutorial.title }}<br /><small>{{ tutorial.levelLabel }}</small>
+            </ui-button>
+          }
         </div>
       </ui-panel>
 
@@ -110,6 +128,7 @@ export class SettingsPage {
   private readonly heroProgress = inject(HeroProgressService);
   private readonly statisticProgress = inject(StatisticProgressService);
   private readonly gameplaySession = inject(GameplaySessionService);
+  readonly effectTutorial = inject(EffectTutorialService);
 
   readonly activeTheme = computed(() => this.theme.activeTheme());
   readonly isAdmin = computed(() => this.gameState.player()?.role === 'admin');
@@ -208,6 +227,9 @@ export class SettingsPage {
     this.gameplaySession.startEffectPlayground();
     void this.nav.go("/utils/effect-playground");
   }
+  resetTutorial(id: string): void { this.effectTutorial.resetTutorial(id); }
+  resetTutorialMode(mode: "adventure" | "time-attack" | "free"): void { this.effectTutorial.resetMode(mode); }
+  resetAllTutorials(): void { if (window.confirm("Ripristinare tutti i tutorial? I progressi di gioco non verranno modificati.")) this.effectTutorial.resetAll(); }
 
   private updateRdnLevelAccess(level: number): void {
     if (!this.isAdmin() || this.adminLevelActionPending()) return;

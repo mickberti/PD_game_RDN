@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from "@angular/core";
 import { PuzzleEngine } from "../../game/rnd/puzzle.engine";
 import { generateRdnPuzzle, getRdnLevel } from "../../game/rnd/levels.config";
 import { PuzzleDifficulty } from "../../game/rnd/difficulty-profile.config";
-import { PersistentLevelDefinition, PuzzleAction, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
+import { ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
 interface AdventureRunSave {
@@ -50,6 +50,7 @@ export class RdnPuzzleService {
     }
     this.state.set(next);
   }
+  planImpulse(): ImpulseResolutionPlan { return this.engine.planImpulse(this.level(), this.state()); }
 
   /** Persists only the active Adventure board; player progress remains separate. */
   saveAdventureRun(): void {

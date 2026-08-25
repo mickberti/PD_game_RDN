@@ -1,7 +1,8 @@
 import * as Phaser from "phaser";
 import { EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
-import { EFFECT_PHASER_VISUAL } from "./effect-phaser-visual.config";
+import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
+import { effectAssetFrame, isEffectVisuallyActive } from "../../rnd/effects/effect-presentation.config";
 
 export interface EffectGemPosition { x: number; y: number; radius: number; }
 
@@ -25,7 +26,7 @@ export class EffectPhaserRenderer {
   }
   renderPersistent(effects: readonly ResolvedEffect[], runtime?: EffectRuntimeState, values: readonly number[] = []): void {
     for (const effect of effects) {
-      if (!this.isEffectActive(effect, values)) continue;
+      if (!isEffectVisuallyActive(effect, values, runtime)) continue;
       if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) {
         const geometry = this.linkGeometry(effect); if (!geometry) continue;
         const view = new LinkEffectView(this.scene, effect, geometry, this.onLinkInfo); this.linkLayer.add(view); this.links.set(effect.id, view);
@@ -74,10 +75,11 @@ export class EffectPhaserRenderer {
       const link = this.links.get(event.linkId);
       if (!link || link.effect.target.type !== EffectScope.LINK) continue;
       const reverse = link.effect.target.fromGem.id === event.gemId;
-      const delay = visual.directDurationMs + Math.max(0, event.generation - 1) * visual.linkGenerationDelayMs;
+      const delay = impulseLinkStartDelayMs(event.generation);
       this.animateDischargeLink(link, reverse, delay);
       const destinationId = reverse ? link.effect.target.fromGem.id : link.effect.target.toGem.id;
-      this.dischargeArrival(destinationId, delay + visual.linkSegmentDurationMs + (visual.particleCount - 1) * visual.particleStaggerMs);
+      // Do not delay the logical impact until every decorative tail has completed.
+      this.dischargeArrival(destinationId, impulseImpactDelayMs(event.generation));
     }
   }
   destroy(): void { this.links.clear(); this.markerCounts.clear(); this.linkLayer.destroy(true); this.previewGemLayer.destroy(true); this.gemLayer.destroy(true); this.markerLayer.destroy(true); this.flowLayer.destroy(true); this.dischargeLayer.destroy(true); }
@@ -88,11 +90,6 @@ export class EffectPhaserRenderer {
     else outward.normalize();
     const radius = Math.max(from.radius, to.radius);
     return { from: start, to: end, control: midpoint.add(outward.scale(radius * 2.2)), radius };
-  }
-  private isEffectActive(effect: ResolvedEffect, values: readonly number[]): boolean {
-    if (effect.target.type === EffectScope.GEM) return values[effect.target.gem.index] !== 0;
-    if (effect.target.type === EffectScope.LINK) return values[effect.target.fromGem.index] !== 0 && values[effect.target.toGem.index] !== 0;
-    return values[effect.target.sourceGem.index] !== 0;
   }
   /** Ring under the sphere: propagated gems read like direct active-flow targets. */
   private drawActiveTargetRing(gemId: string): void {
@@ -105,22 +102,20 @@ export class EffectPhaserRenderer {
   }
   private drawGemEffect(effect: ResolvedEffect, runtime?: EffectRuntimeState, values: readonly number[] = []): void {
     if (effect.target.type !== EffectScope.GEM || effect.config.scope !== EffectScope.GEM) return; const gem = this.gems.get(effect.target.gem.id); if (!gem) return;
-    const graphics = this.scene.add.graphics(); const radius = gem.radius;
-    if (effect.config.type === GemEffectType.SHIELD) { const remaining = effect.config.consumable ? runtime?.shieldRemainingStrength[effect.id] ?? effect.config.strength : effect.config.strength; if (remaining <= 0) return; graphics.lineStyle(Math.max(2, radius * .09), 0x6edfff, .9); graphics.strokeCircle(gem.x, gem.y, radius * 1.26); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), String(remaining)); return; }
-    if (effect.config.type === GemEffectType.WALL || effect.config.type === GemEffectType.ICE) { const remaining = effect.config.type === GemEffectType.WALL ? runtime?.wallRemainingStrength[effect.id] ?? effect.config.strength : runtime?.iceRemainingStrength[effect.id] ?? effect.config.strength; if (remaining <= 0) return; const color = effect.config.type === GemEffectType.WALL ? 0xb79a6c : 0x8cecff; graphics.lineStyle(Math.max(3, radius * .14), color, .95); graphics.strokeCircle(gem.x, gem.y, radius * 1.13); for (let index = 0; index < Math.max(0, effect.config.strength - remaining); index += 1) graphics.lineBetween(gem.x - radius * .55 + index * 5, gem.y - radius * .4, gem.x + radius * .25, gem.y + radius * .45); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), String(remaining)); return; }
-    if (effect.config.type === GemEffectType.AMPLIFIER) { graphics.lineStyle(Math.max(2, radius * .09), 0xffcd62, .95); graphics.strokeCircle(gem.x, gem.y, radius * 1.22); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), `×${effect.config.multiplier}`); return; }
-    if (effect.config.type === GemEffectType.INVERTER) { graphics.lineStyle(Math.max(2, radius * .09), 0xc890ff, .95); graphics.strokeCircle(gem.x, gem.y, radius * 1.2); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), "±"); return; }
-    if (effect.config.type === GemEffectType.TIMER) { const remaining = runtime?.timerRemainingTurns[effect.id] ?? effect.config.turns; if (runtime?.completedTimerIds.includes(effect.id) || runtime?.expiredTimerIds.includes(effect.id)) return; graphics.lineStyle(Math.max(2, radius * .09), 0xffcf75, .95); graphics.strokeCircle(gem.x, gem.y, radius * 1.2); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), String(remaining)); return; }
-    if (effect.config.type === GemEffectType.CORRUPTION) { if (values[effect.target.gem.index] === 0) return; graphics.lineStyle(Math.max(2, radius * .09), 0xb35cff, .92); graphics.strokeCircle(gem.x, gem.y, radius * 1.18); graphics.strokeCircle(gem.x, gem.y, radius * .78); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), `+${effect.config.amount}`); return; }
-    graphics.lineStyle(Math.max(2, radius * .08), 0xd7a2ff, .9); graphics.lineBetween(gem.x - radius * .62, gem.y - radius * .62, gem.x + radius * .62, gem.y + radius * .62); graphics.lineBetween(gem.x - radius * .62, gem.y + radius * .62, gem.x + radius * .62, gem.y - radius * .62); this.gemLayer.add(graphics); this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), "±");
+    // Persistent gem effects are represented only by their atlas icon and optional value badge.
+    // Borders, shield rings, wall cracks and ice lines would compete with the gem numeral.
+    const value = effect.config.type === GemEffectType.SHIELD ? (effect.config.consumable ? runtime?.shieldRemainingStrength[effect.id] ?? effect.config.strength : effect.config.strength)
+      : effect.config.type === GemEffectType.WALL ? runtime?.wallRemainingStrength[effect.id] ?? effect.config.strength
+        : effect.config.type === GemEffectType.ICE ? runtime?.iceRemainingStrength[effect.id] ?? effect.config.strength
+          : effect.config.type === GemEffectType.TIMER ? runtime?.timerRemainingTurns[effect.id] ?? effect.config.turns
+            : effect.config.type === GemEffectType.AMPLIFIER ? `×${effect.config.multiplier}`
+              : effect.config.type === GemEffectType.CORRUPTION ? `+${effect.config.amount}` : "";
+    if (typeof value === "number" && value <= 0) return;
+    if (effect.config.type === GemEffectType.CORRUPTION && values[effect.target.gem.index] === 0) return;
+    this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value));
   }
   private drawBomb(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA) return; this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect)); }
-  /** Reuses the existing action atlas until dedicated effect artwork is available. */
-  private iconFrame(effect: ResolvedEffect): string {
-    if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? "shield" : effect.config.type === GemEffectType.WALL ? "wall" : effect.config.type === GemEffectType.ICE ? "ice" : effect.config.type === GemEffectType.AMPLIFIER ? "amplifier" : effect.config.type === GemEffectType.INVERTER ? "inverter" : effect.config.type === GemEffectType.TIMER ? "timer" : effect.config.type === GemEffectType.CORRUPTION ? "corruption" : "mirror-sign";
-    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? "echo-link" : effect.config.type === LinkEffectType.AMPLIFY ? "double-link" : "mirror-link";
-    return "area-bomb";
-  }
+  private iconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
   private iconColor(effect: ResolvedEffect): number {
     if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff;
     if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff;
@@ -153,10 +148,10 @@ export class EffectPhaserRenderer {
         const t = reverse ? 1 - progress.value : progress.value; const point = link.pointAt(t); const near = link.pointAt(Math.min(1, Math.max(0, t + (reverse ? -.012 : .012))));
         const deltaX = near.x - point.x; const deltaY = near.y - point.y; const length = Math.max(1, Math.hypot(deltaX, deltaY));
         const weave = Math.sin(progress.value * Math.PI * 2 * visual.weaveTurns + phase) * visual.weaveAmplitude;
-        const intensity = Math.sin(progress.value * Math.PI);
+        const intensity = Math.sin(progress.value * Math.PI * .82);
         halo.setPosition(point.x - deltaY / length * weave, point.y + deltaX / length * weave).setScale(visual.haloMinScale + intensity * visual.haloScaleRange).setAlpha(intensity * visual.haloAlpha);
         particle.setPosition(point.x - deltaY / length * weave, point.y + deltaX / length * weave).setScale(visual.particleMinScale + intensity * visual.particleScaleRange).setAlpha(intensity * visual.particleAlpha);
-      }, onComplete: () => { halo.destroy(); particle.destroy(); } });
+      }, onComplete: () => { this.scene.tweens.add({ targets: [halo, particle], alpha: 0, scale: .3, duration: visual.arrivalBurstDurationMs, ease: "Cubic.Out", onComplete: () => { halo.destroy(); particle.destroy(); } }); } });
     }
   }
   private dischargeArrival(gemId: string, delay: number): void {

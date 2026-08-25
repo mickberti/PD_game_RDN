@@ -52,6 +52,12 @@ export interface AtlasConfigOption {
   data: AtlasDataSet;
 }
 export type AtlasSource = 'effects' | 'actions';
+/** Legacy UI names mapped to the refreshed generic icon atlas. */
+const ICON_SET1_FRAME_ALIASES: Readonly<Record<string, string>> = {
+  'icon-profile-s2': 'icon-user', 'icon-settings-s2': 'icon-settings',
+  'icon-play': 'icon-forward', 'icon-close-large': 'icon-close', 'icon-cancel': 'icon-close',
+  'icon-shop-s2': 'icon-shop', 'icon-inventory-s2': 'icon-inventory', 'icon-trophy-s2': 'icon-trophy',
+};
 interface AtlasDataSet {
   frames: Record<string, AtlasFrameEntry>;
   meta?: { image?: string; size?: { w: number; h: number } };
@@ -155,8 +161,9 @@ export class AtlasService {
    */
   resolveFrame(frameName: string, source?: AtlasSource): AtlasFrame {
     const dataSets = source ? [this.namedAtlasDataSets[source]] : this.atlasDataSets;
+    const resolvedFrameName = source ? frameName : ICON_SET1_FRAME_ALIASES[frameName] ?? frameName;
     for (const atlas of dataSets) {
-      const frame = atlas.frames[frameName];
+      const frame = atlas.frames[resolvedFrameName];
       if (!frame) {
 		//console.log("AtlasERVICE - not found ",frameName, atlas.meta?.image);
         continue;

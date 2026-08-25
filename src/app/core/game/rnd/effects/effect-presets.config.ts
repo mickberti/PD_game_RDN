@@ -1,4 +1,4 @@
-import { AreaEffectType, EffectConfig, EffectScope, GemEffectType, LinkEffectType } from "./effects.models";
+import { AreaEffectType, EffectConfig, EffectScope, GemEffectType, LinkEffectType, TimerUnit } from "./effects.models";
 
 /** Central catalogue: levels only reference these stable names. */
 export const EFFECT_PRESETS = {
@@ -15,9 +15,9 @@ export const EFFECT_PRESETS = {
   ICE_1: { scope: EffectScope.GEM, type: GemEffectType.ICE, strength: 1 },
   ICE_2: { scope: EffectScope.GEM, type: GemEffectType.ICE, strength: 2 },
   ICE_3: { scope: EffectScope.GEM, type: GemEffectType.ICE, strength: 3 },
-  TIMER_3: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 3 },
-  TIMER_5: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 5 },
-  TIMER_7: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 7 },
+  TIMER_3: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 3, unit: TimerUnit.IMPULSES },
+  TIMER_5: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 5, unit: TimerUnit.IMPULSES },
+  TIMER_7: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 7, unit: TimerUnit.IMPULSES },
   CORRUPTION_1: { scope: EffectScope.GEM, type: GemEffectType.CORRUPTION, amount: 1 },
   CORRUPTION_2: { scope: EffectScope.GEM, type: GemEffectType.CORRUPTION, amount: 2 },
   ECHO_LINK: { scope: EffectScope.LINK, type: LinkEffectType.ECHO },

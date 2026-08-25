@@ -113,7 +113,7 @@ export const EFFECT_PHASER_VISUAL = {
     /** Number of complete particle tails.  `1` preserves the original single-tail discharge. */
     tailCount: 3,
     /** Angular offset between tails; 2π/3 makes the default three tails interlace evenly. */
-    tailPhaseSpread: Math.PI * 2 / 3,
+    tailPhaseSpread: (Math.PI * 2) / 3,
     particleCount: 14,
     particleRadius: 2.6,
     particleAlpha: 0.94,
@@ -125,8 +125,8 @@ export const EFFECT_PHASER_VISUAL = {
     directDurationMs: 560,
     /** Duration of each curved link segment after the first gem. */
     linkSegmentDurationMs: 500,
-    /** Delay between generations of a propagated effect chain. */
-    linkGenerationDelayMs: 560,
+    /** Consecutive links form a continuous current with no artificial pause. */
+    linkGenerationDelayMs: 500,
     /** Side-to-side movement that makes the particles look intertwined. */
     weaveAmplitude: 11,
     weaveTurns: 2.4,
@@ -144,6 +144,133 @@ export const EFFECT_PHASER_VISUAL = {
     valueFloatColor: 0xc5ffe0,
     depth: 22,
   },
+  /** Contact feedback is presentation-only and is driven by IMPULSE_GEM_IMPACT. */
+  impactFeedback: {
+    reducedMotion: false,
+    normal: {
+      color: 0x9cf5ff,
+      particleColor: 0xffff00,
+      secondaryParticleColor: 0xeafff5,
+      tertiaryParticleColor: 0x83e8ff,
+      particles: 24,
+      distanceRatio: 3.45,
+      particleRadiusRatio: 0.33,
+      durationMs: 780,
+      pulseScale: 1.13,
+      ring: {
+        enabled: true,
+        radiusRatio: 0.78,
+        strokeWidthRatio: 0.12,
+        color: 0xffff00,
+        alpha: 0.96,
+        targetScale: 1.42,
+        durationMs: 150,
+        holdMs: 0,
+      },
+    },
+    absorbed: {
+      color: 0x72dfff,
+      particleColor: 0x333333,
+      secondaryParticleColor: 0xc9fff1,
+      tertiaryParticleColor: 0x83e8ff,
+      particles: 24,
+      distanceRatio: 2.16,
+      particleRadiusRatio: 0.33,
+      durationMs: 780,
+      pulseScale: 1.06,
+      ring: {
+        enabled: true,
+        radiusRatio: 0.78,
+        strokeWidthRatio: 0.12,
+        color: 0x333333,
+        alpha: 0.96,
+        targetScale: 1.42,
+        durationMs: 150,
+        holdMs: 0,
+      },
+    },
+    /** Icon revealed above a gem when Shield, Wall or Ice consumes the impact. */
+    absorbedIcon: {
+      offsetYRatio: 0,
+      sizeRatio: 1.12,
+      /** Entire visible phase before an optional break animation. */
+      durationMs: 800,
+      depthOffset: 4,
+      initialScale: 0.18,
+      finalScale: 0.28,
+      alpha: .8,
+      fadeInMs: 340,
+      holdMs: 560,
+      fadeOutMs: 0,
+      shatter: {
+        fragments: 12,
+        distanceRatio: 1.5,
+        durationMs: 1000,
+        /** No spin: the radial separation must read as an icon breaking, not a rotating gem. */
+        rotation: 0,
+        alpha: 0.96,
+        finalScale: 0.82,
+      },
+    },
+    /** The same staged break sequence, but applied to the gem itself on definitive zero. */
+    zeroGemShatter: {
+      offsetYRatio: 0,
+      sizeRatio: 1,
+      initialScale: 0.18,
+      finalScale: 0.28,
+      alpha: 0.8,
+      durationMs: 800,
+      fadeInMs: 340,
+      holdMs: 560,
+      fadeOutMs: 0,
+      depthOffset: 4,
+      shatter: {
+        fragments: 12,
+        distanceRatio: 1.5,
+        durationMs: 1500,
+        rotation: 0,
+        alpha: 0.96,
+        finalScale: 0.82,
+      },
+    },
+    zero: {
+      color: 0x9cf5ff,
+      particleColor: 0xffff00,
+      secondaryParticleColor: 0xeafff5,
+      tertiaryParticleColor: 0x83e8ff,
+      particles: 30,
+      distanceRatio: 4.3125,
+      particleRadiusRatio: 0.4125,
+      durationMs: 975,
+      pulseScale: 1.4125,
+      shockwaveScale: 3.9,
+      ring: {
+        enabled: true,
+        radiusRatio: 0.78,
+        strokeWidthRatio: 0.12,
+        color: 0xffff00,
+        alpha: 0.96,
+        targetScale: 2.1,
+        durationMs: 150,
+        holdMs: 0,
+      },
+    },
+    label: {
+      color: 0xf5fff8,
+      panelColor: 0x102a20,
+      strokeColor: 0x06110c,
+      sizeRatio: 1.46,
+      holdMs: 280,
+      riseRatio: 1.75,
+      durationMs: 1160,
+      slotOffset: 15,
+      maxSlots: 3,
+    },
+    haptics: { enabled: true, normalMs: 8, zeroMs: 22 },
+    /** Keeps particles visible after the logical impact before the board may rebuild. */
+    settleMs: 800,
+    depth: 24,
+  },
   gemHighlightDuration: 190,
   wallBreakDuration: 330,
   bombDuration: 360,
@@ -153,3 +280,23 @@ export const EFFECT_PHASER_VISUAL = {
   hudActiveEffectPulseScale: 0.1,
   hudActiveEffectPulseDurationMs: 900,
 } as const;
+
+/**
+ * Single timing source for the visual arrival of an impulse on a gem.
+ * Generation zero is the direct trip from the core; later generations arrive
+ * at the end of their respective link segment.
+ */
+export const impulseImpactDelayMs = (generation: number): number => {
+  const visual = EFFECT_PHASER_VISUAL.impulseDischarge;
+  if (generation <= 0) return visual.directDurationMs;
+  return impulseLinkStartDelayMs(generation) + visual.linkSegmentDurationMs;
+};
+
+/** Start time of a propagated link segment, measured from the impulse release. */
+export const impulseLinkStartDelayMs = (generation: number): number => {
+  const visual = EFFECT_PHASER_VISUAL.impulseDischarge;
+  return (
+    visual.directDurationMs +
+    Math.max(0, generation - 1) * visual.linkGenerationDelayMs
+  );
+};

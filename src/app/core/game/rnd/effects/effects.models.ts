@@ -16,6 +16,12 @@ export enum GemEffectType {
   CORRUPTION = "CORRUPTION",
 }
 
+/** A timer has one explicit clock source. Seconds are reserved for future level rules. */
+export enum TimerUnit {
+  IMPULSES = "IMPULSES",
+  SECONDS = "SECONDS",
+}
+
 export enum LinkEffectType {
   ECHO = "ECHO",
   AMPLIFY = "AMPLIFY",
@@ -48,7 +54,7 @@ export interface BarrierEffectConfig extends BaseEffectConfig { scope: EffectSco
 export interface MirrorEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.MIRROR; }
 export interface AmplifierGemEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.AMPLIFIER; multiplier: number; }
 export interface InverterGemEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.INVERTER; }
-export interface TimerEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.TIMER; turns: number; }
+export interface TimerEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.TIMER; turns: number; unit?: TimerUnit; }
 export interface CorruptionEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.CORRUPTION; amount: number; intervalTurns?: number; }
 export type GemEffectConfig = ShieldEffectConfig | BarrierEffectConfig | MirrorEffectConfig | AmplifierGemEffectConfig | InverterGemEffectConfig | TimerEffectConfig | CorruptionEffectConfig;
 

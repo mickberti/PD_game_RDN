@@ -21,6 +21,7 @@ import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/rnd/puzzle-score.policy";
 import { RDN_ACTION_CATALOG, RdnActionId, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/rnd/rdn-actions.config";
+import { ImpulseResolutionPlan } from "../../core/game/rnd/puzzle.types";
 import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
 
@@ -197,7 +198,9 @@ export class GameplayPageComponent implements AfterViewInit {
     this.selectedGemIndex.set(null);
     this.selectedLinkEffectId.set(null);
   }
-  private impulse(): void {
+  private impulse(): ImpulseResolutionPlan | null {
+    if (this.outcome() !== null) return null;
+    const plan = this.puzzle.planImpulse();
     this.puzzle.dispatch({ type: "IMPULSE" });
     this.puzzle.saveAdventureRun();
     const failed = hasPuzzleFailed(this.puzzle.level(), this.puzzle.state());
@@ -210,6 +213,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (won) this.outcome.set("win");
     else if (failed || queuesExhausted) this.finishTimeAttack("lose");
     else this.outcome.set(null);
+    return plan;
   }
   private restart(): void {
     this.puzzle.dispatch({ type: "RESTART" });

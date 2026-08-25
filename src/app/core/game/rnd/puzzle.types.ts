@@ -23,6 +23,9 @@ export interface PuzzleSolutionMove { outerIndex: number; rotation: number; oper
 export interface PuzzleCost { impulses: number; rotationSteps: number; }
 export interface PuzzleSlot { outerIndex: number; phase?: number; }
 export interface ImpulseResult { outerIndex: number; result: number; trend: "zero" | "closer" | "same" | "farther"; }
+/** Immutable mathematical result of an impulse; Phaser only schedules its presentation. */
+export interface ImpulseResolutionImpact { targetId: number; sourceId?: number; linkId?: string; previousValue: number; operation: PuzzleOperator | null; appliedValue: number; resultValue: number; generation: number; relativeImpactMs: number; }
+export interface ImpulseResolutionPlan { id: string; initialValues: readonly number[]; finalValues: readonly number[]; impacts: readonly ImpulseResolutionImpact[]; effectEvents: readonly EffectEngineEvent[]; }
 /** Topology is independent from mathematical validity and can therefore remain visible when blocked. */
 export interface FlowState { sourceId: number; targetId: number; active: boolean; interactable: boolean; blockedReason?: OperationRejectedReason; }
 /** Read-only projection of a Time Attack operator queue. */

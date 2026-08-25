@@ -53,6 +53,10 @@ export const RDN_MOTION = {
   operationFloatMs: 2060,
   maxZeroParticles: 28,
   blockedAlpha: .76,
+  /** Transaction timings: math is precomputed; only these values affect presentation. */
+  impulseTravelMs: 500,
+  impulseLinkTravelMs: 580,
+  impulseNodePauseMs: 530,
 } as const;
 
 export const getRdnBoardLayout = (positions: number): RdnBoardLayout => RDN_BOARD_LAYOUTS[positions as RdnBoardLayout["positions"]] ?? RDN_BOARD_LAYOUTS[6];

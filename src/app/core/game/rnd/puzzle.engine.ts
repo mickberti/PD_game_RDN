@@ -1,4 +1,4 @@
-import { AlignmentPreview, DEFAULT_PUZZLE_NUMBER_RANGE, FlowState, GameplayEvent, LevelDefinition, OperationAttemptResult, OperationRejectedReason, PuzzleAction, PuzzleOperator, PuzzleSnapshot, PuzzleState, QueueState, TargetModifierState } from "./puzzle.types";
+import { AlignmentPreview, DEFAULT_PUZZLE_NUMBER_RANGE, FlowState, GameplayEvent, ImpulseResolutionPlan, LevelDefinition, OperationAttemptResult, OperationRejectedReason, PuzzleAction, PuzzleOperator, PuzzleSnapshot, PuzzleState, QueueState, TargetModifierState } from "./puzzle.types";
 import { EffectFlowEngine } from "./effects/effect-flow.engine";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
 import { logEffectDebug } from "./effects/effect-debug";
@@ -74,6 +74,27 @@ export class PuzzleEngine {
     const resolution = this.effectResolver.resolve(level.effectConfiguration, level.positions);
     const resolvedGemIds = state.targetVisualStates.flatMap((visual, index) => visual === "OFF" ? [`target-${index}`] : []);
     return this.effectFlow.resolve(state.outerValues, resolution.effects, state.effectRuntime, inputs, resolution.flowRules, state.impulses + 1, resolvedGemIds).events;
+  }
+  /** Builds the deterministic transaction before its visual timeline starts. */
+  planImpulse(level: LevelDefinition, state: PuzzleState): ImpulseResolutionPlan {
+    const next = this.apply(level, state, { type: "IMPULSE" });
+    const directByTarget = new Map(next.lastOperationResults.filter((item) => item.valid).map((item) => [item.outerIndex, item]));
+    const linkByTargetAndGeneration = new Map<string, string>();
+    for (const event of next.lastEffectEvents ?? []) if (event.type === "FLOW_PROPAGATED" && event.gemId && event.linkId) linkByTargetAndGeneration.set(`${event.gemId}:${event.generation}`, event.linkId);
+    const values = [...state.outerValues]; const impacts: Array<ImpulseResolutionPlan["impacts"][number]> = []; const impactByGemAndGeneration = new Map<string, ImpulseResolutionPlan["impacts"][number]>();
+    for (const event of next.lastEffectEvents ?? []) {
+      if (event.type === "GEM_VALUE_CHANGED" && event.gemId && event.value !== undefined) {
+        const targetId = Number(event.gemId.replace("target-", "")); if (!Number.isInteger(targetId)) continue;
+        const direct = directByTarget.get(targetId); const previousValue = values[targetId]; const resultValue = event.value; values[targetId] = resultValue;
+        const impact = { targetId, sourceId: direct ? this.getInnerIndex(level, targetId, state.rotation) : undefined, linkId: linkByTargetAndGeneration.get(`${event.gemId}:${event.generation}`), previousValue, operation: direct?.operator ?? null, appliedValue: resultValue - previousValue, resultValue, generation: event.generation, relativeImpactMs: 0 }; impacts.push(impact); impactByGemAndGeneration.set(`${event.gemId}:${event.generation}`, impact);
+      }
+      if (event.type === "GEM_INVERTER_APPLIED" && event.gemId && event.valueAfterInversion !== undefined) {
+        const impact = impactByGemAndGeneration.get(`${event.gemId}:${event.generation}`); if (!impact) continue;
+        impact.resultValue = event.valueAfterInversion; impact.appliedValue = impact.resultValue - impact.previousValue; values[impact.targetId] = impact.resultValue;
+      }
+    }
+    for (const result of next.lastOperationResults) if (result.valid && !impacts.some((impact) => impact.targetId === result.outerIndex && impact.generation === 0)) impacts.push({ targetId: result.outerIndex, sourceId: this.getInnerIndex(level, result.outerIndex, state.rotation), previousValue: state.outerValues[result.outerIndex], operation: result.operator, appliedValue: result.nextValue - result.previousValue, resultValue: result.nextValue, generation: 0, relativeImpactMs: 0 });
+    return { id: `${level.id}:${state.impulses + 1}`, initialValues: [...state.outerValues], finalValues: [...next.outerValues], impacts, effectEvents: [...(next.lastEffectEvents ?? [])] };
   }
   apply(level: LevelDefinition, state: PuzzleState, action: PuzzleAction): PuzzleState {
     if (action.type === "UNDO") { const previous = state.history.at(-1); return previous ? restore(level, previous, state.history.slice(0, -1)) : state; } if (action.type === "RESTART") return this.createInitialState(level); if (state.won) return state;

@@ -42,7 +42,7 @@ export const atlasData = {
     }
   },
   "meta": {
-    "image": "/assets/ui/fantasy_bg/top1-set4.png",
+    "image": "/assets/ui/fantasy_bg/top-set1.png",
     "format": "RGBA8888",
     "size": {
       "w": 624,
