@@ -203,6 +203,8 @@ export const EFFECT_PHASER_VISUAL = {
       holdMs: 560,
       fadeOutMs: 0,
       shatter: {
+        /** Diagnostic switch: keep false while validating the base icon timeline. */
+        enabled: true,
         fragments: 12,
         distanceRatio: 1.5,
         durationMs: 1000,
@@ -213,7 +215,7 @@ export const EFFECT_PHASER_VISUAL = {
       },
     },
     /** The same staged break sequence, but applied to the gem itself on definitive zero. */
-    zeroGemShatter: {
+    zeroGemIcon: {
       offsetYRatio: 0,
       sizeRatio: 1,
       initialScale: 0.18,
@@ -225,6 +227,8 @@ export const EFFECT_PHASER_VISUAL = {
       fadeOutMs: 0,
       depthOffset: 4,
       shatter: {
+        /** Diagnostic switch: keep false while validating the base gem timeline. */
+        enabled: true,
         fragments: 12,
         distanceRatio: 1.5,
         durationMs: 1500,
@@ -256,6 +260,8 @@ export const EFFECT_PHASER_VISUAL = {
       },
     },
     label: {
+      /** Must remain above impact particles, effect icons and shatter fragments. */
+      depthOffset: 12,
       color: 0xf5fff8,
       panelColor: 0x102a20,
       strokeColor: 0x06110c,

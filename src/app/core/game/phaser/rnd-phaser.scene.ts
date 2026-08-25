@@ -282,13 +282,13 @@ export class RdnPhaserScene extends Phaser.Scene {
     const zero = impact.resultValue === 0 && impact.previousValue !== 0;
     const absorbed = !zero && impact.resultValue === impact.previousValue;
     if (zero) this.lastZeroBurstKey = `${this.model?.level.id}-${this.model?.state.impulses}`;
-    this.playImpactFeedback(slot.gem, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", effectPresentations, gemTintBeforeImpact);
+    this.playImpactFeedback(slot.gem, slot.text, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", effectPresentations, gemTintBeforeImpact);
     const blockedByBarrier = effectPresentations.some((effect) => effect.frame === "effect-wall" || effect.frame === "effect-ice");
     const absorbedByShield = effectPresentations.some((effect) => effect.frame === "effect-shield");
     const displayedOperation = blockedByBarrier || absorbedByShield || impact.operation === null ? format(impact.appliedValue) : formatOperator(impact.operation);
     this.showImpactLabel(impact.targetId, slot.text.x, slot.text.y, radius, displayedOperation, zero);
   }
-  private playImpactFeedback(gem: Phaser.GameObjects.Image, targetId: number, radius: number, variant: "normal" | "absorbed" | "zero", effectPresentations: readonly { frame: string; breaks: boolean }[] = [], gemTintBeforeImpact?: number): void {
+  private playImpactFeedback(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, targetId: number, radius: number, variant: "normal" | "absorbed" | "zero", effectPresentations: readonly { frame: string; breaks: boolean }[] = [], gemTintBeforeImpact?: number): void {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback; const style = visual[variant]; const reduce = visual.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     const x = gem.x; const y = gem.y; const count = reduce ? Math.max(2, Math.ceil(style.particles / 3)) : style.particles;
     if (variant !== "zero") {
@@ -302,7 +302,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     for (let index = 0; index < count; index += 1) { const angle = Math.PI * 2 * index / count + targetId * .43; const distance = radius * style.distanceRatio * (.9 + (index % 3) * .2); const color = index % 6 === 4 ? style.secondaryParticleColor : index % 6 === 5 ? style.tertiaryParticleColor : style.particleColor; const spark = this.acquireImpactCircle(x, y, Math.max(9.6, radius * style.particleRadiusRatio), color, 1, visual.depth + 2); this.tweens.add({ targets: spark, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance, scale: .12, alpha: 0, duration: reduce ? 140 : style.durationMs, delay: reduce ? 0 : index * 12, ease: "Cubic.Out", onComplete: () => this.releaseImpact(spark) }); }
     this.showImpactEffectIcons(x, y, radius, effectPresentations, reduce);
-    if (variant === "zero" && !reduce) this.showZeroGemShatter(gem, gemTintBeforeImpact ?? 0xffffff);
+    if (variant === "zero" && !reduce) this.showZeroGemShatter(gem, gemValue, gemTintBeforeImpact ?? 0xffffff);
     this.events.emit("IMPULSE_FEEDBACK_SOUND", { variant });
     this.triggerImpactHaptic(variant === "zero");
   }
@@ -348,27 +348,40 @@ export class RdnPhaserScene extends Phaser.Scene {
     const icon = this.trackImpact(this.add.image(x, y - radius * config.offsetYRatio, "rdn-effects", frame).setDisplaySize(radius * config.sizeRatio, radius * config.sizeRatio).setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + config.depthOffset).setAlpha(0).setScale(config.initialScale));
     const fadeIn = reduced ? 0 : config.fadeInMs; const hold = reduced ? 0 : config.holdMs; const fadeOut = reduced ? 120 : config.fadeOutMs;
     this.tweens.add({ targets: icon, alpha: config.alpha, scaleX: config.finalScale, scaleY: config.finalScale, delay, duration: fadeIn, ease: "Sine.Out", onComplete: () => {
-      if (breaks && !reduced) this.tweens.add({ targets: icon, delay: Math.max(0, config.durationMs - fadeIn), duration: 1, onComplete: () => { this.shatterImage("rdn-effects", frame, x, y - radius * config.offsetYRatio, radius * config.sizeRatio * config.finalScale); this.releaseImpact(icon); } });
+      if (breaks && config.shatter.enabled && !reduced) this.tweens.add({ targets: icon, alpha: config.alpha, duration: Math.max(1, config.durationMs - fadeIn), ease: "Linear", onComplete: () => { this.shatterImage("rdn-effects", frame, x, y - radius * config.offsetYRatio, radius * config.sizeRatio * config.finalScale); this.releaseImpact(icon); } });
       else this.tweens.add({ targets: icon, alpha: 0, delay: hold, duration: fadeOut, ease: "Sine.In", onComplete: () => this.releaseImpact(icon) });
     } });
   }
   /** Keep the original coloured gem visible for the icon phase, then break that sprite apart. */
-  private showZeroGemShatter(gem: Phaser.GameObjects.Image, tint: number): void {
-    const icon = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemShatter;
+  private showZeroGemShatter(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, tint: number): void {
+    const icon = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon;
     const size = Math.max(gem.displayWidth, gem.displayHeight);
     const shardGem = this.trackImpact(this.add.image(gem.x, gem.y, gem.texture.key, gem.frame.name)
       .setDisplaySize(size * icon.sizeRatio / icon.finalScale, size * icon.sizeRatio / icon.finalScale)
       .setTint(tint).setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + icon.depthOffset)
       .setAlpha(0).setScale(icon.initialScale));
+    const zeroValue = this.trackImpact(this.add.text(gem.x, gem.y, "0", {
+      fontFamily: gemValue.style.fontFamily,
+      fontSize: gemValue.style.fontSize,
+      fontStyle: gemValue.style.fontStyle,
+      color: "#ffffff",
+      stroke: gemValue.style.stroke,
+      strokeThickness: gemValue.style.strokeThickness,
+    }).setOrigin(gemValue.originX, gemValue.originY).setScale(gemValue.scaleX, gemValue.scaleY)
+      .setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + EFFECT_PHASER_VISUAL.impactFeedback.label.depthOffset)
+      .setAlpha(0));
+    this.tweens.add({ targets: zeroValue, alpha: 1, duration: icon.fadeInMs, ease: "Sine.Out" });
     this.tweens.add({ targets: shardGem, alpha: icon.alpha, scaleX: icon.finalScale, scaleY: icon.finalScale, duration: icon.fadeInMs, ease: "Sine.Out", onComplete: () => {
-      this.tweens.add({ targets: shardGem, delay: Math.max(0, icon.durationMs - icon.fadeInMs), duration: 1, onComplete: () => {
+      if (icon.shatter.enabled) this.tweens.add({ targets: shardGem, alpha: icon.alpha, duration: Math.max(1, icon.durationMs - icon.fadeInMs), ease: "Linear", onComplete: () => {
         this.shatterImage(gem.texture.key, gem.frame.name, gem.x, gem.y - size * icon.offsetYRatio, size * icon.sizeRatio, tint, true);
         this.releaseImpact(shardGem);
+        this.releaseImpact(zeroValue);
       } });
+      else this.tweens.add({ targets: [shardGem, zeroValue], alpha: 0, delay: icon.holdMs, duration: icon.fadeOutMs, ease: "Sine.In", onComplete: () => { this.releaseImpact(shardGem); this.releaseImpact(zeroValue); } });
     } });
   }
   private shatterImage(textureKey: string, frame: string | number, x: number, y: number, size: number, tint?: number, zeroGem = false): void {
-    const config = zeroGem ? EFFECT_PHASER_VISUAL.impactFeedback.zeroGemShatter.shatter : EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon.shatter;
+    const config = zeroGem ? EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon.shatter : EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon.shatter;
     const textureFrame = this.textures.getFrame(textureKey, frame); if (!textureFrame) return;
     const columns = 4; const rows = Math.ceil(config.fragments / columns); const cropWidth = textureFrame.width / columns; const cropHeight = textureFrame.height / rows;
     for (let index = 0; index < config.fragments; index += 1) {
@@ -388,18 +401,18 @@ export class RdnPhaserScene extends Phaser.Scene {
   }
   private effectIconTimelineDurationMs(breaks: boolean): number {
     const icon = EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon;
-    return icon.durationMs + (breaks ? icon.shatter.durationMs : 0);
+    return icon.durationMs + (breaks && icon.shatter.enabled ? icon.shatter.durationMs : 0);
   }
   private zeroGemShatterTimelineDurationMs(): number {
-    const gem = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemShatter;
-    return gem.durationMs + gem.shatter.durationMs;
+    const gem = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon;
+    return gem.durationMs + (gem.shatter.enabled ? gem.shatter.durationMs : 0);
   }
   private showImpactLabel(targetId: number, x: number, y: number, radius: number, value: string, zero: boolean): void {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback; const slot = this.impactSlots.get(targetId) ?? 0; this.impactSlots.set(targetId, (slot + 1) % visual.label.maxSlots);
-    const offset = (slot - (visual.label.maxSlots - 1) / 2) * visual.label.slotOffset; const startY = y - radius * 1.18 - slot * 8; const text = this.trackImpact(this.sphereLabel(x + offset, startY, value, radius * visual.label.sizeRatio, zero ? 0xffffff : visual.label.color).setDepth(visual.depth + 3)); text.setShadow(0, 0, zero ? "#8dffe2" : "#4fffa0", 9, true, true).setAlpha(0); const endY = startY - radius * visual.label.riseRatio; this.tweens.add({ targets: text, alpha: 1, duration: 80, ease: "Sine.Out" }); this.tweens.add({ targets: text, y: endY, delay: visual.label.holdMs, duration: visual.label.durationMs, alpha: 0, ease: "Cubic.Out", onComplete: () => this.releaseImpact(text) });
+    const offset = (slot - (visual.label.maxSlots - 1) / 2) * visual.label.slotOffset; const startY = y - radius * 1.18 - slot * 8; const text = this.trackImpact(this.sphereLabel(x + offset, startY, value, radius * visual.label.sizeRatio, zero ? 0xffffff : visual.label.color).setDepth(visual.depth + visual.label.depthOffset)); text.setShadow(0, 0, zero ? "#8dffe2" : "#4fffa0", 9, true, true).setAlpha(0); const endY = startY - radius * visual.label.riseRatio; this.tweens.add({ targets: text, alpha: 1, duration: 80, ease: "Sine.Out" }); this.tweens.add({ targets: text, y: endY, delay: visual.label.holdMs, duration: visual.label.durationMs, alpha: 0, ease: "Cubic.Out", onComplete: () => this.releaseImpact(text) });
   }
   private trackImpact<T extends Phaser.GameObjects.GameObject>(object: T): T { this.impactObjects.add(object); return object; }
-  private acquireImpactCircle(x: number, y: number, radius: number, color: number, alpha: number, depth: number): Phaser.GameObjects.Arc { const circle = this.impactParticlePool.pop() ?? this.add.circle(x, y, radius, color, alpha); circle.setActive(true).setVisible(true).setPosition(x, y).setRadius(radius).setFillStyle(color, alpha).setStrokeStyle(0, 0, 0).setScale(1).setDepth(depth); return this.trackImpact(circle); }
+  private acquireImpactCircle(x: number, y: number, radius: number, color: number, alpha: number, depth: number): Phaser.GameObjects.Arc { const circle = this.impactParticlePool.pop() ?? this.add.circle(x, y, radius, color, alpha); circle.setActive(true).setVisible(true).setPosition(x, y).setRadius(radius).setFillStyle(color, alpha).setAlpha(alpha).setStrokeStyle(0, 0, 0).setScale(1).setDepth(depth); return this.trackImpact(circle); }
   private releaseImpact(object: Phaser.GameObjects.GameObject): void { this.tweens.killTweensOf(object); this.impactObjects.delete(object); if (object instanceof Phaser.GameObjects.Arc) { object.setVisible(false).setActive(false); this.impactParticlePool.push(object); return; } if (object.active) object.destroy(); }
   private clearImpactFeedback(): void { for (const object of this.impactObjects) { this.tweens.killTweensOf(object); if (object instanceof Phaser.GameObjects.Arc) object.destroy(); else if (object.active) object.destroy(); } this.impactObjects.clear(); this.impactParticlePool.forEach((object) => object.destroy()); this.impactParticlePool = []; this.impactSlots.clear(); }
   private triggerImpactHaptic(zero: boolean): void { const haptics = EFFECT_PHASER_VISUAL.impactFeedback.haptics; const vibrate = typeof navigator === "undefined" ? undefined : navigator.vibrate; if (!haptics.enabled || typeof vibrate !== "function") return; try { vibrate.call(navigator, zero ? haptics.zeroMs : haptics.normalMs); } catch { /* Haptics are optional and must never disrupt gameplay. */ } }
