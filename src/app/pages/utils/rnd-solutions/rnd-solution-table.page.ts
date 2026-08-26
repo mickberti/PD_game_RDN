@@ -3,6 +3,9 @@ import { Component, computed, inject } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { IonContent, IonFooter, IonToolbar } from "@ionic/angular/standalone";
 import { PuzzleOperator } from "../../../core/game/rnd/puzzle.types";
+import { EffectScope, ResolvedEffect } from "../../../core/game/rnd/effects/effects.models";
+import { effectAssetFrame } from "../../../core/game/rnd/effects/effect-presentation.config";
+import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
 import { getRdnSolutionTable, RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
 import { UIBottomUtilsComponent } from "../../../shared/components/ui-bottom-utils.component";
 import { UiUtilsPageHeaderComponent } from "../../../shared/components/ui-utils-page-header.component";
@@ -12,7 +15,7 @@ type SolutionVariant = "adventure" | "time-attack";
 @Component({
   selector: "app-rnd-solution-table",
   standalone: true,
-  imports: [CommonModule, IonContent, IonFooter, IonToolbar, UIBottomUtilsComponent, UiUtilsPageHeaderComponent],
+  imports: [CommonModule, IonContent, IonFooter, IonToolbar, UIBottomUtilsComponent, UiUtilsPageHeaderComponent, UiSpriteComponent],
   template: `
     <ion-content>
       <div class="screen solution-page">
@@ -31,23 +34,72 @@ type SolutionVariant = "adventure" | "time-attack";
             <summary>
               <span>Livello {{ row.level }}</span>
               <span>{{ row.slots.length }} castoni · {{ row.moves.length }} impulsi</span>
+              @if (row.effects.length) {
+                <span class="summary-effects" [attr.aria-label]="row.effects.length + ' effetti applicati'">
+                  @for (effect of row.effects.slice(0, 3); track effect.id) {
+                    <ui-sprite class="effect-icon effect-icon--summary" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                  }
+                  @if (row.effects.length > 3) { <small>+{{ row.effects.length - 3 }}</small> }
+                </span>
+              }
               <b [class.invalid]="!row.verified">{{ row.verified ? '✓ verificato' : '✕ non valido' }}</b>
             </summary>
             <div class="card-content">
               <section class="provided"><h2>Operatori disponibili nel gear</h2><p>{{ operators(row.providedOperators) }}</p></section>
+              <section class="effects">
+                <h2>Effetti applicati</h2>
+                @if (row.effects.length) {
+                  <p class="effect-intro">Durante ogni impulso gli effetti possono modificare il flusso prima dell'operazione, trasformare il risultato oppure intervenire al termine dell'impulso sulle gemme coinvolte.</p>
+                  <ul>
+                    @for (effect of row.effects; track effect.id) {
+                      <li><ui-sprite class="effect-icon" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite><div><b>{{ effect.config.type }}</b><span>{{ effectTarget(effect) }}</span><small>{{ effectExplanation(effect) }}</small></div></li>
+                    }
+                  </ul>
+                } @else {
+                  <p>Nessun effetto applicato.</p>
+                }
+                <small>Simulazione motore: {{ values(row.finalValues) }}</small>
+              </section>
               <section>
                 <h2>Valori esterni e sequenza per castone</h2>
                 <ol class="slots">
                   @for (slot of row.slots; track $index) {
-                    <li><b>C{{ $index + 1 }}</b><span>{{ slot.startValue }} → {{ operators(slot.operators) }} → 0</span></li>
+                    <li>
+                      <b>C{{ $index + 1 }}</b>
+                      @if (effectsForGem(row.effects, $index).length) {
+                        <span class="inline-effects">
+                          @for (effect of effectsForGem(row.effects, $index); track effect.id) {
+                            <ui-sprite class="effect-icon effect-icon--inline" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                          }
+                        </span>
+                      }
+                      <span>{{ slot.startValue }} → {{ operators(slot.operators) }} → 0</span>
+                    </li>
                   }
                 </ol>
               </section>
               <section>
                 <h2>Sequenza globale</h2>
                 <ol class="moves">
-                  @for (move of row.moves; track $index) {
-                    <li>#{{ $index + 1 }} · C{{ move.outerIndex + 1 }} · rotazione {{ move.rotation }} · {{ operator(move.operator) }}</li>
+                  @for (step of row.execution; track $index) {
+                    <li>
+                      <span class="move-main">
+                        @for (effect of effectsForGem(row.effects, step.move.outerIndex); track effect.id) {
+                          <ui-sprite class="effect-icon effect-icon--inline" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                        }
+                        #{{ $index + 1 }} · C{{ step.move.outerIndex + 1 }} · rotazione {{ step.move.rotation }} · {{ operator(step.move.operator) }}
+                      </span>
+                      @for (update of step.updates; track update.outerIndex) {
+                        <span class="move-update" [class.move-update--link]="update.viaLink">
+                          @if (update.viaLink) {
+                            @for (effect of linkEffectsForGem(row.effects, update.outerIndex); track effect.id) {
+                              <ui-sprite class="effect-icon effect-icon--inline" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                            }
+                          }
+                          C{{ update.outerIndex + 1 }} = {{ update.value }}{{ update.viaLink ? ' (link)' : '' }}
+                        </span>
+                      }
+                    </li>
                   }
                 </ol>
               </section>
@@ -62,14 +114,18 @@ type SolutionVariant = "adventure" | "time-attack";
     .solution-page { padding-bottom: 96px; }
     .summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; padding: 14px; border: 1px solid rgba(103, 232, 249, .35); border-radius: 14px; color: #dff9ff; background: rgba(8, 35, 46, .72); }
     .level-card { margin: 10px 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .18); border-radius: 14px; color: #ecfeff; background: rgba(15, 23, 42, .9); }
-    summary { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(130px, 1fr) auto; gap: 12px; padding: 15px; cursor: pointer; font-weight: 700; }
+    summary { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(130px, 1fr) auto auto; gap: 12px; padding: 15px; cursor: pointer; font-weight: 700; }
     summary b { color: #7cf0ae; } .invalid { color: #fb7185 !important; }
     .card-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; padding: 0 16px 16px; border-top: 1px solid rgba(255, 255, 255, .12); }
     h2 { margin: 16px 0 8px; color: #f8d77c; font-size: 15px; }
     .slots, .moves { display: grid; gap: 6px; margin: 0; padding-left: 22px; }
-    .slots li { display: flex; gap: 10px; } .slots b { min-width: 28px; color: #7dd3fc; }
+    .slots li { display: flex; align-items: center; gap: 10px; } .slots b { min-width: 28px; color: #7dd3fc; }
     .provided p { margin: 0; color: #a7f3d0; font-weight: 800; letter-spacing: .04em; }
-    .moves { max-height: 260px; overflow: auto; color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .summary-effects { display: inline-flex; align-items: center; gap: 2px; } .summary-effects small { color: #c4b5fd; }
+    ui-sprite.effect-icon { display: inline-block; width: 32px; height: 32px; flex: 0 0 32px; } ui-sprite.effect-icon--summary { width: 22px; height: 22px; flex-basis: 22px; } ui-sprite.effect-icon--inline { width: 20px; height: 20px; flex-basis: 20px; vertical-align: middle; }
+    .inline-effects, .move-main { display: inline-flex; align-items: center; gap: 3px; } .inline-effects { flex: 0 0 auto; }
+    .effects ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; } .effects li { display: flex; gap: 9px; align-items: flex-start; } .effects li > div { display: grid; gap: 2px; } .effects b { color: #c4b5fd; } .effects span, .effects small { display: block; color: #cbd5e1; } .effects li small { color: #a5b4fc; line-height: 1.35; } .effects p, .effects > small { display: block; margin: 0; color: #cbd5e1; } .effects .effect-intro { margin: 0 0 10px; color: #dbeafe; line-height: 1.4; } .effects > small { margin-top: 10px; color: #7cf0ae; }
+    .moves { max-height: 260px; overflow: auto; color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; } .moves li { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; } .move-update { display: inline-flex; align-items: center; gap: 3px; color: #a7f3d0; } .move-update--link { color: #c4b5fd; }
     @media (max-width: 500px) { summary { grid-template-columns: 1fr auto; } summary b { grid-column: 1 / -1; } }
   `],
 })
@@ -83,4 +139,32 @@ export class RdnSolutionTablePage {
 
   operator(value: PuzzleOperator): string { return value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value); }
   operators(values: readonly PuzzleOperator[]): string { return values.map((value) => this.operator(value)).join(" · "); }
+  values(values: readonly number[]): string { return values.join(" · "); }
+  effectTarget(effect: ResolvedEffect): string {
+    if (effect.target.type === EffectScope.GEM) return `Gemma C${effect.target.gem.index + 1}`;
+    if (effect.target.type === EffectScope.LINK) return `Link C${effect.target.fromGem.index + 1} → C${effect.target.toGem.index + 1}`;
+    return `Area da C${effect.target.sourceGem.index + 1}`;
+  }
+  effectFrame(effect: ResolvedEffect) { return { name: effectAssetFrame(effect), effect: "none" as const }; }
+  effectsForGem(effects: readonly ResolvedEffect[], gemIndex: number): readonly ResolvedEffect[] {
+    return effects.filter((effect) => effect.target.type === EffectScope.GEM ? effect.target.gem.index === gemIndex : effect.target.type === EffectScope.LINK ? effect.target.fromGem.index === gemIndex || effect.target.toGem.index === gemIndex : effect.target.sourceGem.index === gemIndex);
+  }
+  linkEffectsForGem(effects: readonly ResolvedEffect[], gemIndex: number): readonly ResolvedEffect[] {
+    return effects.filter((effect) => effect.target.type === EffectScope.LINK && (effect.target.fromGem.index === gemIndex || effect.target.toGem.index === gemIndex));
+  }
+  effectExplanation(effect: ResolvedEffect): string {
+    const config = effect.config;
+    if (config.type === "SHIELD") return `Prima dell'operazione assorbe fino a ${config.strength} punti del flusso in arrivo.`;
+    if (config.type === "WALL" || config.type === "ICE") return `I primi ${config.strength} impulsi in arrivo vengono bloccati; solo dopo il valore può cambiare.`;
+    if (config.type === "MIRROR") return "Prima dell'operazione inverte il segno del flusso ricevuto dalla gemma.";
+    if (config.type === "AMPLIFIER") return `Prima dell'operazione moltiplica il flusso ricevuto per ${config.multiplier}.`;
+    if (config.type === "INVERTER") return "Dopo l'operazione inverte il segno del valore ottenuto dalla gemma.";
+    if (config.type === "TIMER") return `Alla fine di ogni impulso diminuisce il contatore di ${config.turns} turni.`;
+    if (config.type === "CORRUPTION") return `Alla fine dell'impulso aumenta il valore assoluto della gemma di ${config.amount}.`;
+    if (config.type === "ECHO") return "Dopo l'arrivo del flusso lo propaga anche alla gemma collegata.";
+    if (config.type === "AMPLIFY") return `Dopo l'arrivo del flusso lo propaga al link moltiplicato per ${config.multiplier ?? 1}.`;
+    if (config.type === "INVERT") return "Dopo l'arrivo del flusso lo propaga al link con segno invertito.";
+    const strength = config.scope === EffectScope.AREA ? config.strength ?? 1 : 1;
+    return `Quando ${this.effectTarget(effect)} arriva a zero, colpisce le gemme vicine con forza ${strength}.`;
+  }
 }

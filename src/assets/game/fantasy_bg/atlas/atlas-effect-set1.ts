@@ -327,8 +327,8 @@ export const atlasData = {
     "image": "/assets/game/fantasy_bg/effect-set1.png",
     "format": "RGBA8888",
     "size": {
-      "w": 1024,
-      "h": 1024
+      "w": 1254,
+      "h": 1254
     },
     "scale": "1"
   }

@@ -4,7 +4,15 @@
  */
 export interface RdnBoardLayout {
   positions: 4 | 5 | 6 | 7 | 8;
-  ring: { diameter: number; offsetX: number; offsetY: number; angle: number };
+  ring: {
+    diameter: number;
+    /** Independent texture scaling: tune these when a ring asset appears oval. */
+    widthScale: number;
+    heightScale: number;
+    offsetX: number;
+    offsetY: number;
+    angle: number;
+  };
   gear: { diameter: number; offsetX: number; offsetY: number; angle: number };
   outerSlots: {
     radius: number;
@@ -32,10 +40,10 @@ export const RDN_BOARD_LAYOUTS: Record<
 > = {
   4: {
     positions: 4,
-    ring: { diameter: 2.18, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.38, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
     gear: { diameter: 1.47, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
-      radius: 0.91,
+      radius: 0.98,
       angleOffset: 0,
       sphereRadius: 0.125,
       badgeOffsetX: -0.11,
@@ -55,7 +63,7 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   5: {
     positions: 5,
-    ring: { diameter: 2.2, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.2, widthScale: 1, heightScale: 0.95, offsetX: 0, offsetY: -0.03, angle: 0 },
     gear: { diameter: 1.44, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
       radius: 0.91,
@@ -78,7 +86,7 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   6: {
     positions: 6,
-    ring: { diameter: 2.18, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.18, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
     gear: { diameter: 1.44, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
       radius: 0.91,
@@ -87,7 +95,7 @@ export const RDN_BOARD_LAYOUTS: Record<
       badgeOffsetX: -0.1,
       badgeOffsetY: 0.12,
     },
-    innerSlots: { radius: 0.64, angleOffset: 0, sphereRadius: 0.105 },
+    innerSlots: { radius: 0.66, angleOffset: 0, sphereRadius: 0.105 },
     impulse: { radius: 0.28, iconSize: 0.6 },
     trail: {
       startRadius: 0.22,
@@ -101,7 +109,7 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   7: {
     positions: 7,
-    ring: { diameter: 3.18, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.35, widthScale: 1, heightScale: 0.85, offsetX: 0, offsetY: 0, angle: 0 },
     gear: { diameter: 1.45, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
       radius: 0.91,
@@ -110,7 +118,7 @@ export const RDN_BOARD_LAYOUTS: Record<
       badgeOffsetX: -0.095,
       badgeOffsetY: 0.11,
     },
-    innerSlots: { radius: 0.64, angleOffset: 0, sphereRadius: 0.1 },
+    innerSlots: { radius: 0.68, angleOffset: 0, sphereRadius: 0.1 },
     impulse: { radius: 0.275, iconSize: 0.6 },
     trail: {
       startRadius: 0.22,
@@ -124,7 +132,7 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   8: {
     positions: 8,
-    ring: { diameter: 2.18, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.18, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
     gear: { diameter: 1.46, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
       radius: 0.91,
@@ -133,7 +141,7 @@ export const RDN_BOARD_LAYOUTS: Record<
       badgeOffsetX: -0.09,
       badgeOffsetY: 0.105,
     },
-    innerSlots: { radius: 0.64, angleOffset: 0, sphereRadius: 0.095 },
+    innerSlots: { radius: 0.68, angleOffset: 0, sphereRadius: 0.095 },
     impulse: { radius: 0.27, iconSize: 0.6 },
     trail: {
       startRadius: 0.22,
@@ -191,6 +199,12 @@ export const RDN_GEM_NUMERAL_CONFIG: Record<
 export const RDN_PHASER_VISUAL_CONFIG = {
   /** Percentage applied independently to width and height of the stretched background. */
   backgroundScalePercent: 100,
+  /** HUD content is centred within this maximum width instead of spreading across wide screens. */
+  hudMaxWidth: 640,
+  /** Minimum empty space reserved at the left and right edges of the HUD, in canvas pixels. */
+  hudSideMargin: 18,
+  /** Vertical displacement applied to the complete top HUD, in canvas pixels. */
+  hudVerticalOffset: 10,
   /** Distance from the bottom edge for the three action buttons. */
   actionButtonsBottomOffset: 85,
   /** Board radius caps preserve a 1:1 board on narrow, wide and tall screens. */

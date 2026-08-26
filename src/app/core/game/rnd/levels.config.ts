@@ -1,7 +1,7 @@
 import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
 import { PuzzleEngine } from "./puzzle.engine";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
-import { EffectScope, GemEffectType, LinkEffectType } from "./effects/effects.models";
+import { EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 import { RDN_RELEASE } from "./rdn-release.config";
 import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity } from "./effects/effect-progression.config";
@@ -171,16 +171,31 @@ const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameCo
   },
 });
 
-const replaySolution = (level: LevelDefinition): ReturnType<PuzzleEngine["createInitialState"]> => {
+export interface PuzzleSolutionExecutionStep {
+  move: PuzzleSolutionMove;
+  /** Every sphere whose displayed value changes during this impulse. */
+  updates: readonly { outerIndex: number; value: number; viaLink: boolean }[];
+}
+
+const replaySolutionWithTrace = (level: LevelDefinition): { state: ReturnType<PuzzleEngine["createInitialState"]>; execution: readonly PuzzleSolutionExecutionStep[] } => {
   const engine = new PuzzleEngine();
   let state = engine.createInitialState(level);
+  const execution: PuzzleSolutionExecutionStep[] = [];
   for (const move of level.solutionMoves ?? []) {
     const delta = modulo(move.rotation - state.rotation, level.positions);
     if (delta) state = engine.apply(level, state, { type: "ROTATE", direction: delta <= level.positions / 2 ? "CW" : "CCW", steps: delta <= level.positions / 2 ? delta : level.positions - delta });
+    const plan = engine.planImpulse(level, state);
+    const linkedTargets = new Set(plan.impacts.filter((impact) => impact.linkId).map((impact) => impact.targetId));
+    const changedTargets = new Set(plan.impacts.map((impact) => impact.targetId));
+    execution.push({
+      move,
+      updates: [...changedTargets].map((outerIndex) => ({ outerIndex, value: plan.finalValues[outerIndex], viaLink: linkedTargets.has(outerIndex) })),
+    });
     state = engine.apply(level, state, { type: "IMPULSE" });
   }
-  return state;
+  return { state, execution };
 };
+const replaySolution = (level: LevelDefinition): ReturnType<PuzzleEngine["createInitialState"]> => replaySolutionWithTrace(level).state;
 
 /**
  * Effects make a board harder to read and route even when the generated
@@ -267,7 +282,7 @@ export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficul
   return regenerateEffectAwareLevel(level, createFreeModeEffectConfiguration(difficulty, level.positions, generation.seed, freeEffectsEnabled));
 };
 
-export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; verified: boolean; }
+export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; execution: readonly PuzzleSolutionExecutionStep[]; effects: readonly ResolvedEffect[]; finalValues: readonly number[]; verified: boolean; }
 const applySolutionOperator = (value: number, operator: PuzzleOperator): number => operator === "divide2" ? value / 2 : operator === "divide3" ? value / 3 : operator === "zero" ? 0 : operator === "invert" ? -value : operator === "skip" ? value : value + operator;
 const verifiesSolution = (level: LevelDefinition): boolean => {
   // Effected boards are validated through the real engine because link and area
@@ -290,7 +305,11 @@ const verifiesSolution = (level: LevelDefinition): boolean => {
   return values.every((value) => value === 0) && cursors.every((cursor, index) => cursor === solution[index].operators.length);
 };
 /** Inspectable solution tables for every authored level of both gameplay variants. */
-export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = RDN_LEVELS.map((level) => ({ level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], verified: verifiesSolution(level) }));
+export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = RDN_LEVELS.map((level) => {
+  const effectResolution = new LevelEffectConfigResolver().resolve(level.effectConfiguration, level.positions);
+  const simulation = replaySolutionWithTrace(level);
+  return { level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], execution: simulation.execution, effects: effectResolution.effects, finalValues: simulation.state.outerValues, verified: effectResolution.issues.length === 0 && simulation.state.won && verifiesSolution(level) };
+});
 export const getRdnSolutionTable = (variant: "adventure" | "time-attack"): readonly PuzzleSolutionAudit[] => RDN_SOLUTION_TABLE.filter((row) => row.variant === variant);
 
 /** Replays every authored Adventure solution through the current engine rules. */

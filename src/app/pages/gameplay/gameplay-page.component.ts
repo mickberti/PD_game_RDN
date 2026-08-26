@@ -83,6 +83,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly timeRemainingMs = signal<number | null>(null);
   private readonly showInfo = signal(false);
   private readonly selectedGemIndex = signal<number | null>(null);
+  private readonly selectedGearGemIndex = signal<number | null>(null);
   private readonly selectedLinkEffectId = signal<string | null>(null);
   private readonly actionInstances = signal<RdnActionInstance[]>([]);
   constructor() {
@@ -120,10 +121,10 @@ export class GameplayPageComponent implements AfterViewInit {
       retry: () => this.restart(),
       exit: () => this.exitGameplay(),
       info: () => this.showInfo.set(true),
-      closeInfo: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(null); },
+      closeInfo: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null); },
       dismissTutorial: (id) => this.effectTutorial.markSeen(id),
-      gemInfo: (index) => { this.showInfo.set(false); this.selectedLinkEffectId.set(null); this.selectedGemIndex.set(index); },
-      linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
+      gemInfo: (index, source = "ring") => { this.showInfo.set(false); this.selectedLinkEffectId.set(null); this.selectedGemIndex.set(source === "ring" ? index : null); this.selectedGearGemIndex.set(source === "gear" ? index : null); },
+      linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
       nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
       previousPlaygroundScenario: () => this.changePlaygroundScenario(-1),
     });
@@ -158,6 +159,7 @@ export class GameplayPageComponent implements AfterViewInit {
           playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
           tutorial: this.session.variant === "effect-playground" ? null : this.effectTutorial.tutorialForLevel(this.puzzle.level()),
           selectedGemIndex: this.selectedGemIndex(),
+          selectedGearGemIndex: this.selectedGearGemIndex(),
           selectedLinkEffectId: this.selectedLinkEffectId(),
           outcome: this.outcome(),
           timeRemaining: this.timeRemaining(),
@@ -196,6 +198,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.outcome.set(null);
     this.showInfo.set(false);
     this.selectedGemIndex.set(null);
+    this.selectedGearGemIndex.set(null);
     this.selectedLinkEffectId.set(null);
   }
   private impulse(): ImpulseResolutionPlan | null {
@@ -221,6 +224,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.outcome.set(null);
     this.showInfo.set(false);
     this.selectedGemIndex.set(null);
+    this.selectedGearGemIndex.set(null);
     this.selectedLinkEffectId.set(null);
     this.resetTimeAttackTimer();
     this.resetActionInstances();
@@ -308,7 +312,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (this.session.variant !== "effect-playground") return;
     if (direction > 0) this.playground.next(); else this.playground.previous();
     this.puzzle.loadDebugLevel(this.playground.level());
-    this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedLinkEffectId.set(null);
+    this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null);
   }
   private exitGameplay(): void {
     // Leaving through the game UI always starts a fresh board on the next launch.
