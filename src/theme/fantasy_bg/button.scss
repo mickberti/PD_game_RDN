@@ -56,28 +56,28 @@
 .ui-button.ui-button-xs{
 	height: 40px;
 	  border-width: 15px 10px;
-	  border-image-slice: 20 20 20 20 fill;
+	  border-image-slice: 50 fill;
 	  padding: 0px 10px 6px 10px;
 }
 
 .ui-button.ui-button-sm{
 	height: 50px;
 	  border-width: 15px 10px;
-	  border-image-slice: 20 20 20 20 fill;
+	  border-image-slice: 50 fill;
 	  padding: 0px 10px 0px 10px;
 }
 
 .ui-button.ui-button-md{
 	height: 55px;
 	  border-width: 15px 10px;
-	  border-image-slice: 20 20 20 20 fill;
+	  border-image-slice: 50 fill;
 	  padding: 0px 10px 6px 10px;
 }
 
 .ui-button.ui-button-lg{
 	height: 60px;
 	  border-width: 15px 10px;
-	  border-image-slice: 20 20 20 20 fill;
+	  border-image-slice: 50 fill;
 	  padding: 0px 10px 6px 10px;
 }
 
@@ -88,31 +88,31 @@
 
 .ui-button.primary {
 
-	border-image-source: url("/assets/ui/fantasy_bg/button/button3-set3.png");
+	border-image-source: url("/assets/ui/fantasy_bg/button/button1-set1.png");
 		
 }
 
 .ui-button.secondary {
 
-	border-image-source: url("/assets/ui/fantasy_bg/button/button2-set3.png");
+	border-image-source: url("/assets/ui/fantasy_bg/button/button3-set1.png");
 
 }
 
 .ui-button.complementary {
 
-	border-image-source: url("/assets/ui/fantasy_bg/button/button4-set3.png");
+	border-image-source: url("/assets/ui/fantasy_bg/button/button4-set1.png");
 
 }
 
 .ui-button.light {
 
-	border-image-source: url("/assets/ui/fantasy_bg/button/button2-set3.png");
+	border-image-source: url("/assets/ui/fantasy_bg/button/button6-set1.png");
 
 }
 
 .ui-button.dark {
 
-	border-image-source: url("/assets/ui/fantasy_bg/button/button1-set3.png");
+	border-image-source: url("/assets/ui/fantasy_bg/button/button2-set1.png");
 
 }
 

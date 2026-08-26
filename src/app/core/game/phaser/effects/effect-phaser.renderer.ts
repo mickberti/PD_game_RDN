@@ -89,7 +89,8 @@ export class EffectPhaserRenderer {
     if (outward.lengthSq() < 1) outward = end.clone().subtract(start).normalize().rotate(Math.PI / 2);
     else outward.normalize();
     const radius = Math.max(from.radius, to.radius);
-    return { from: start, to: end, control: midpoint.add(outward.scale(radius * 2.2)), radius };
+    const total = this.gems.size; const distance = Math.abs(effect.target.fromGem.index - effect.target.toGem.index); const adjacent = Math.min(distance, total - distance) === 1;
+    return { from: start, to: end, control: midpoint.add(outward.scale(radius * 2.2)), radius, iconProgress: adjacent ? .5 : EFFECT_PHASER_VISUAL.links.nonAdjacentIconProgress };
   }
   /** Ring under the sphere: propagated gems read like direct active-flow targets. */
   private drawActiveTargetRing(gemId: string): void {

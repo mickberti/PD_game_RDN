@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { EffectScope, LinkDirection, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
 import { EFFECT_PHASER_VISUAL } from "./effect-phaser-visual.config";
 
-export interface LinkEffectGeometry { from: Phaser.Math.Vector2; to: Phaser.Math.Vector2; control: Phaser.Math.Vector2; radius: number; }
+export interface LinkEffectGeometry { from: Phaser.Math.Vector2; to: Phaser.Math.Vector2; control: Phaser.Math.Vector2; radius: number; iconProgress: number; }
 
 /** Visual-only link: its central icon and arrows describe the engine-defined direction. */
 export class LinkEffectView extends Phaser.GameObjects.Container {
@@ -23,12 +23,11 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     const direction = config.direction ?? LinkDirection.BIDIRECTIONAL; this.direction = direction;
     if (direction !== LinkDirection.REVERSE) this.drawArrow(graphic, this.pointAt(.93), this.tangentAt(.93), color);
     if (direction !== LinkDirection.FORWARD) this.drawArrow(graphic, this.pointAt(.07), this.tangentAt(.07).negate(), color);
-    const midpoint = this.pointAt(.5); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : "effect-mirror-link";
-    const background = scene.add.circle(midpoint.x, midpoint.y, 17, 0x101c18, .94).setStrokeStyle(2, color, 1).setInteractive({ useHandCursor: true });
-    const icon = scene.add.image(midpoint.x, midpoint.y - 2, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color);
-    const directionLabel = scene.add.text(midpoint.x, midpoint.y + 17, direction === LinkDirection.FORWARD ? "→" : direction === LinkDirection.REVERSE ? "←" : "↔", { fontFamily: "Arial, Helvetica, sans-serif", fontSize: "13px", fontStyle: "bold", color: "#ffffff", stroke: "#111814", strokeThickness: 3 }).setOrigin(.5);
+    const iconPosition = this.pointAt(geometry.iconProgress); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : "effect-mirror-link";
+    const background = scene.add.circle(iconPosition.x, iconPosition.y, 17, 0x101c18, .94).setStrokeStyle(2, color, 1).setInteractive({ useHandCursor: true });
+    const icon = scene.add.image(iconPosition.x, iconPosition.y - 2, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color);
     if (onInfo) background.on("pointerdown", () => onInfo(effect.id));
-    this.add([graphic, background, icon, directionLabel]);
+    this.add([graphic, background, icon]);
     if (direction !== LinkDirection.REVERSE) this.animateDirection(scene, color, true, 0);
     if (direction !== LinkDirection.FORWARD) this.animateDirection(scene, color, false, direction === LinkDirection.BIDIRECTIONAL ? 620 : 0);
   }

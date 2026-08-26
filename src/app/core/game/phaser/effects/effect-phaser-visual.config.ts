@@ -99,6 +99,8 @@ export const EFFECT_PHASER_VISUAL = {
     activeGlowWidthExtra: 5,
     activeAlpha: 0.9,
     activeDurationMs: 680,
+    /** Position of a non-adjacent link icon along the curve, measured from its source. */
+    nonAdjacentIconProgress: 0.2,
   },
   /**
    * One-shot current released by the central impulse.  It is deliberately
