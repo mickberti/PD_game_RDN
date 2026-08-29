@@ -6,8 +6,8 @@ export type EffectVisualState = "ACTIVE" | "CONSUMED" | "REMOVED" | "EXPIRED" | 
 /** The engine currently implements only impulse timers. A seconds timer must be added as a level rule before it can be authored. */
 export const TIMER_PRESENTATION = {
   defaultUnit: TimerUnit.IMPULSES,
-  decrementMoment: "alla fine di ogni impulso globale",
-  expiryConsequence: "la scadenza viene registrata e l'effetto non resta piu attivo",
+  decrementMoment: "dopo ogni impulso diretto ricevuto dalla gemma",
+  expiryConsequence: "il livello termina con una sconfitta",
   attentionAt: 2,
   criticalAt: 1,
 } as const;

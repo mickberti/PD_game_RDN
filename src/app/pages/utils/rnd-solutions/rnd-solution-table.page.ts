@@ -34,15 +34,37 @@ type SolutionVariant = "adventure" | "time-attack";
             <summary>
               <span>Livello {{ row.level }}</span>
               <span>{{ row.slots.length }} castoni · {{ row.moves.length }} impulsi</span>
-              @if (row.effects.length) {
-                <span class="summary-effects" [attr.aria-label]="row.effects.length + ' effetti applicati'">
-                  @for (effect of row.effects.slice(0, 3); track effect.id) {
-                    <ui-sprite class="effect-icon effect-icon--summary" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+              <b [class.invalid]="!row.verified">{{ row.verified ? '✓ verificato' : '✕ non valido' }}</b>
+              @if (hasEffectsInPlay(row.effects, row.providedOperators)) {
+                <span class="effects-in-play" aria-label="Effetti in gioco">
+                  @if (gemEffects(row.effects).length) {
+                    <span class="effects-in-play__row">
+                      <strong>Gemma</strong>
+                      <span class="effect-chip" *ngFor="let effect of gemEffects(row.effects); trackBy: trackEffect">
+                        <ui-sprite class="effect-icon effect-icon--summary" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                        <span>{{ effect.config.type }}</span><small>{{ effectTarget(effect) }}</small>
+                      </span>
+                    </span>
                   }
-                  @if (row.effects.length > 3) { <small>+{{ row.effects.length - 3 }}</small> }
+                  @if (linkEffects(row.effects).length) {
+                    <span class="effects-in-play__row">
+                      <strong>Link</strong>
+                      <span class="effect-chip" *ngFor="let effect of linkEffects(row.effects); trackBy: trackEffect">
+                        <ui-sprite class="effect-icon effect-icon--summary" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                        <span>{{ effect.config.type }}</span><small>{{ effectTarget(effect) }}</small>
+                      </span>
+                    </span>
+                  }
+                  @if (specialOperators(row.providedOperators).length) {
+                    <span class="effects-in-play__row">
+                      <strong>Operatore</strong>
+                      @for (special of specialOperators(row.providedOperators); track special) {
+                        <span class="effect-chip effect-chip--operator"><span>{{ operator(special) }}</span><small>Speciale nel gear</small></span>
+                      }
+                    </span>
+                  }
                 </span>
               }
-              <b [class.invalid]="!row.verified">{{ row.verified ? '✓ verificato' : '✕ non valido' }}</b>
             </summary>
             <div class="card-content">
               <section class="provided"><h2>Operatori disponibili nel gear</h2><p>{{ operators(row.providedOperators) }}</p></section>
@@ -60,20 +82,31 @@ type SolutionVariant = "adventure" | "time-attack";
                 }
                 <small>Simulazione motore: {{ values(row.finalValues) }}</small>
               </section>
-              <section>
+              <section class="slot-details">
                 <h2>Valori esterni e sequenza per castone</h2>
                 <ol class="slots">
                   @for (slot of row.slots; track $index) {
                     <li>
-                      <b>C{{ $index + 1 }}</b>
-                      @if (effectsForGem(row.effects, $index).length) {
-                        <span class="inline-effects">
-                          @for (effect of effectsForGem(row.effects, $index); track effect.id) {
-                            <ui-sprite class="effect-icon effect-icon--inline" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                      <div class="slot-gem">
+                        <b>Gemma C{{ $index + 1 }}</b>
+                        <span class="slot-start-value">Valore iniziale: {{ slot.startValue }}</span>
+                        @if (effectsForGem(row.effects, $index).length) {
+                          <span class="inline-effects">
+                            @for (effect of effectsForGem(row.effects, $index); track effect.id) {
+                              <ui-sprite class="effect-icon effect-icon--inline" [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effect.config.type"></ui-sprite>
+                            }
+                          </span>
+                        }
+                      </div>
+                      <div class="slot-sequence">
+                        <span class="slot-sequence__label">Sequenza</span>
+                        <span class="slot-sequence__steps">
+                          @for (step of slot.operators; track $index) {
+                            <span class="slot-sequence__step"><span class="slot-sequence__operator">{{ operator(step) }}</span><span aria-hidden="true">→</span></span>
                           }
+                          <span class="slot-sequence__result">0</span>
                         </span>
-                      }
-                      <span>{{ slot.startValue }} → {{ operators(slot.operators) }} → 0</span>
+                      </div>
                     </li>
                   }
                 </ol>
@@ -114,19 +147,29 @@ type SolutionVariant = "adventure" | "time-attack";
     .solution-page { padding-bottom: 96px; }
     .summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; padding: 14px; border: 1px solid rgba(103, 232, 249, .35); border-radius: 14px; color: #dff9ff; background: rgba(8, 35, 46, .72); }
     .level-card { margin: 10px 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .18); border-radius: 14px; color: #ecfeff; background: rgba(15, 23, 42, .9); }
-    summary { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(130px, 1fr) auto auto; gap: 12px; padding: 15px; cursor: pointer; font-weight: 700; }
+    summary { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(130px, 1fr) auto; gap: 12px; padding: 15px; cursor: pointer; font-weight: 700; }
     summary b { color: #7cf0ae; } .invalid { color: #fb7185 !important; }
     .card-content { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; padding: 0 16px 16px; border-top: 1px solid rgba(255, 255, 255, .12); }
+    .slot-details { grid-column: 1 / -1; }
     h2 { margin: 16px 0 8px; color: #f8d77c; font-size: 15px; }
     .slots, .moves { display: grid; gap: 6px; margin: 0; padding-left: 22px; }
-    .slots li { display: flex; align-items: center; gap: 10px; } .slots b { min-width: 28px; color: #7dd3fc; }
+    .slots { grid-template-columns: minmax(0, 1fr); grid-auto-flow: row; width: 100%; padding-left: 0; list-style: none; gap: 10px; }
+    .slots li { display: grid; width: 100%; gap: 7px; min-width: 0; border: 1px solid rgba(125, 211, 252, .18); border-radius: 10px; padding: 10px; background: rgba(14, 116, 144, .12); }
+    .slot-gem { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; } .slot-gem b { color: #7dd3fc; } .slot-start-value { color: #dbeafe; font-weight: 700; }
+    .slot-sequence { display: flex; align-items: flex-start; gap: 8px; min-width: 0; } .slot-sequence__label { flex: 0 0 64px; color: #94a3b8; font-size: .76rem; font-weight: 800; text-transform: uppercase; }
+    .slot-sequence__steps { display: flex; flex: 1 1 auto; flex-wrap: wrap; align-items: center; gap: 5px; min-width: 0; color: #cbd5e1; }
+    .slot-sequence__step { display: inline-flex; align-items: center; gap: 5px; } .slot-sequence__operator, .slot-sequence__result { border-radius: 6px; padding: 2px 6px; color: #ecfeff; background: rgba(30, 41, 59, .86); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 800; } .slot-sequence__result { color: #7cf0ae; background: rgba(22, 101, 52, .48); }
     .provided p { margin: 0; color: #a7f3d0; font-weight: 800; letter-spacing: .04em; }
-    .summary-effects { display: inline-flex; align-items: center; gap: 2px; } .summary-effects small { color: #c4b5fd; }
+    .effects-in-play { display: grid; grid-column: 1 / -1; gap: 7px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, .12); }
+    .effects-in-play__row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .effects-in-play__row > strong { width: 76px; color: #f8d77c; font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; }
+    .effect-chip { display: inline-flex; align-items: center; gap: 4px; min-height: 27px; border: 1px solid rgba(196, 181, 253, .42); border-radius: 999px; padding: 2px 8px 2px 3px; color: #e9ddff; background: rgba(91, 59, 146, .2); font-size: .72rem; }
+    .effect-chip small { color: #a5b4fc; font-size: .68rem; } .effect-chip--operator { border-color: rgba(125, 211, 252, .42); color: #d9f5ff; background: rgba(14, 116, 144, .2); padding-left: 8px; }
     ui-sprite.effect-icon { display: inline-block; width: 32px; height: 32px; flex: 0 0 32px; } ui-sprite.effect-icon--summary { width: 22px; height: 22px; flex-basis: 22px; } ui-sprite.effect-icon--inline { width: 20px; height: 20px; flex-basis: 20px; vertical-align: middle; }
     .inline-effects, .move-main { display: inline-flex; align-items: center; gap: 3px; } .inline-effects { flex: 0 0 auto; }
     .effects ul { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; } .effects li { display: flex; gap: 9px; align-items: flex-start; } .effects li > div { display: grid; gap: 2px; } .effects b { color: #c4b5fd; } .effects span, .effects small { display: block; color: #cbd5e1; } .effects li small { color: #a5b4fc; line-height: 1.35; } .effects p, .effects > small { display: block; margin: 0; color: #cbd5e1; } .effects .effect-intro { margin: 0 0 10px; color: #dbeafe; line-height: 1.4; } .effects > small { margin-top: 10px; color: #7cf0ae; }
     .moves { max-height: 260px; overflow: auto; color: #cbd5e1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; } .moves li { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 8px; } .move-update { display: inline-flex; align-items: center; gap: 3px; color: #a7f3d0; } .move-update--link { color: #c4b5fd; }
-    @media (max-width: 500px) { summary { grid-template-columns: 1fr auto; } summary b { grid-column: 1 / -1; } }
+    @media (max-width: 500px) { summary { grid-template-columns: 1fr auto; } .effects-in-play__row > strong { width: 100%; } }
   `],
 })
 export class RdnSolutionTablePage {
@@ -146,6 +189,11 @@ export class RdnSolutionTablePage {
     return `Area da C${effect.target.sourceGem.index + 1}`;
   }
   effectFrame(effect: ResolvedEffect) { return { name: effectAssetFrame(effect), effect: "none" as const }; }
+  gemEffects(effects: readonly ResolvedEffect[]): readonly ResolvedEffect[] { return effects.filter((effect) => effect.config.scope === EffectScope.GEM || effect.config.scope === EffectScope.AREA); }
+  linkEffects(effects: readonly ResolvedEffect[]): readonly ResolvedEffect[] { return effects.filter((effect) => effect.config.scope === EffectScope.LINK); }
+  specialOperators(operators: readonly PuzzleOperator[]): readonly Exclude<PuzzleOperator, number>[] { return operators.filter((operator): operator is Exclude<PuzzleOperator, number> => typeof operator !== "number"); }
+  hasEffectsInPlay(effects: readonly ResolvedEffect[], operators: readonly PuzzleOperator[]): boolean { return effects.length > 0 || this.specialOperators(operators).length > 0; }
+  trackEffect(_: number, effect: ResolvedEffect): string { return effect.id; }
   effectsForGem(effects: readonly ResolvedEffect[], gemIndex: number): readonly ResolvedEffect[] {
     return effects.filter((effect) => effect.target.type === EffectScope.GEM ? effect.target.gem.index === gemIndex : effect.target.type === EffectScope.LINK ? effect.target.fromGem.index === gemIndex || effect.target.toGem.index === gemIndex : effect.target.sourceGem.index === gemIndex);
   }
@@ -159,7 +207,7 @@ export class RdnSolutionTablePage {
     if (config.type === "MIRROR") return "Prima dell'operazione inverte il segno del flusso ricevuto dalla gemma.";
     if (config.type === "AMPLIFIER") return `Prima dell'operazione moltiplica il flusso ricevuto per ${config.multiplier}.`;
     if (config.type === "INVERTER") return "Dopo l'operazione inverte il segno del valore ottenuto dalla gemma.";
-    if (config.type === "TIMER") return `Alla fine di ogni impulso diminuisce il contatore di ${config.turns} turni.`;
+    if (config.type === "TIMER") return `Hai ${config.turns} impulsi diretti su questa gemma per portarla a zero; allo scadere il livello fallisce.`;
     if (config.type === "CORRUPTION") return `Alla fine dell'impulso aumenta il valore assoluto della gemma di ${config.amount}.`;
     if (config.type === "ECHO") return "Dopo l'arrivo del flusso lo propaga anche alla gemma collegata.";
     if (config.type === "AMPLIFY") return `Dopo l'arrivo del flusso lo propaga al link moltiplicato per ${config.multiplier ?? 1}.`;

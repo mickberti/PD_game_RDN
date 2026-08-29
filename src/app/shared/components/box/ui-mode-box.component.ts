@@ -5,18 +5,19 @@ import { GameStateService } from "../../../core/services/state/game-state.servic
 import { isAvailableNow } from "../../../core/services/utils/availability/availability.util";
 import { UIProgressbarComponent } from "../../../shared/basic/ui-progress-bar.component";
 import { UIProgressStarsComponent } from "../../basic/ui-progress-stars.component";
+import { UiSpriteComponent } from "../../basic/ui-sprite.component";
 import { ModeMasteryProgressionService } from "../../../core/services/progression/mode-mastery-progression.service";
 import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
 
 @Component({
   selector: "ui-mode-box",
   standalone: true,
-  imports: [CommonModule, UIProgressbarComponent, UIProgressStarsComponent],
+  imports: [CommonModule, UIProgressbarComponent, UIProgressStarsComponent, UiSpriteComponent],
   template: `
     <article class="mode-item" [class.mode-item--inactive]="!active()">
       <button type="button" class="mode-item__launch" [disabled]="!active()" (click)="select.emit(mode)">
         <div class="mode-item__background" [style.background-image]="backgroundImage()" aria-hidden="true"></div>
-        <ui-progress-stars class="mode-item__mastery" [mastery]="mastery()" direction="vertical" />
+        <ui-progress-stars class="mode-item__mastery" [gameModeLevel]="playableLevel()" direction="vertical" />
         <div class="mode-item__overlay">
           <div class="mode-item__copy">
             <span class="mode-item__status" *ngIf="!active()">Non disponibile</span>
@@ -29,7 +30,7 @@ import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
         </div>
       </button>
       <button *ngIf="supportsLevelSelection()" type="button" class="mode-item__levels" [disabled]="!active()" (click)="selectLevels.emit(mode)" aria-label="Scegli un livello">
-        ☷
+        <ui-sprite [frame]="{ name: 'icon-sort-scroll', effect: 'none' }" [showScale]="false" [allowUpscale]="true" />
       </button>
     </article>
   `,
@@ -93,7 +94,8 @@ import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
     .mode-item__status { width: fit-content; border-radius: 999px; padding: 3px 8px; background: rgba(0, 0, 0, 0.48); font-size: 0.72rem !important; text-transform: uppercase; letter-spacing: 0.06em; }
     .mode-item__level { width: fit-content; border: 1px solid rgba(255, 213, 74, 0.76); border-radius: 999px; padding: 3px 8px; background: rgba(12, 8, 3, 0.58); color: #ffe39a; font-size: 0.78rem !important; font-weight: 800; }
     .mode-item__stars { width: fit-content; border-radius: 999px; padding: 3px 8px; background: rgba(38, 20, 2, .68); color: #ffd75d; font-size: .78rem !important; font-weight: 800; }
-    .mode-item__levels { position: absolute; z-index: 3; right: 12px; bottom: 12px; width: 42px; height: 42px; border: 1px solid rgba(255, 221, 119, .9); border-radius: 50%; color: #ffe8a1; background: rgba(17, 12, 5, .84); font-size: 1.45rem; line-height: 1; box-shadow: 0 3px 10px rgba(0, 0, 0, .55); }
+    .mode-item__levels { position: absolute; z-index: 3; right: 12px; bottom: 12px; width: 42px; height: 42px; border: 1px solid rgba(255, 221, 119, .9); border-radius: 50%; padding: 7px; background: rgba(17, 12, 5, .84); box-shadow: 0 3px 10px rgba(0, 0, 0, .55); }
+    .mode-item__levels ui-sprite { display: block; width: 100%; height: 100%; }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

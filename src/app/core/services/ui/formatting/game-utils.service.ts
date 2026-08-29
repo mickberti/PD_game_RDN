@@ -1,4 +1,5 @@
 import { Injectable } from "@angular/core";
+import { rdnSphereCountForLevel } from "../../../game/rnd/levels.config";
 
 @Injectable({ providedIn: "root" })
 export class GameUtilsService {
@@ -21,6 +22,14 @@ export class GameUtilsService {
 	}
 	
     return result;
+  }
+
+  /**
+   * Renders the game-mode difficulty stars from the current board configuration.
+   * The displayed step therefore changes exactly when the level introduces a gem.
+   */
+  calculateModeDifficultyStars(level: number): string[] {
+    return this.calculateMasteryStars(rdnSphereCountForLevel(level)-3);
   }
 
   /**

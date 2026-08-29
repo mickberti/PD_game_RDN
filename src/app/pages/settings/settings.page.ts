@@ -98,6 +98,8 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
           <div class="settings-links">
             <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/adventure')">Soluzioni Avventura</ui-button>
             <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-solutions/time-attack')">Soluzioni Time Attack</ui-button>
+            <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-effects/adventure')">Effetti livelli Avventura</ui-button>
+            <ui-button variant="complementary" (pressed)="nav.go('/utils/rnd-effects/time-attack')">Effetti livelli Time Attack</ui-button>
             <ui-button variant="complementary" [disabled]="adminLevelActionPending()" (pressed)="resetRdnLevels()">Resetta livelli RDN</ui-button>
             <ui-button variant="complementary" [disabled]="adminLevelActionPending()" (pressed)="unlockAllRdnLevels()">Abilita tutti i livelli RDN</ui-button>
             @if (effectPlaygroundAvailable()) { <ui-button variant="complementary" (pressed)="openEffectPlayground()">🧪 Effect Playground</ui-button> }

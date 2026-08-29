@@ -131,6 +131,18 @@ export const routes: Routes = [
     data: { variant: "time-attack" },
   },
   {
+    path: "utils/rnd-effects/adventure",
+    canActivate: [AdminGuard],
+    loadComponent: () => import("./pages/utils/rnd-effects-summary/rnd-effects-summary.page").then((m) => m.RdnEffectsSummaryPage),
+    data: { variant: "adventure" },
+  },
+  {
+    path: "utils/rnd-effects/time-attack",
+    canActivate: [AdminGuard],
+    loadComponent: () => import("./pages/utils/rnd-effects-summary/rnd-effects-summary.page").then((m) => m.RdnEffectsSummaryPage),
+    data: { variant: "time-attack" },
+  },
+  {
     path: "stats-hero",
 	canActivate: [AuthGuard],
     loadComponent: () =>

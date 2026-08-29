@@ -5,6 +5,7 @@ export const EFFECT_PRESETS = {
   SHIELD_1: { scope: EffectScope.GEM, type: GemEffectType.SHIELD, strength: 1 },
   SHIELD_2: { scope: EffectScope.GEM, type: GemEffectType.SHIELD, strength: 2 },
   SHIELD_3: { scope: EffectScope.GEM, type: GemEffectType.SHIELD, strength: 3 },
+  WALL_1: { scope: EffectScope.GEM, type: GemEffectType.WALL, strength: 1 },
   WALL_2: { scope: EffectScope.GEM, type: GemEffectType.WALL, strength: 2 },
   WALL_3: { scope: EffectScope.GEM, type: GemEffectType.WALL, strength: 3 },
   WALL_4: { scope: EffectScope.GEM, type: GemEffectType.WALL, strength: 4 },
@@ -18,11 +19,13 @@ export const EFFECT_PRESETS = {
   TIMER_3: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 3, unit: TimerUnit.IMPULSES },
   TIMER_5: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 5, unit: TimerUnit.IMPULSES },
   TIMER_7: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 7, unit: TimerUnit.IMPULSES },
+  TIMER_10: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 10, unit: TimerUnit.IMPULSES },
   CORRUPTION_1: { scope: EffectScope.GEM, type: GemEffectType.CORRUPTION, amount: 1 },
   CORRUPTION_2: { scope: EffectScope.GEM, type: GemEffectType.CORRUPTION, amount: 2 },
   ECHO_LINK: { scope: EffectScope.LINK, type: LinkEffectType.ECHO },
   DOUBLE_LINK: { scope: EffectScope.LINK, type: LinkEffectType.AMPLIFY, multiplier: 2 },
   INVERT_LINK: { scope: EffectScope.LINK, type: LinkEffectType.INVERT },
+  BOMB_1: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, strength: 1, radius: 1 },
   BOMB_2: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, strength: 2, radius: 1 },
 } satisfies Record<string, EffectConfig>;
 

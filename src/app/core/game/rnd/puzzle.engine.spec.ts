@@ -1,4 +1,5 @@
 import { PuzzleEngine } from "./puzzle.engine";
+import { hasPuzzleFailed } from "./puzzle-score.policy";
 import { LevelDefinition } from "./puzzle.types";
 import { EffectScope } from "./effects/effects.models";
 
@@ -43,6 +44,14 @@ describe("PuzzleEngine", () => {
     const resolved = engine.apply(definition, engine.createInitialState(definition), { type: "IMPULSE" });
     expect(resolved.targetVisualStates[0]).toBe("OFF");
     expect(resolved.lastGameplayEvents.map((event) => event.type)).toEqual(["OperationApplied", "TargetReachedZero", "TargetDeactivated"]);
+  });
+
+  it("fails the level when a local TIMER expires", () => {
+    const definition: LevelDefinition = { ...level([5, 1, 1, 1], [-1, 1, 1, 1]), effectConfiguration: { enabled: true, effects: [{ preset: "TIMER_3", target: { type: EffectScope.GEM, gemIndex: 0 }, overrides: { turns: 2 } }] } };
+    const first = engine.apply(definition, engine.createInitialState(definition), { type: "IMPULSE" });
+    const expired = engine.apply(definition, first, { type: "IMPULSE" });
+    expect(expired.effectRuntime?.expiredTimerIds).toContain("TIMER_3-0");
+    expect(hasPuzzleFailed(definition, expired)).toBeTrue();
   });
 
   it("advances a Time Attack queue only after a valid operation and exposes its preview", () => {

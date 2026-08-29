@@ -28,8 +28,9 @@ export const getPuzzleStars = (level: LevelDefinition, state: PuzzleState): numb
   return 1;
 };
 
-/** Adventure can fail only when its authored configuration declares a limit. */
+/** A timer expiry always fails; other limits depend on the active game mode. */
 export const hasPuzzleFailed = (level: LevelDefinition, state: PuzzleState): boolean => {
+  if ((state.effectRuntime?.expiredTimerIds.length ?? 0) > 0) return true;
   if (level.variant === "persistent") {
     const limits = level.adventure?.limits;
     return (limits?.maxImpulses !== undefined && state.impulses > limits.maxImpulses)

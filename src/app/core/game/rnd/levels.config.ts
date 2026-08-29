@@ -1,15 +1,17 @@
 import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
 import { PuzzleEngine } from "./puzzle.engine";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
-import { EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
+import { EffectConfig, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 import { RDN_RELEASE } from "./rdn-release.config";
 import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity } from "./effects/effect-progression.config";
 import { LevelEffectConfiguration } from "./effects/level-effects.types";
+import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, rdnEffectRuleForLevel, rdnSpecialOperatorsForBoard } from "./progression-rules.config";
 
-export const RDN_MAX_LEVEL = 200;
+export const RDN_MAX_LEVEL = 350;
 export const RDN_MIN_SPHERES = 4;
 export const RDN_MAX_SPHERES = 8;
+export const RDN_MAX_TIMER_DIRECT_IMPULSES = 10;
 /** Number of levels in each sphere-count band; recalculated when the catalogue size changes. */
 export const RDN_LEVELS_PER_SPHERE_INCREMENT = Math.ceil(RDN_MAX_LEVEL / (RDN_MAX_SPHERES - RDN_MIN_SPHERES + 1));
 
@@ -29,24 +31,8 @@ interface ValuePlan { start: number; operators: PuzzleOperator[]; }
 
 /** Division specials are introduced gradually on advanced boards. */
 /** One-use action specials share the gear with DIV2/DIV3; ×2 remains HUD-only. */
-const SPECIAL_OPERATOR_SPAWN_INTERVAL = 4;
-const DOUBLE_SPECIAL_OPERATOR_SPAWN_INTERVAL = 12;
-const specialOperatorsForLevel = (level: number, positions: number): PuzzleOperator[] => {
-  // A special is an occasional tactical event, never the default state of a board.
-  if (level < 20 || level % SPECIAL_OPERATOR_SPAWN_INTERVAL !== 0) return [];
-  const candidates: PuzzleOperator[] = [
-    ...(level >= 20 ? ["zero" as const] : []),
-    ...(level >= 30 ? ["invert" as const] : []),
-    ...(level >= 40 ? ["divide2" as const] : []),
-    ...(level >= 60 ? ["skip" as const] : []),
-    ...(level >= 80 ? ["divide3" as const] : []),
-  ];
-  // Boards up to seven spheres use exactly one special. Only an eight-sphere
-  // board can occasionally host two, while preserving numeric operators.
-  const requestedCount = positions === RDN_MAX_SPHERES && level % DOUBLE_SPECIAL_OPERATOR_SPAWN_INTERVAL === 0 ? 2 : 1;
-  const count = Math.min(candidates.length, requestedCount, Math.max(0, positions - 2));
-  const start = modulo(Math.floor(level / SPECIAL_OPERATOR_SPAWN_INTERVAL), Math.max(1, candidates.length));
-  return Array.from({ length: count }, (_, index) => candidates[(start + index) % candidates.length]);
+const specialOperatorsForLevel = (level: number, positions: number, variation = 0): PuzzleOperator[] => {
+  return [...rdnSpecialOperatorsForBoard(level, positions, variation)];
 };
 const gearOperators = (positions: number, specialOperators: readonly PuzzleOperator[], next: () => number): PuzzleOperator[] => {
   const subtractorCount = positions - specialOperators.length;
@@ -112,7 +98,7 @@ const generateBoard = (number: number, seedOffset: number, slotCount?: number, b
   const impulses = impulsesPerValue(number);
   const seed = number * 977 + seedOffset;
   const next = random(seed);
-  const specialOperators = specialOperatorsForLevel(number, positions);
+  const specialOperators = specialOperatorsForLevel(number, positions, seedOffset);
   const innerValues = gearOperators(positions, specialOperators, next);
   const allAdditives = additiveOperators(innerValues);
   const range = DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange;
@@ -220,6 +206,82 @@ const effectStarAllowance = (configuration: LevelEffectConfiguration, positions:
 };
 
 /**
+ * Timer limits are derived from the canonical route. This keeps the pressure
+ * local to the timed gem while ensuring its own planned direct impulses fit
+ * inside the displayed deadline.
+ */
+const withCalibratedTimerDeadlines = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration): LevelEffectConfiguration | undefined => {
+  if (!configuration.effects?.length || configuration.sets?.length) return configuration;
+  const effects = new LevelEffectConfigResolver().resolve(configuration, level.positions).effects;
+  const deadlines = new Map<number, number>();
+  effects.forEach((effect, index) => {
+    if (effect.config.type !== GemEffectType.TIMER) return;
+    const target = effect.target;
+    if (target.type !== EffectScope.GEM) return;
+    const directImpulses = (level.solutionMoves ?? []).filter((move) => move.outerIndex === target.gem.index).length;
+    if (directImpulses > RDN_MAX_TIMER_DIRECT_IMPULSES) return;
+    deadlines.set(index, Math.max(effect.config.turns, directImpulses));
+  });
+  return {
+    ...configuration,
+    effects: configuration.effects.map((assignment, index) => {
+      const deadline = deadlines.get(index);
+      return deadline === undefined ? assignment : { ...assignment, overrides: { ...assignment.overrides, turns: deadline } as Partial<EffectConfig> };
+    }),
+  };
+};
+
+const timerDeadlineFailed = (state: ReturnType<PuzzleEngine["createInitialState"]>): boolean => (state.effectRuntime?.expiredTimerIds.length ?? 0) > 0;
+
+/** Scales within the same category first, then tries configured safe GEM fallbacks. */
+const simplifiedEffectConfigurations = (configuration: LevelEffectConfiguration): readonly LevelEffectConfiguration[] => {
+  if (!configuration.effects?.length) return [configuration];
+  const candidates: LevelEffectConfiguration[] = [configuration];
+  let effects = [...configuration.effects];
+  while (true) {
+    const index = effects.findIndex((effect) => RDN_EFFECT_SIMPLIFICATIONS[effect.preset] !== undefined);
+    if (index < 0) break;
+    const effect = effects[index];
+    const preset = RDN_EFFECT_SIMPLIFICATIONS[effect.preset];
+    if (!preset) break;
+    effects = effects.map((item, itemIndex) => itemIndex === index ? { ...item, preset, overrides: undefined } : item);
+    candidates.push({ ...configuration, effects });
+  }
+  const simplestEffects = effects;
+  for (let index = 0; index < simplestEffects.length; index += 1) {
+    if (simplestEffects[index].target.type !== EffectScope.GEM) continue;
+    for (const preset of RDN_GEM_EFFECT_FALLBACK_PRESETS) {
+      if (preset === simplestEffects[index].preset) continue;
+      const fallbackEffects = simplestEffects.map((effect, effectIndex) => effectIndex === index ? { ...effect, preset, overrides: undefined } : effect);
+      candidates.push({ ...configuration, effects: fallbackEffects });
+    }
+  }
+  return candidates;
+};
+
+const buildEffectCandidate = <T extends LevelDefinition>(level: T, outerValues: readonly number[], effectConfiguration: LevelEffectConfiguration): T => ({ ...level, outerValues: [...outerValues], solution: level.solution?.map((slot, index) => ({ ...slot, startValue: outerValues[index] })), effectConfiguration } as T);
+
+const needsSignedValueCalibration = (configuration: LevelEffectConfiguration): boolean => (configuration.effects ?? []).some((effect) => effect.preset === "INVERTER_1" || effect.preset === "MIRROR_1" || effect.preset === "CORRUPTION_1" || effect.preset === "CORRUPTION_2");
+
+/** Uses a one-unit probe for effects whose output slope can be -1 (for example INVERTER). */
+const recalculatedOuterValues = <T extends LevelDefinition>(candidate: T, result: ReturnType<typeof replaySolution>, range: { min: number; max: number }, useSignedCalibration: boolean): number[] | undefined => {
+  const recalculated = candidate.outerValues.map((value, index) => {
+    if (!useSignedCalibration) return value - result.outerValues[index];
+    // A probe may never create zero: outer values must always be non-zero for
+    // a valid level definition. Prefer the positive direction, then negative.
+    const probeStep = value < range.max && value !== -1 ? 1 : value > range.min && value !== 1 ? -1 : 0;
+    if (probeStep === 0) return value - result.outerValues[index];
+    const probeValues = [...candidate.outerValues];
+    probeValues[index] += probeStep;
+    const probeResult = replaySolution(buildEffectCandidate(candidate, probeValues, candidate.effectConfiguration!));
+    const slope = (probeResult.outerValues[index] - result.outerValues[index]) / probeStep;
+    const correction = slope === 0 ? -result.outerValues[index] : -result.outerValues[index] / slope;
+    return value + correction;
+  });
+  return recalculated.some((value) => !Number.isInteger(value) || value === 0 || value < range.min || value > range.max) ? undefined : recalculated;
+};
+
+/**
  * Effects alter deltas, not the numeric generator.  Recalculate only the
  * authored starting values against the canonical move sequence so an effected
  * board retains a deterministic playable solution. Its star budget is then
@@ -227,23 +289,29 @@ const effectStarAllowance = (configuration: LevelEffectConfiguration, positions:
  */
 const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration | undefined): T => {
   if (!configuration) return level;
-  const issues = validateEffectComplexity(configuration, `${level.variant} level ${level.number}`);
-  if (issues.length) throw new Error(issues.join(" "));
   const range = level.numberRange ?? DIFFICULTY_PROFILES[difficultyForLevel(level.number)].numberRange;
-  let outerValues = [...level.outerValues];
-  for (let attempt = 0; attempt < 14; attempt += 1) {
-    const candidate = { ...level, outerValues, solution: level.solution?.map((slot, index) => ({ ...slot, startValue: outerValues[index] })), effectConfiguration: configuration } as T;
-    const result = replaySolution(candidate);
-    if (result.won) {
-      const allowance = effectStarAllowance(configuration, candidate.positions);
-      const canonicalImpulses = result.impulses;
-      const canonicalRotations = result.rotationSteps;
-      return { ...candidate, starCost: { impulses: canonicalImpulses + allowance, rotationSteps: canonicalRotations + Math.ceil(allowance / 2) } };
+  const attemptsBeforeScaling = Math.max(1, rdnEffectRuleForLevel(level.number).solutionAttemptsBeforeScaling);
+  for (const uncalibratedConfiguration of simplifiedEffectConfigurations(configuration)) {
+    const candidateConfiguration = withCalibratedTimerDeadlines(level, uncalibratedConfiguration);
+    if (!candidateConfiguration) continue;
+    const issues = validateEffectComplexity(candidateConfiguration, `${level.variant} level ${level.number}`, level.positions);
+    if (issues.length) throw new Error(issues.join(" "));
+    let outerValues = [...level.outerValues];
+    const useSignedCalibration = needsSignedValueCalibration(candidateConfiguration);
+    for (let attempt = 0; attempt < attemptsBeforeScaling; attempt += 1) {
+      const candidate = buildEffectCandidate(level, outerValues, candidateConfiguration);
+      const result = replaySolution(candidate);
+      if (result.won && !timerDeadlineFailed(result)) {
+        const allowance = effectStarAllowance(candidateConfiguration, candidate.positions);
+        const canonicalImpulses = result.impulses;
+        const canonicalRotations = result.rotationSteps;
+        return { ...candidate, starCost: { impulses: canonicalImpulses + allowance, rotationSteps: canonicalRotations + Math.ceil(allowance / 2) } };
+      }
+      const recalculated = recalculatedOuterValues(candidate, result, range, useSignedCalibration);
+      if (!recalculated) break;
+      if (recalculated.every((value, index) => value === outerValues[index])) break;
+      outerValues = recalculated;
     }
-    const recalculated = outerValues.map((value, index) => value - result.outerValues[index]);
-    if (recalculated.some((value) => !Number.isInteger(value) || value === 0 || value < range.min || value > range.max)) break;
-    if (recalculated.every((value, index) => value === outerValues[index])) break;
-    outerValues = recalculated;
   }
   // A tier is never allowed to ship an unsolvable generated board. The fallback
   // remains deterministic and legacy-compatible; development tests flag it.
@@ -266,10 +334,36 @@ const loader = (number: number): LevelDefinition => {
   return applyProgressionEffects("time-attack", level);
 };
 
-export const RDN_LEVELS: readonly LevelDefinition[] = [
-  ...Array.from({ length: RDN_MAX_LEVEL }, (_, index) => persistent(index + 1)),
-  ...Array.from({ length: RDN_MAX_LEVEL }, (_, index) => loader(index + 1)),
-];
+const generateRdnLevelCatalogue = (): readonly LevelDefinition[] => {
+  const startedAt = performance.now();
+  const total = RDN_MAX_LEVEL * 2;
+  const levels: LevelDefinition[] = [];
+  let completed = 0;
+  let nextProgressLog = 5;
+  const reportProgress = (): void => {
+    const percentage = Math.floor(completed / total * 100);
+    while (percentage >= nextProgressLog) {
+      console.info(`[RDN] Generazione livelli: ${nextProgressLog}% (${completed}/${total})`);
+      nextProgressLog += 5;
+    }
+  };
+
+  console.info(`[RDN] Generazione livelli: 0% (0/${total})`);
+  for (let number = 1; number <= RDN_MAX_LEVEL; number += 1) {
+    levels.push(persistent(number));
+    completed += 1;
+    reportProgress();
+  }
+  for (let number = 1; number <= RDN_MAX_LEVEL; number += 1) {
+    levels.push(loader(number));
+    completed += 1;
+    reportProgress();
+  }
+  console.info(`[RDN] Generazione completata: ${levels.length} livelli in ${(performance.now() - startedAt).toFixed(1)} ms.`);
+  return levels;
+};
+
+export const RDN_LEVELS: readonly LevelDefinition[] = generateRdnLevelCatalogue();
 export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): LevelDefinition => RDN_LEVELS.find((level) => level.variant === (variant === "adventure" ? "persistent" : "loader") && level.number === number) ?? RDN_LEVELS[0];
 
 /** Seedable entry point for replay, support and future ranked runs. */
@@ -287,7 +381,7 @@ const applySolutionOperator = (value: number, operator: PuzzleOperator): number 
 const verifiesSolution = (level: LevelDefinition): boolean => {
   // Effected boards are validated through the real engine because link and area
   // contributions intentionally make their solution non-local to one gem.
-  if (level.effectConfiguration?.enabled) return replaySolution(level).won;
+  if (level.effectConfiguration?.enabled) { const state = replaySolution(level); return state.won && !timerDeadlineFailed(state); }
   const solution = level.solution ?? [];
   const moves = level.solutionMoves ?? [];
   const requiredMoves = level.slotPhases.reduce((total, phase) => total + phase.length, 0);
@@ -308,7 +402,7 @@ const verifiesSolution = (level: LevelDefinition): boolean => {
 export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = RDN_LEVELS.map((level) => {
   const effectResolution = new LevelEffectConfigResolver().resolve(level.effectConfiguration, level.positions);
   const simulation = replaySolutionWithTrace(level);
-  return { level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], execution: simulation.execution, effects: effectResolution.effects, finalValues: simulation.state.outerValues, verified: effectResolution.issues.length === 0 && simulation.state.won && verifiesSolution(level) };
+  return { level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], execution: simulation.execution, effects: effectResolution.effects, finalValues: simulation.state.outerValues, verified: effectResolution.issues.length === 0 && simulation.state.won && !timerDeadlineFailed(simulation.state) && verifiesSolution(level) };
 });
 export const getRdnSolutionTable = (variant: "adventure" | "time-attack"): readonly PuzzleSolutionAudit[] => RDN_SOLUTION_TABLE.filter((row) => row.variant === variant);
 
@@ -322,7 +416,7 @@ export const validateAdventureLevelBatch = (): readonly { level: number; valid: 
       if (delta) state = engine.apply(level, state, { type: "ROTATE", direction: delta <= level.positions / 2 ? "CW" : "CCW", steps: delta <= level.positions / 2 ? delta : level.positions - delta });
       state = engine.apply(level, state, { type: "IMPULSE" });
     }
-    return { level: level.number, valid: state.won };
+    return { level: level.number, valid: state.won && !timerDeadlineFailed(state) };
   });
 };
 

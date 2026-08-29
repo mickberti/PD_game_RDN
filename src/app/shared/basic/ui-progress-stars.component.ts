@@ -29,12 +29,16 @@ export class UIProgressStarsComponent {
   @Input() direction: "vertical" | "horizontal" = "horizontal";
   @Input() level: number = 0;
   @Input() mastery: number = 0;
+  /** Level of an RDN game mode; its stars follow the board gem progression. */
+  @Input() gameModeLevel: number = 0;
   readonly logger = inject(LoggerService);
 
   private utils = inject(GameUtilsService);
 
   calculateStars(): string[]{
-	if(this.level > 0){
+	if(this.gameModeLevel > 0){
+		return this.utils.calculateModeDifficultyStars(this.gameModeLevel);
+	}else if(this.level > 0){
 		const stars =  this.utils.calculateLevelStars(this.level);
 		return stars;	
 	}else if(this.mastery > 0){
