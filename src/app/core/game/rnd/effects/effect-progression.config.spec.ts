@@ -47,6 +47,13 @@ describe("effect game-mode progression", () => {
     expect(validateEffectComplexity(configuration, "free")).toEqual([]);
   });
 
+  it("enables only the selected Free effect families", () => {
+    const linkOnly = createFreeModeEffectConfiguration("EASY", 8, 14, { gem: false, link: true, area: false });
+    expect(linkOnly?.effects?.every((effect) => effect.target.type === EffectScope.LINK)).toBeTrue();
+    const areaOnly = createFreeModeEffectConfiguration("EASY", 8, 14, { gem: false, link: false, area: true });
+    expect(areaOnly?.effects?.every((effect) => effect.target.type === EffectScope.AREA)).toBeTrue();
+  });
+
   it("resolves the stable tier after the introduction sequence", () => {
     expect(resolveEffectProgressionTier(80).id).toBe("AREA");
     expect(resolveEffectProgressionTier(100).id).toBe("AREA");

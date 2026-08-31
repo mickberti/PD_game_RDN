@@ -6,7 +6,8 @@ import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.co
 import { RDN_RELEASE } from "./rdn-release.config";
 import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity } from "./effects/effect-progression.config";
 import { LevelEffectConfiguration } from "./effects/level-effects.types";
-import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, rdnEffectRuleForLevel, rdnSpecialOperatorsForBoard } from "./progression-rules.config";
+import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_PRESETS, rdnEffectRuleForLevel, rdnProgressionRuleForSpheres, rdnSpecialOperatorsForBoard } from "./progression-rules.config";
+import { GENERATED_RDN_LEVELS, GENERATED_RDN_SOLUTION_AUDIT } from "./generated/rnd-catalogue.manifest";
 
 export const RDN_MAX_LEVEL = 350;
 export const RDN_MIN_SPHERES = 4;
@@ -233,31 +234,43 @@ const withCalibratedTimerDeadlines = <T extends LevelDefinition>(level: T, confi
 
 const timerDeadlineFailed = (state: ReturnType<PuzzleEngine["createInitialState"]>): boolean => (state.effectRuntime?.expiredTimerIds.length ?? 0) > 0;
 
-/** Scales within the same category first, then tries configured safe GEM fallbacks. */
-const simplifiedEffectConfigurations = (configuration: LevelEffectConfiguration): readonly LevelEffectConfiguration[] => {
-  if (!configuration.effects?.length) return [configuration];
-  const candidates: LevelEffectConfiguration[] = [configuration];
-  let effects = [...configuration.effects];
+const lastIndexFor = (effects: readonly NonNullable<LevelEffectConfiguration["effects"]>[number][], scope: EffectScope): number => { for (let index = effects.length - 1; index >= 0; index -= 1) if (effects[index].target.type === scope) return index; return -1; };
+
+/** The prescribed fallback order. A phase is fully explored across all seeds before the next one begins. */
+const effectConfigurationStages = (configuration: LevelEffectConfiguration, spheres: number): readonly (readonly LevelEffectConfiguration[])[] => {
+  const effects = [...(configuration.effects ?? [])];
+  const optional: LevelEffectConfiguration[] = [];
+  let reduced = effects.filter((effect) => effect.target.type !== EffectScope.AREA);
+  optional.push({ ...configuration, effects: reduced });
+  const fixedLinks = rdnProgressionRuleForSpheres(spheres).fixedLinks;
+  while (reduced.filter((effect) => effect.target.type === EffectScope.LINK).length > fixedLinks) {
+    reduced = reduced.filter((_, index) => index !== lastIndexFor(reduced, EffectScope.LINK));
+    optional.push({ ...configuration, effects: reduced });
+  }
+  const scaled: LevelEffectConfiguration[] = [];
+  let scaledEffects = [...reduced];
   while (true) {
-    const index = effects.findIndex((effect) => RDN_EFFECT_SIMPLIFICATIONS[effect.preset] !== undefined);
+    const index = scaledEffects.findIndex((effect) => RDN_EFFECT_SIMPLIFICATIONS[effect.preset] !== undefined);
     if (index < 0) break;
-    const effect = effects[index];
-    const preset = RDN_EFFECT_SIMPLIFICATIONS[effect.preset];
+    const preset = RDN_EFFECT_SIMPLIFICATIONS[scaledEffects[index].preset];
     if (!preset) break;
-    effects = effects.map((item, itemIndex) => itemIndex === index ? { ...item, preset, overrides: undefined } : item);
-    candidates.push({ ...configuration, effects });
+    scaledEffects = scaledEffects.map((effect, effectIndex) => effectIndex === index ? { ...effect, preset, overrides: undefined } : effect);
+    scaled.push({ ...configuration, effects: scaledEffects });
   }
-  const simplestEffects = effects;
-  for (let index = 0; index < simplestEffects.length; index += 1) {
-    if (simplestEffects[index].target.type !== EffectScope.GEM) continue;
-    for (const preset of RDN_GEM_EFFECT_FALLBACK_PRESETS) {
-      if (preset === simplestEffects[index].preset) continue;
-      const fallbackEffects = simplestEffects.map((effect, effectIndex) => effectIndex === index ? { ...effect, preset, overrides: undefined } : effect);
-      candidates.push({ ...configuration, effects: fallbackEffects });
-    }
-  }
-  return candidates;
+  const minimumGems = rdnProgressionRuleForSpheres(spheres).minGemEffects;
+  let minimum = scaledEffects.filter((effect) => effect.target.type !== EffectScope.AREA && effect.target.type !== EffectScope.LINK);
+  while (minimum.filter((effect) => effect.target.type === EffectScope.GEM).length > minimumGems) minimum = minimum.filter((_, index) => index !== lastIndexFor(minimum, EffectScope.GEM));
+  const finalPresets = RDN_GEM_EFFECT_PRESETS.STABLE;
+  const final = finalPresets.map((preset) => ({ ...configuration, effects: minimum.map((effect) => effect.target.type === EffectScope.GEM ? { ...effect, preset, overrides: undefined } : effect) }));
+  return [[configuration], optional, scaled, final];
 };
+
+/** Reject timer placements that cannot meet their local direct-impulse deadline. */
+const timerPlacementIsCompatible = (level: LevelDefinition, configuration: LevelEffectConfiguration): boolean => (configuration.effects ?? []).every((effect) => {
+  if (!effect.preset.startsWith("TIMER_") || effect.target.type !== EffectScope.GEM) return true;
+  const directImpulses = (level.solutionMoves ?? []).filter((move) => move.outerIndex === (effect.target as { gemIndex: number }).gemIndex).length;
+  return directImpulses <= RDN_MAX_TIMER_DIRECT_IMPULSES;
+});
 
 const buildEffectCandidate = <T extends LevelDefinition>(level: T, outerValues: readonly number[], effectConfiguration: LevelEffectConfiguration): T => ({ ...level, outerValues: [...outerValues], solution: level.solution?.map((slot, index) => ({ ...slot, startValue: outerValues[index] })), effectConfiguration } as T);
 
@@ -289,49 +302,82 @@ const recalculatedOuterValues = <T extends LevelDefinition>(candidate: T, result
  */
 const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration | undefined): T => {
   if (!configuration) return level;
+  const startedAt = performance.now();
+  let calibrationAttempts = 0;
+  const failureReasons = new Set<string>();
+  const withStats = (candidate: T, solved: boolean): T => ({ ...candidate, generation: candidate.generation ? { ...candidate.generation, generationStats: { elapsedMs: performance.now() - startedAt, structureAttempts: 1, calibrationAttempts, totalComplexity: (candidate.optimalCost?.impulses ?? 0) + (candidate.optimalCost?.rotationSteps ?? 0) + (candidate.effectConfiguration?.effects?.length ?? 0) * 10, failureReasons: solved ? [...failureReasons] : [...failureReasons, "NO_VALID_EFFECT_CONFIGURATION"] } } : candidate.generation } as T);
   const range = level.numberRange ?? DIFFICULTY_PROFILES[difficultyForLevel(level.number)].numberRange;
   const attemptsBeforeScaling = Math.max(1, rdnEffectRuleForLevel(level.number).solutionAttemptsBeforeScaling);
-  for (const uncalibratedConfiguration of simplifiedEffectConfigurations(configuration)) {
-    const candidateConfiguration = withCalibratedTimerDeadlines(level, uncalibratedConfiguration);
-    if (!candidateConfiguration) continue;
+  if (!timerPlacementIsCompatible(level, configuration)) { failureReasons.add("TIMER_TARGET_TOO_MANY_DIRECT_IMPULSES"); return withStats(level, false); }
+  {
+    const candidateConfiguration = withCalibratedTimerDeadlines(level, configuration);
+    if (!candidateConfiguration) { failureReasons.add("TIMER_DEADLINE_CALIBRATION_FAILED"); return withStats(level, false); }
     const issues = validateEffectComplexity(candidateConfiguration, `${level.variant} level ${level.number}`, level.positions);
-    if (issues.length) throw new Error(issues.join(" "));
+    if (issues.length) { failureReasons.add("COMPLEXITY_INVALID"); throw new Error(issues.join(" ")); }
     let outerValues = [...level.outerValues];
     const useSignedCalibration = needsSignedValueCalibration(candidateConfiguration);
     for (let attempt = 0; attempt < attemptsBeforeScaling; attempt += 1) {
+      calibrationAttempts += 1;
       const candidate = buildEffectCandidate(level, outerValues, candidateConfiguration);
       const result = replaySolution(candidate);
       if (result.won && !timerDeadlineFailed(result)) {
         const allowance = effectStarAllowance(candidateConfiguration, candidate.positions);
         const canonicalImpulses = result.impulses;
         const canonicalRotations = result.rotationSteps;
-        return { ...candidate, starCost: { impulses: canonicalImpulses + allowance, rotationSteps: canonicalRotations + Math.ceil(allowance / 2) } };
+        return withStats({ ...candidate, starCost: { impulses: canonicalImpulses + allowance, rotationSteps: canonicalRotations + Math.ceil(allowance / 2) } }, true);
       }
+      failureReasons.add(timerDeadlineFailed(result) ? "TIMER_EXPIRED" : "REPLAY_NOT_WON");
       const recalculated = recalculatedOuterValues(candidate, result, range, useSignedCalibration);
-      if (!recalculated) break;
-      if (recalculated.every((value, index) => value === outerValues[index])) break;
+      if (!recalculated) { failureReasons.add("VALUES_OUT_OF_RANGE_OR_NON_INTEGER"); break; }
+      if (recalculated.every((value, index) => value === outerValues[index])) { failureReasons.add("VALUES_NO_LONGER_CHANGE"); break; }
       outerValues = recalculated;
     }
   }
   // A tier is never allowed to ship an unsolvable generated board. The fallback
   // remains deterministic and legacy-compatible; development tests flag it.
-  return level;
+  return withStats(level, false);
 };
 
 /** Explicit checkpoint lessons take precedence over the deterministic progression. */
-const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T): T => regenerateEffectAwareLevel(level, explicitEffectConfigurationForLevel(level.number) ?? createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
+const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T, configuration?: LevelEffectConfiguration): T => regenerateEffectAwareLevel(level, configuration ?? explicitEffectConfigurationForLevel(level.number) ?? createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
+
+const effectAwareVariant = <T extends LevelDefinition>(number: number, mode: "adventure" | "time-attack", build: (variation: number) => T): T => {
+  const startedAt = performance.now();
+  const attempts = Math.max(1, rdnEffectRuleForLevel(number).structureAttemptsBeforeScaling);
+  const first = build(0);
+  // Effects are intentionally stable across board seeds: only the puzzle
+  // structure varies while searching for a valid implementation.
+  const requestedConfiguration = explicitEffectConfigurationForLevel(number) ?? createProgressionEffectConfiguration(mode, number, first.positions, number);
+  let last = first;
+  let totalCalibrations = 0;
+  const failureReasons = new Set<string>();
+  const stages = requestedConfiguration?.enabled ? effectConfigurationStages(requestedConfiguration, first.positions) : [[]];
+  for (const stage of stages) {
+    for (const configuration of stage) {
+      for (let variation = 0; variation < attempts; variation += 1) {
+        const candidate = applyProgressionEffects(mode, variation === 0 ? first : build(variation), configuration);
+        last = candidate;
+        const stats = candidate.generation?.generationStats;
+        totalCalibrations += stats?.calibrationAttempts ?? 0;
+        (stats?.failureReasons ?? []).forEach((reason) => failureReasons.add(reason));
+        if (number < 10 || candidate.effectConfiguration?.enabled) {
+          return { ...candidate, generation: candidate.generation ? { ...candidate.generation, generationStats: { elapsedMs: performance.now() - startedAt, structureAttempts: variation + 1, calibrationAttempts: totalCalibrations, totalComplexity: stats?.totalComplexity ?? ((candidate.optimalCost?.impulses ?? 0) + (candidate.optimalCost?.rotationSteps ?? 0)), failureReasons: [...failureReasons] } } : candidate.generation } as T;
+        }
+      }
+    }
+  }
+  if (number >= 10 && requestedConfiguration?.enabled) throw new Error(`RDN ${mode} level ${number}: no valid effect-aware structure after ${attempts} seeds.`);
+  const stats = last.generation?.generationStats;
+  return { ...last, generation: last.generation ? { ...last.generation, generationStats: { elapsedMs: performance.now() - startedAt, structureAttempts: attempts, calibrationAttempts: totalCalibrations || stats?.calibrationAttempts || 0, totalComplexity: stats?.totalComplexity ?? ((last.optimalCost?.impulses ?? 0) + (last.optimalCost?.rotationSteps ?? 0)), failureReasons: [...failureReasons, "ALTERNATE_STRUCTURE_ATTEMPTS_EXHAUSTED"] } } : last.generation } as T;
+};
 
 const persistent = (number: number): LevelDefinition => {
   // Keep the first board as the one-step tutorial. Levels 2 and 3 must already
   // be distinct playable boards, otherwise the solution catalogue repeats it too.
-  const board = number === 1 ? tutorialBoard() : generateBoard(number, 17);
-  const level = { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board };
-  return applyProgressionEffects("adventure", level);
+  return effectAwareVariant(number, "adventure", (variation) => { const board = number === 1 ? tutorialBoard() : generateBoard(number, 17 + variation * 101); return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board }; });
 };
 const loader = (number: number): LevelDefinition => {
-  const board = number === 1 ? tutorialBoard() : generateBoard(number, 71);
-  const level = { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
-  return applyProgressionEffects("time-attack", level);
+  return effectAwareVariant(number, "time-attack", (variation) => { const board = number === 1 ? tutorialBoard() : generateBoard(number, 71 + variation * 101); return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves }; });
 };
 
 const generateRdnLevelCatalogue = (): readonly LevelDefinition[] => {
@@ -363,11 +409,14 @@ const generateRdnLevelCatalogue = (): readonly LevelDefinition[] => {
   return levels;
 };
 
-export const RDN_LEVELS: readonly LevelDefinition[] = generateRdnLevelCatalogue();
+const catalogueGenerationRequested = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.["RDN_GENERATE_CATALOGUE"] === "1";
+const useGeneratedCatalogue = !catalogueGenerationRequested && GENERATED_RDN_LEVELS.length > 0;
+
+export const RDN_LEVELS: readonly LevelDefinition[] = useGeneratedCatalogue ? GENERATED_RDN_LEVELS : generateRdnLevelCatalogue();
 export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): LevelDefinition => RDN_LEVELS.find((level) => level.variant === (variant === "adventure" ? "persistent" : "loader") && level.number === number) ?? RDN_LEVELS[0];
 
 /** Seedable entry point for replay, support and future ranked runs. */
-export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number, freeEffectsEnabled = false): LevelDefinition => {
+export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number, freeEffectsEnabled: boolean | import("./effects/effect-progression.config").FreeEffectSelections = false): LevelDefinition => {
   const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
   const board = generateBoard(number, Math.trunc(seed), slotCount, true); const profile = DIFFICULTY_PROFILES[difficulty]; const generation = { ...generatedMetadata(number, board), seed: board.seed, difficulty };
   const level = variant === "adventure"
@@ -399,7 +448,8 @@ const verifiesSolution = (level: LevelDefinition): boolean => {
   return values.every((value) => value === 0) && cursors.every((cursor, index) => cursor === solution[index].operators.length);
 };
 /** Inspectable solution tables for every authored level of both gameplay variants. */
-export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = RDN_LEVELS.map((level) => {
+const generatedSolutionAudit = GENERATED_RDN_SOLUTION_AUDIT as unknown as readonly PuzzleSolutionAudit[];
+export const RDN_SOLUTION_TABLE: readonly PuzzleSolutionAudit[] = useGeneratedCatalogue ? generatedSolutionAudit : RDN_LEVELS.map((level) => {
   const effectResolution = new LevelEffectConfigResolver().resolve(level.effectConfiguration, level.positions);
   const simulation = replaySolutionWithTrace(level);
   return { level: level.number, variant: level.variant === "persistent" ? "adventure" : "time-attack", providedOperators: level.variant === "persistent" ? level.innerValues : level.queues.map((queue) => queue[0] ?? 0), slots: level.solution ?? [], moves: level.solutionMoves ?? [], execution: simulation.execution, effects: effectResolution.effects, finalValues: simulation.state.outerValues, verified: effectResolution.issues.length === 0 && simulation.state.won && !timerDeadlineFailed(simulation.state) && verifiesSolution(level) };
@@ -420,5 +470,7 @@ export const validateAdventureLevelBatch = (): readonly { level: number; valid: 
   });
 };
 
-if (RDN_SOLUTION_TABLE.some((row) => !row.verified)) throw new Error("Invalid RDN solution table");
-if (validateAdventureLevelBatch().some((row) => !row.valid)) throw new Error("Invalid Adventure level batch");
+if (!useGeneratedCatalogue) {
+  if (RDN_SOLUTION_TABLE.some((row) => !row.verified)) throw new Error("Invalid RDN solution table");
+  if (validateAdventureLevelBatch().some((row) => !row.valid)) throw new Error("Invalid Adventure level batch");
+}

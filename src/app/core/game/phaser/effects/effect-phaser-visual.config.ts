@@ -25,6 +25,8 @@ export const EFFECT_PHASER_VISUAL = {
     intensityBase: 0.35,
     intensityRange: 0.65,
     directPathRatio: 0.72,
+    /** The active conduit also enters gently, preventing a busy board on load. */
+    initialAppearanceFadeInMs: 1000,
     /** Link continuation uses the same three-layer active-flow treatment, sized from its gem radius. */
     linkGlowWidthRadiusRatio: 1.3,
     linkMiddleWidthRadiusRatio: 0.78,
@@ -60,11 +62,13 @@ export const EFFECT_PHASER_VISUAL = {
     intensityBase: 0.35,
     intensityRange: 0.65,
     directPathRatio: 0.72,
+    /** First appearance is intentionally delayed to avoid competing with the active flow. */
+    initialAppearanceFadeInMs: 3500,
     durationMs: 1450,
     repeatDelayMs: 250,
   },
-  /** Gray section of a blocked active flow, after it leaves the gear. */
-  blockedFlows: { color: 0x929292, alpha: 0.76, widthMultiplier: 1.48 },
+  /** Red section of a blocked active flow, after it leaves the gear. */
+  blockedFlows: { color: 0xd94852, alpha: 0.76, widthMultiplier: 1.48 },
   /** Static effect links, their moving particles, and their active green continuation. */
   links: {
     alpha: 0.72,

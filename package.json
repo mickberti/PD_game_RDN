@@ -8,6 +8,9 @@
     "start": "ng serve",
     "build": "ng build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "rdn:catalogue": "node scripts/generate-rdn-catalogue.mjs",
+    "rdn:catalogue:check": "node scripts/generate-rdn-catalogue.mjs --check",
+    "rdn:catalogue:activate": "node scripts/generate-rdn-catalogue.mjs --activate",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"

@@ -10,12 +10,15 @@ import {
   RDN_AREA_EFFECT_PRESET,
   RdnEffectProgressionRule,
   rdnEffectRuleForLevel,
+  rdnGemEffectCountForBoard,
   rdnLinkCountForBoard,
+  rdnMaximumGemEffectsForSpheres,
   rdnMaximumLinksForSpheres,
 } from "../progression-rules.config";
 
 export type EffectProgressionMode = "adventure" | "time-attack" | "free";
 export type EffectProgressionTier = RdnEffectProgressionRule;
+export interface FreeEffectSelections { gem: boolean; link: boolean; area: boolean; }
 export const EFFECT_PROGRESSION_TIERS = RDN_EFFECT_PROGRESSION_RULES;
 
 const positiveModulo = (value: number, length: number): number => ((value % length) + length) % length;
@@ -45,8 +48,10 @@ export const createProgressionEffectConfiguration = (mode: EffectProgressionMode
   const effects: NonNullable<LevelEffectConfiguration["effects"]>[number][] = [];
 
   const gemPresets = RDN_GEM_EFFECT_PRESETS[tier.id];
-  if (tier.id !== "LEGACY") effects.push({ preset: pick(gemPresets, key), target: { type: EffectScope.GEM, gemIndex: first } });
-  if (tier.maxGemEffects > 1 && key % 3 === 0) effects.push({ preset: pick(gemPresets, key + 1), target: { type: EffectScope.GEM, gemIndex: second } });
+  const gemEffectCount = tier.id === "LEGACY" ? 0 : Math.min(tier.maxGemEffects, rdnGemEffectCountForBoard(key, gemCount));
+  for (let index = 0; index < gemEffectCount; index += 1) {
+    effects.push({ preset: pick(gemPresets, key + index), target: { type: EffectScope.GEM, gemIndex: positiveModulo(first + index, gemCount) } });
+  }
   // Adventure and Time Attack must follow the visible level cadence exactly.
   // Free keeps the seed as variation so its optional link is not always fixed.
   const linkCount = rdnLinkCountForBoard(level, gemCount, mode === "free" ? seed : 0);
@@ -59,10 +64,20 @@ export const createProgressionEffectConfiguration = (mode: EffectProgressionMode
   return effects.length ? { enabled: true, effects, flowRules: RDN_EFFECT_FLOW_RULES } : undefined;
 };
 
-export const createFreeModeEffectConfiguration = (difficulty: PuzzleDifficulty, gemCount: number, seed = 0, enabled = false): LevelEffectConfiguration | undefined => {
-  if (!enabled) return undefined;
+export const createFreeModeEffectConfiguration = (difficulty: PuzzleDifficulty, gemCount: number, seed = 0, selections: FreeEffectSelections | boolean = false): LevelEffectConfiguration | undefined => {
+  const enabled = typeof selections === "boolean"
+    ? { gem: selections, link: selections, area: selections }
+    : selections;
+  if (!enabled.gem && !enabled.link && !enabled.area) return undefined;
   const progressionLevel = difficulty === "EASY" ? 20 : difficulty === "NORMAL" ? 40 : difficulty === "HARD" ? 60 : 81;
-  return createProgressionEffectConfiguration("free", progressionLevel, gemCount, seed);
+  // Each control must remain meaningful even when the selected difficulty
+  // predates that category in the normal progression.
+  const effects = [
+    ...(enabled.gem ? createProgressionEffectConfiguration("free", progressionLevel, gemCount, seed)?.effects?.filter((effect) => effect.target.type === EffectScope.GEM) ?? [] : []),
+    ...(enabled.link ? createProgressionEffectConfiguration("free", Math.max(progressionLevel, 72), gemCount, seed)?.effects?.filter((effect) => effect.target.type === EffectScope.LINK) ?? [] : []),
+    ...(enabled.area ? createProgressionEffectConfiguration("free", Math.max(progressionLevel, 80), gemCount, seed)?.effects?.filter((effect) => effect.target.type === EffectScope.AREA) ?? [] : []),
+  ];
+  return effects.length ? { enabled: true, effects, flowRules: RDN_EFFECT_FLOW_RULES } : undefined;
 };
 
 /** Development/test validator: link caps come from the sphere progression table. */
@@ -73,7 +88,8 @@ export const validateEffectComplexity = (configuration: LevelEffectConfiguration
   const link = effects.filter((effect) => effect.target.type === EffectScope.LINK).length;
   const area = effects.filter((effect) => effect.target.type === EffectScope.AREA).length;
   const issues: string[] = [];
-  if (gem > 2) issues.push(`${label}: GEM effect count = ${gem}, maximum allowed = 2.`);
+  const maximumGemEffects = rdnMaximumGemEffectsForSpheres(spheres);
+  if (gem > maximumGemEffects) issues.push(`${label}: GEM effect count = ${gem}, maximum allowed = ${maximumGemEffects}.`);
   const maximumLinks = rdnMaximumLinksForSpheres(spheres);
   if (link > maximumLinks) issues.push(`${label}: LINK effect count = ${link}, maximum allowed = ${maximumLinks}.`);
   if (area > 1) issues.push(`${label}: AREA effect count = ${area}, maximum allowed = 1.`);

@@ -32,7 +32,7 @@ export interface FlowState { sourceId: number; targetId: number; active: boolean
 export interface QueueState { innerIndex: number; elements: readonly PuzzleOperator[]; currentIndex: number; current: PuzzleOperator | null; preview: readonly PuzzleOperator[]; remainingCount: number; exhausted: boolean; refillRule: "none"; }
 export type TargetModifier = { type: "shield"; strength: number } | { type: "poison" } | { type: "multi-life"; lives: number } | { type: "growth"; everyImpulses: number; delta: number; label?: string; };
 export interface TargetModifierState { shield: number; lives: number; }
-export interface PuzzleGenerationMetadata { seed: number; generatorVersion: string; balanceVersion?: string; difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; estimatedMinimumSolutionLength: number; branchingFactor: number; featureFlags: readonly string[]; }
+export interface PuzzleGenerationMetadata { seed: number; generatorVersion: string; balanceVersion?: string; difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; estimatedMinimumSolutionLength: number; branchingFactor: number; featureFlags: readonly string[]; generationStats?: { elapsedMs: number; structureAttempts: number; calibrationAttempts: number; totalComplexity: number; failureReasons: readonly string[]; }; }
 /** Authored rules for an Adventure board. They are immutable and never live in global player progress. */
 export interface AdventureGameConfig {
   version: 1;

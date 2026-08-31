@@ -4,7 +4,7 @@ import { ActivatedRoute } from "@angular/router";
 import { IonContent, IonFooter, IonToolbar } from "@ionic/angular/standalone";
 import { EffectScope, ResolvedEffect } from "../../../core/game/rnd/effects/effects.models";
 import { effectAssetFrame } from "../../../core/game/rnd/effects/effect-presentation.config";
-import { getRdnSolutionTable, RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
+import { getRdnSolutionTable, RDN_LEVELS, RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
 import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
 import { UIBottomUtilsComponent } from "../../../shared/components/ui-bottom-utils.component";
 import { UiUtilsPageHeaderComponent } from "../../../shared/components/ui-utils-page-header.component";
@@ -29,6 +29,10 @@ type SummaryVariant = "adventure" | "time-attack";
                 <th scope="col">Effetti gemma</th>
                 <th scope="col">Effetti link</th>
                 <th scope="col">Effetti area</th>
+                <th scope="col">Generazione</th>
+                <th scope="col">Tentativi</th>
+                <th scope="col">Complessita</th>
+                <th scope="col">Diagnostica</th>
               </tr>
             </thead>
             <tbody>
@@ -39,6 +43,10 @@ type SummaryVariant = "adventure" | "time-attack";
                   <td><span class="effect-icons">@for (effect of gemEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of linkEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of areaEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
+                  <td>{{ generationStats(row.level)?.elapsedMs?.toFixed(1) ?? '-' }} ms</td>
+                  <td>{{ generationStats(row.level)?.structureAttempts ?? 0 }} strutt. / {{ generationStats(row.level)?.calibrationAttempts ?? 0 }} val.</td>
+                  <td>{{ generationStats(row.level)?.totalComplexity ?? '-' }}</td>
+                  <td [title]="failureText(row.level)">{{ failureText(row.level) }}</td>
                 </tr>
               }
             </tbody>
@@ -51,7 +59,7 @@ type SummaryVariant = "adventure" | "time-attack";
   styles: [`
     .effects-summary-page { padding-bottom: 22px; width: 100%}
     .table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.15); border-radius: 16px; background: rgba(15,23,42,.72); }
-    table { width: 100%; min-width: 680px; border-collapse: collapse; color: #e2e8f0; }
+    table { width: 100%; min-width: 1120px; border-collapse: collapse; color: #e2e8f0; }
     th, td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.1); text-align: left; vertical-align: middle; }
     thead th { position: sticky; top: 0; z-index: 1; color: #fef3c7; background: #1e293b; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
     tbody tr:nth-child(even) { background: rgba(148,163,184,.06); }
@@ -71,6 +79,8 @@ export class RdnEffectsSummaryPage {
   gemEffects(effects: readonly ResolvedEffect[]): readonly ResolvedEffect[] { return effects.filter((effect) => effect.config.scope === EffectScope.GEM); }
   linkEffects(effects: readonly ResolvedEffect[]): readonly ResolvedEffect[] { return effects.filter((effect) => effect.config.scope === EffectScope.LINK); }
   areaEffects(effects: readonly ResolvedEffect[]): readonly ResolvedEffect[] { return effects.filter((effect) => effect.config.scope === EffectScope.AREA); }
+  generationStats(level: number) { return RDN_LEVELS.find((item) => item.number === level && item.variant === (this.variant === "adventure" ? "persistent" : "loader"))?.generation?.generationStats; }
+  failureText(level: number): string { const reasons = this.generationStats(level)?.failureReasons ?? []; return reasons.length ? reasons.join(", ") : "OK"; }
   effectFrame(effect: ResolvedEffect) { return { name: effectAssetFrame(effect), effect: "none" as const }; }
 
   effectTooltip(effect: ResolvedEffect): string {

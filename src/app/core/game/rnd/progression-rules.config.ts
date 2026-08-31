@@ -5,6 +5,8 @@ import type { EffectPresetKey } from "./effects/effect-presets.config";
 
 export interface RdnProgressionRule {
   readonly minSpheres: number;
+  readonly minGemEffects: number;
+  readonly maxGemEffects: number;
   readonly guaranteedSpecials: number;
   readonly optionalSpecials: number;
   readonly optionalSpecialEvery: number;
@@ -22,6 +24,8 @@ export interface RdnEffectProgressionRule {
   readonly maxAreaEffects: number;
   /** Replay attempts before the generator scales one effect to its next safer preset. */
   readonly solutionAttemptsBeforeScaling: number;
+  /** Alternate board seeds tried before the effect configuration is simplified. */
+  readonly structureAttemptsBeforeScaling: number;
 }
 
 /**
@@ -29,6 +33,8 @@ export interface RdnEffectProgressionRule {
  * Viene scelta la riga con `minSpheres` piu alto che non supera le sfere
  * presenti nel tabellone.
  *
+ * - `minGemEffects` / `maxGemEffects`: intervallo del numero di effetti GEM
+ *   applicati. Il valore effettivo e scelto in modo deterministico dal seed.
  * - `guaranteedSpecials`: speciali sempre presenti nell'ingranaggio.
  * - `optionalSpecials`: speciali aggiuntivi quando scatta l'intervallo.
  * - `optionalSpecialEvery`: ogni quanti livelli/seed aggiungere gli
@@ -47,6 +53,10 @@ export interface RdnEffectProgressionRule {
 export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
   {
     minSpheres: 4,
+    minGemEffects: 1,
+    // I checkpoint didattici possono mostrare due effetti, ma le fasce base
+    // restano limitate a uno tramite il loro `maxGemEffects`.
+    maxGemEffects: 2,
     guaranteedSpecials: 0,
     optionalSpecials: 0,
     optionalSpecialEvery: 0,
@@ -58,6 +68,8 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
   },
   {
     minSpheres: 5,
+    minGemEffects: 2,
+    maxGemEffects: 2,
     guaranteedSpecials: 0,
     optionalSpecials: 0,
     optionalSpecialEvery: 0,
@@ -68,6 +80,8 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
   },
   {
     minSpheres: 6,
+    minGemEffects: 2,
+    maxGemEffects: 3,
     guaranteedSpecials: 0,
     optionalSpecials: 0,
     optionalSpecialEvery: 0,
@@ -78,6 +92,8 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
   },
   {
     minSpheres: 7,
+    minGemEffects: 3,
+    maxGemEffects: 4,
     guaranteedSpecials: 1,
     optionalSpecials: 1,
     optionalSpecialEvery: 3,
@@ -88,6 +104,8 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
   },
   {
     minSpheres: 8,
+    minGemEffects: 4,
+    maxGemEffects: 5,
     guaranteedSpecials: 1,
     optionalSpecials: 1,
     optionalSpecialEvery: 3,
@@ -105,30 +123,32 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
  *
  * - `id`: nome della fascia e chiave del pool in `RDN_GEM_EFFECT_PRESETS`.
  * - `minLevel` / `maxLevel`: intervallo della fascia.
- * - `maxGemEffects`: massimo di effetti sulle gemme. Il secondo, se ammesso,
- *   compare solo in alcune configurazioni determinate dal seed.
+ * - `maxGemEffects`: tetto della fascia di livello per gli effetti sulle
+ *   gemme; il numero effettivo segue l'intervallo per sfere sopra.
  * - `maxAreaEffects`: 0 disabilita l'effetto area, 1 inserisce il preset area
  *   configurato sotto.
  * - `solutionAttemptsBeforeScaling`: tentativi di ricalcolo dei valori iniziali
  *   con la configurazione corrente, prima di scalare un effetto a un preset
  *   piu semplice della stessa categoria.
+ * - `structureAttemptsBeforeScaling`: quanti tabelloni alternativi (seed,
+ *   code, operatori e sequenza) provare mantenendo gli stessi effetti.
  *
  * I link non sono definiti qui: il loro numero dipende esclusivamente dalla
  * tabella `RDN_PROGRESSION_RULES`, in base alle sfere del tabellone.
  */
 export const RDN_EFFECT_PROGRESSION_RULES: readonly RdnEffectProgressionRule[] = [
-  { id: "LEGACY", minLevel: 1, maxLevel: 9, maxGemEffects: 0, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 0 },
-  { id: "SHIELD", minLevel: 10, maxLevel: 19, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "WALL", minLevel: 20, maxLevel: 29, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "MIRROR", minLevel: 30, maxLevel: 34, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "AMPLIFY", minLevel: 35, maxLevel: 39, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "INVERTER", minLevel: 40, maxLevel: 44, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "ICE", minLevel: 45, maxLevel: 49, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "TIMER", minLevel: 50, maxLevel: 59, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "CORRUPTION", minLevel: 60, maxLevel: 69, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "LINKS", minLevel: 70, maxLevel: 79, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 15 },
-  { id: "AREA", minLevel: 80, maxLevel: 100, maxGemEffects: 2, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 15 },
-  { id: "STABLE", minLevel: 101, maxGemEffects: 2, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 15 },
+  { id: "LEGACY", minLevel: 1, maxLevel: 9, maxGemEffects: 0, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 0, structureAttemptsBeforeScaling: 0 },
+  { id: "SHIELD", minLevel: 10, maxLevel: 19, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "WALL", minLevel: 20, maxLevel: 29, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "MIRROR", minLevel: 30, maxLevel: 34, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "AMPLIFY", minLevel: 35, maxLevel: 39, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "INVERTER", minLevel: 40, maxLevel: 44, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "ICE", minLevel: 45, maxLevel: 49, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "TIMER", minLevel: 50, maxLevel: 59, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "CORRUPTION", minLevel: 60, maxLevel: 69, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "LINKS", minLevel: 70, maxLevel: 79, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "AREA", minLevel: 80, maxLevel: 100, maxGemEffects: 2, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "STABLE", minLevel: 101, maxGemEffects: 5, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
 ] as const;
 
 /**
@@ -163,8 +183,8 @@ export const RDN_GEM_EFFECT_PRESETS: Readonly<
   ICE: ["ICE_1", "ICE_2", "ICE_3"],
   TIMER: ["TIMER_3", "TIMER_5", "TIMER_7", "TIMER_10"],
   CORRUPTION: ["CORRUPTION_1", "CORRUPTION_2"],
-  LINKS: ["SHIELD_1", "WALL_1"],
-  AREA: ["SHIELD_1", "WALL_1"],
+  LINKS: ["SHIELD_1", "WALL_1","MIRROR_1","AMPLIFIER_X2","INVERTER_1","ICE_1","CORRUPTION_1"],
+  AREA: ["SHIELD_1", "WALL_1","MIRROR_1","AMPLIFIER_X2","INVERTER_1","ICE_1","CORRUPTION_1"],
   STABLE: [
     "SHIELD_1",
     "SHIELD_2",
@@ -233,3 +253,13 @@ export const rdnLinkCountForBoard = (level: number, spheres: number, variation =
 };
 
 export const rdnMaximumLinksForSpheres = (spheres: number): number => rdnProgressionRuleForSpheres(spheres).maxLinks;
+
+/** Maximum GEM effects allowed by the active sphere row. */
+export const rdnMaximumGemEffectsForSpheres = (spheres: number): number => rdnProgressionRuleForSpheres(spheres).maxGemEffects;
+
+/** Deterministically chooses a GEM-effect count within the configured sphere interval. */
+export const rdnGemEffectCountForBoard = (key: number, spheres: number): number => {
+  const rule = rdnProgressionRuleForSpheres(spheres);
+  const range = rule.maxGemEffects - rule.minGemEffects + 1;
+  return rule.minGemEffects + (range > 0 ? Math.abs(Math.floor(key)) % range : 0);
+};

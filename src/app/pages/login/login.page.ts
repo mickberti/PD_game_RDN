@@ -19,7 +19,7 @@ import { LoggerService } from '../../core/services/infrastructure/logging/logger
   <main class="screen login-screen">
 
       <ui-panel [variant]="'primary'">
-	  <div class="login-title"><h1>LOGIN VG GAWE</h1><p>Select your login</p></div>
+	  <div class="login-title"><h1>LOGIN GEARITHM</h1><p>Select your login</p></div>
         <div class="login-menu-actions">
           <ui-button (pressed)="loginService.loginViaGoogle()" >Google</ui-button>
           <ui-button variant="secondary" (pressed)="loginService.loginOffline()">Offline</ui-button>	

@@ -119,9 +119,9 @@ describe("EffectFlowEngine", () => {
   it("ticks TIMER only when its own gem receives a direct impulse and completes on the final allowed impulse", () => {
     const timer = gemConfig("timer", 0, { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 3 }); const runtime = engine.createRuntime([timer]);
     const untouched = resolve([3, 1, 0, 0], [timer], [{ gemId: "target-1", value: -1 }], runtime);
-    expect(untouched.runtime.timerRemainingTurns.timer).toBe(3);
+    expect(untouched.runtime.timerRemainingTurns["timer"]).toBe(3);
     const first = resolve(untouched.values as number[], [timer], [{ gemId: "target-0", value: -1 }], untouched.runtime);
-    expect(first.runtime.timerRemainingTurns.timer).toBe(2);
+    expect(first.runtime.timerRemainingTurns["timer"]).toBe(2);
     const second = resolve(first.values as number[], [timer], [{ gemId: "target-0", value: -1 }], first.runtime);
     const third = resolve(second.values as number[], [timer], [{ gemId: "target-0", value: -1 }], second.runtime);
     expect(third.events.some((event) => event.type === "TIMER_COMPLETED")).toBeTrue();

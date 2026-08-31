@@ -1,4 +1,4 @@
-import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, rdnEffectRuleForLevel, rdnLinkCountForBoard, rdnSpecialOperatorsForBoard } from './progression-rules.config';
+import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, rdnEffectRuleForLevel, rdnGemEffectCountForBoard, rdnLinkCountForBoard, rdnSpecialOperatorsForBoard } from './progression-rules.config';
 
 describe('RDN progression rules', () => {
   it('introduces one special only from seven spheres and never more than two', () => {
@@ -18,10 +18,16 @@ describe('RDN progression rules', () => {
   });
 
   it('configures retries and only same-category effect scaling', () => {
-    expect(rdnEffectRuleForLevel(40).solutionAttemptsBeforeScaling).toBe(15);
+    expect(rdnEffectRuleForLevel(40).solutionAttemptsBeforeScaling).toBe(500);
     expect(RDN_EFFECT_SIMPLIFICATIONS.CORRUPTION_2).toBe('CORRUPTION_1');
     expect(RDN_EFFECT_SIMPLIFICATIONS.TIMER_7).toBe('TIMER_10');
     expect(RDN_EFFECT_SIMPLIFICATIONS.INVERTER_1).toBeUndefined();
     expect(RDN_GEM_EFFECT_FALLBACK_PRESETS).toEqual(["SHIELD_1", "WALL_1", "AMPLIFIER_X2", "INVERTER_1", "ICE_1"]);
+  });
+
+  it('configures the GEM-effect interval by sphere count', () => {
+    expect([2, 3]).toContain(rdnGemEffectCountForBoard(1, 6));
+    expect([3, 4]).toContain(rdnGemEffectCountForBoard(2, 7));
+    expect([4, 5]).toContain(rdnGemEffectCountForBoard(3, 8));
   });
 });

@@ -19,7 +19,7 @@ import { LoggerService } from '../../core/services/infrastructure/logging/logger
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>VG Gawe</ion-title>
+        <ion-title>GEARITHM</ion-title>
       </ion-toolbar>
     </ion-header>
 

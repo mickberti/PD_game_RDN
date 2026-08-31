@@ -203,6 +203,7 @@ export class GameplayPageComponent implements AfterViewInit {
   }
   private impulse(): ImpulseResolutionPlan | null {
     if (this.outcome() !== null) return null;
+    if (this.puzzle.flows().some((flow) => !flow.interactable)) return null;
     const plan = this.puzzle.planImpulse();
     this.puzzle.dispatch({ type: "IMPULSE" });
     this.puzzle.saveAdventureRun();
@@ -233,7 +234,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (this.session.variant === "effect-playground") { this.changePlaygroundScenario(1); return; }
     if (this.session.variant === "free") {
       const overrides = this.gameplaySession.getLaunchOverrides();
-      this.puzzle.load("free", 1, overrides?.freeDifficulty ?? "EASY", Math.floor(Math.random() * 0x7fffffff), overrides?.freeSlotCount, overrides?.freeEffectsEnabled ?? false);
+      this.puzzle.load("free", 1, overrides?.freeDifficulty ?? "EASY", Math.floor(Math.random() * 0x7fffffff), overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false);
       this.outcome.set(null); this.showInfo.set(false); return;
     }
     this.puzzle.load(
@@ -306,7 +307,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private loadSessionPuzzle(session: GameplaySession): void {
     if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();
-    this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount, overrides?.freeEffectsEnabled ?? false);
+    this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false);
   }
   private changePlaygroundScenario(direction: -1 | 1): void {
     if (this.session.variant !== "effect-playground") return;

@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from "@angular/core";
 import { PuzzleEngine } from "../../game/rnd/puzzle.engine";
 import { generateRdnPuzzle, getRdnLevel } from "../../game/rnd/levels.config";
 import { PuzzleDifficulty } from "../../game/rnd/difficulty-profile.config";
+import { FreeEffectSelections } from "../../game/rnd/effects/effect-progression.config";
 import { ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
@@ -27,7 +28,7 @@ export class RdnPuzzleService {
   readonly flows = computed(() => this.engine.flows(this.level(), this.state()));
   readonly effectPreviewEvents = computed(() => this.engine.effectPreviewEvents(this.level(), this.state()));
   readonly queueStates = computed(() => this.engine.queueStates(this.level(), this.state()));
-  load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number, freeEffectsEnabled = false): void {
+  load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number, freeEffectsEnabled: boolean | FreeEffectSelections = false): void {
     const level = variant === "free" ? generateRdnPuzzle("adventure", difficulty, seed, slotCount, freeEffectsEnabled) : getRdnLevel(variant, number);
     this.freeMode = variant === "free";
     this.freeDifficulty = difficulty;

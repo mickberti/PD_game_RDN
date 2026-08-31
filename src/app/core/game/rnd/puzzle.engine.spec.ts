@@ -33,6 +33,15 @@ describe("PuzzleEngine", () => {
     expect(engine.getInnerValue(even, applied, 0)).toBeNull();
   });
 
+  it("does not advance an impulse when an active flow is blocked", () => {
+    const definition = level([3, 1, 1, 1], ["divide2", 1, 1, 1]);
+    const initial = engine.createInitialState(definition);
+    const blocked = engine.apply(definition, initial, { type: "IMPULSE" });
+    expect(blocked).toBe(initial);
+    expect(blocked.impulses).toBe(0);
+    expect(blocked.phaseCursor).toBe(0);
+  });
+
   it("reads version 1 saves and migrates their missing special-resource state", () => {
     const definition = level([4, 1, 1, 1], ["divide2", 1, 1, 1]);
     const restored = engine.deserialize(definition, JSON.stringify({ version: 1, rotation: 0, rotationTurns: 0, outerValues: [4, 1, 1, 1], queueCursors: [0, 0, 0, 0], impulses: 0, phaseCursor: 0, rotationSteps: 0, lastImpulseResults: [], won: false }));

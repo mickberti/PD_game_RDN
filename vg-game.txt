@@ -259,3 +259,9 @@ Upload su Firebase
 
 
 PIN android studio pixel 10Pro -> 1234
+
+===============================================================
+GENERAZIONE CATALOGO LIVELLI
+===============================================================
+
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v003

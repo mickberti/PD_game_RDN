@@ -16,7 +16,7 @@ import { IonContent } from '@ionic/angular/standalone';
 	<main class="screen boot-screen">
   	<section class="ui-stack">
   		<div class="boot-box">
-  			<h1>VG ARCADE</h1>
+  			<h1>GEARITHM</h1>
 			@if (error(); as startupError) {
 			  <section class="boot-error" role="alert">
 				<h2>Inizializzazione non completata</h2>

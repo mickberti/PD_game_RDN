@@ -66,8 +66,14 @@ export class RdnPhaserScene extends Phaser.Scene {
   private infoScrollMax = 0;
   private infoScrollDragY: number | null = null;
   private infoScrollForGem: number | null = null;
+  /** Pointer origin lets gem details react to a tap only, never a gear drag. */
+  private pointerDownAt: { x: number; y: number } | null = null;
   private lastHudStarCount: number | null = null;
   private lastHudImpulseCount = -1;
+  /** Each upcoming flow fades in only once during a board session. */
+  private readonly revealedYellowPreviewKeys = new Set<string>();
+  /** Active flow gets the same calm first appearance as its secondary preview. */
+  private readonly revealedActiveFlowKeys = new Set<string>();
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
@@ -91,6 +97,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.render();
   }
   setModel(model: RdnSceneModel): void {
+    if (model.level !== this.model?.level) { this.revealedYellowPreviewKeys.clear(); this.revealedActiveFlowKeys.clear(); }
     if (model.selectedGemIndex !== this.model?.selectedGemIndex || model.selectedGearGemIndex !== this.model?.selectedGearGemIndex) { this.infoScrollForGem = null; this.infoScrollOffset = 0; this.infoScrollMax = 0; }
     const countdownOnlyUpdate = this.isCountdownOnlyUpdate(model);
     this.model = model;
@@ -116,15 +123,16 @@ export class RdnPhaserScene extends Phaser.Scene {
     const progressed = model.state.impulses > this.lastHudImpulseCount;
     const lostStar = this.lastHudStarCount !== null && stars < this.lastHudStarCount;
     const reduced = EFFECT_PHASER_VISUAL.impactFeedback.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-    this.add.rectangle(cx, y, 184, 30, 0x101c18, .88).setStrokeStyle(1, 0xb18b48, .9).setDepth(18);
+    this.add.rectangle(cx, y, 164, 30, 0x101c18, .88).setStrokeStyle(1, 0xb18b48, .9).setDepth(18);
     for (let index = 0; index < 3; index += 1) {
       const available = index < stars;
-      const star = this.label(cx - 45 + index * 45, y, available ? "★" : "☆", 23, available ? 0xffdf70 : 0x5d675f).setDepth(19);
+      const star = this.label(cx - 52 + index * 32, y, available ? "★" : "☆", 23, available ? 0xffdf70 : 0x5d675f).setDepth(19);
       if (!reduced && lostStar && index >= stars && index < (this.lastHudStarCount ?? 0)) this.tweens.add({ targets: star, alpha: 0, scaleX: 1.45, scaleY: 1.45, duration: 180, ease: "Cubic.Out" });
       else if (!reduced && progressed && available) this.tweens.add({ targets: star, scaleX: 1.12, scaleY: 1.12, duration: 120, yoyo: true, ease: "Sine.Out" });
     }
-    const next = stars === 3 ? "3 stelle" : stars === 2 ? `★ fino a ${policy.oneStarImpulseLimit}` : "1 stella garantita";
-    this.label(cx + 37, y, next, 10, stars === 1 ? 0xffcf75 : 0xe6dfc3).setDepth(19);
+    const nextStarThreshold = stars === 3 ? policy.perfectImpulses : stars === 2 ? policy.twoStarImpulseLimit : policy.oneStarImpulseLimit;
+    const impulsesBeforeNextStarLoss = Math.max(0, nextStarThreshold - model.state.impulses);
+    this.label(cx + 55, y, String(impulsesBeforeNextStarLoss), 19, stars === 1 ? 0xffcf75 : 0xe6dfc3).setDepth(19);
     this.lastHudStarCount = stars;
     this.lastHudImpulseCount = model.state.impulses;
   }
@@ -152,12 +160,12 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (m.timeRemaining !== null) this.createCountdownHud(cx - hudWidth * .04, m, hudOffsetY);
     this.label(cx + hudWidth * .12, 46 + hudOffsetY, "IMPULSI", 10, 0xf3d27c); this.label(cx + hudWidth * .12, 73 + hudOffsetY, String(m.state.impulses), 27, 0xf3d27c);
     this.label(cx + hudWidth * .29, 46 + hudOffsetY, "ROT.", 10, 0xf3d27c); this.label(cx + hudWidth * .29, 73 + hudOffsetY, String(m.state.rotationSteps), 27, 0xf3d27c);
-    this.starProgressHud(cx, 111 + hudOffsetY, m);
+    this.starProgressHud(hudLeft + 88, 111 + hudOffsetY, m);
     this.button(hudLeft + hudWidth - 38, 48 + hudOffsetY, "↻", () => this.actions.restart()); const info = this.add.circle(cx, 48 + hudOffsetY, 27, 0x183e28).setInteractive(); info.on("pointerdown", () => this.actions.info()); this.add.image(cx, 48 + hudOffsetY, "rdn-ui-icons", "icon-info").setDisplaySize(48, 48).setDepth(1);
     this.addDecor(ringX, ringY, outerR * layout.ring.diameter, rdnRingTextureKey(layout, visualSet), layout.ring.angle, layout.ring.widthScale, layout.ring.heightScale); this.drawConnections(ringX, ringY, gearX, gearY, outerR, m);
     const effectGemPositions = new Map<string, EffectGemPosition>();
     const numeralConfig = RDN_GEM_NUMERAL_CONFIG[layout.positions];
-    for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, index, m.level.positions, layout.outerSlots.angleOffset); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); const sphere = this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet, outerR * numeralConfig.outerFontSizeRatio, numeralConfig.reservedWidthRatio); sphere.gem.setInteractive().on("pointerdown", () => this.actions.gemInfo(index)); this.outerSlots.set(index, sphere); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
+    for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, index, m.level.positions, layout.outerSlots.angleOffset); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); const sphere = this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet, outerR * numeralConfig.outerFontSizeRatio, numeralConfig.reservedWidthRatio); sphere.gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, index)); this.outerSlots.set(index, sphere); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
     const resolvedEffects = this.effectResolver.resolve(m.level.effectConfiguration, m.level.positions).effects;
     if (resolvedEffects.length) {
       this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY), (effectId) => this.actions.linkInfo(effectId));
@@ -178,7 +186,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     this.wheelCenter = { x: gearX, y: gearY, radius: wheelR }; this.wheel = this.add.container(gearX, gearY); this.wheel.add(this.addGear(outerR * layout.gear.diameter, rdnGearTextureKey(layout, visualSet)));
     const blockedSources = new Set(m.flows.filter((flow) => flow.active && !flow.interactable).map((flow) => flow.sourceId));
-    for (let index = 0; index < m.level.positions; index += 1) { const point = this.point(0, 0, wheelR * layout.innerSlots.radius, index, m.level.positions, layout.innerSlots.angleOffset); const innerIndex = index; const queue = m.level.variant === "loader" ? m.queueStates[innerIndex] : undefined; const rawValue = m.level.variant === "persistent" ? m.level.innerValues[innerIndex] : queue?.current ?? null; const consumed = typeof rawValue === "string" && m.state.consumedSpecialOperatorIndexes.includes(innerIndex); const exhausted = queue?.exhausted ?? false; const value = consumed || exhausted ? null : rawValue; const sphereRadius = outerR * layout.innerSlots.sphereRadius; const blocked = blockedSources.has(innerIndex); const deactivated = blocked || consumed || exhausted; const specialIcon = deactivated ? undefined : this.gearSpecialIcon(value); const gem = specialIcon ? this.add.image(gearX + point.x, gearY + point.y, specialIcon.texture, specialIcon.frame).setDisplaySize(sphereRadius * 2.18, sphereRadius * 2.18).setDepth(4) : this.gem(gearX + point.x, gearY + point.y, sphereRadius, index, visualSet, deactivated, typeof rawValue === "string").setDepth(4); gem.setInteractive().on("pointerdown", () => this.actions.gemInfo(innerIndex, "gear")); const text = this.sphereLabel(gearX + point.x, gearY + point.y, specialIcon ? "" : consumed || exhausted ? "" : formatOperator(value), sphereRadius, deactivated ? 0xd8d8d8 : 0xffffff, outerR * numeralConfig.innerFontSizeRatio, numeralConfig.reservedWidthRatio).setDepth(5); const badge = queue ? this.queueBadge(gearX + point.x + sphereRadius * .72, gearY + point.y + sphereRadius * .72, queue.remainingCount, exhausted) : undefined; this.innerSlots.push({ sphere: gem, text, badge, localX: point.x, localY: point.y }); }
+    for (let index = 0; index < m.level.positions; index += 1) { const point = this.point(0, 0, wheelR * layout.innerSlots.radius, index, m.level.positions, layout.innerSlots.angleOffset); const innerIndex = index; const queue = m.level.variant === "loader" ? m.queueStates[innerIndex] : undefined; const rawValue = m.level.variant === "persistent" ? m.level.innerValues[innerIndex] : queue?.current ?? null; const consumed = typeof rawValue === "string" && m.state.consumedSpecialOperatorIndexes.includes(innerIndex); const exhausted = queue?.exhausted ?? false; const value = consumed || exhausted ? null : rawValue; const sphereRadius = outerR * layout.innerSlots.sphereRadius; const blocked = blockedSources.has(innerIndex); const deactivated = blocked || consumed || exhausted; const specialIcon = deactivated ? undefined : this.gearSpecialIcon(value); const gem = specialIcon ? this.add.image(gearX + point.x, gearY + point.y, specialIcon.texture, specialIcon.frame).setDisplaySize(sphereRadius * 2.18, sphereRadius * 2.18).setDepth(4) : this.gem(gearX + point.x, gearY + point.y, sphereRadius, index, visualSet, deactivated, typeof rawValue === "string").setDepth(4); gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, innerIndex, "gear")); const text = this.sphereLabel(gearX + point.x, gearY + point.y, specialIcon ? "" : consumed || exhausted ? "" : formatOperator(value), sphereRadius, deactivated ? 0xd8d8d8 : 0xffffff, outerR * numeralConfig.innerFontSizeRatio, numeralConfig.reservedWidthRatio).setDepth(5); const badge = queue ? this.queueBadge(gearX + point.x + sphereRadius * .72, gearY + point.y + sphereRadius * .72, queue.remainingCount, exhausted) : undefined; this.innerSlots.push({ sphere: gem, text, badge, localX: point.x, localY: point.y }); }
     const impulse = this.add.circle(gearX, gearY, wheelR * layout.impulse.radius, 0x2b6240).setStrokeStyle(5, 0xd6b75d).setDepth(2).setInteractive();
     impulse.on("pointerdown", () => this.fireImpulse(impulse));
     const impulseIcon = this.actionIcon(gearX, gearY, wheelR * layout.impulse.iconSize, "action-holy-star", 3);
@@ -206,11 +214,15 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     m.actions.forEach((action, index) => this.bonus(cx + (index - (m.actions.length - 1) / 2) * 84, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset, action, () => this.actions.action(index)));
     if (m.playground) this.playgroundOverlay(width, height, m.playground);
-    if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m);
+    if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m); }
   }
-  private beginDrag(pointer: Phaser.Input.Pointer): void { if (this.model?.selectedGemIndex !== null && this.infoScrollMax > 0) { this.infoScrollDragY = pointer.y; return; } if (this.busy || !this.model || this.model.outcome || this.model.showInfo || this.model.tutorial) return; const dx = pointer.x - this.wheelCenter.x; const dy = pointer.y - this.wheelCenter.y; const distance = Math.hypot(dx, dy); if (distance > this.wheelCenter.radius || distance < this.wheelCenter.radius * .3) return; this.dragging = true; this.dragStart = Math.atan2(dy, dx); this.dragDelta = 0; }
+  private beginDrag(pointer: Phaser.Input.Pointer): void { this.pointerDownAt = { x: pointer.x, y: pointer.y }; if (this.model?.selectedGemIndex !== null && this.infoScrollMax > 0) { this.infoScrollDragY = pointer.y; return; } if (this.busy || !this.model || this.model.outcome || this.hasInfoOverlay(this.model) || this.model.tutorial) return; const dx = pointer.x - this.wheelCenter.x; const dy = pointer.y - this.wheelCenter.y; const distance = Math.hypot(dx, dy); if (distance > this.wheelCenter.radius || distance < this.wheelCenter.radius * .3) return; this.dragging = true; this.dragStart = Math.atan2(dy, dx); this.dragDelta = 0; }
   private drag(pointer: Phaser.Input.Pointer): void { if (this.infoScrollDragY !== null) { const delta = this.infoScrollDragY - pointer.y; this.infoScrollDragY = pointer.y; this.scrollInfo(delta); return; } if (!this.dragging || !this.wheel || !pointer.isDown || !this.model) return; const a = Math.atan2(pointer.y - this.wheelCenter.y, pointer.x - this.wheelCenter.x); let delta = (a - this.dragStart) * 180 / Math.PI; if (delta > 180) delta -= 360; if (delta < -180) delta += 360; this.dragDelta = delta; this.setWheelAngle(this.model.state.rotationTurns * 360 / this.model.level.positions + delta); }
   private release(): void { if (this.infoScrollDragY !== null) { this.infoScrollDragY = null; return; } if (!this.dragging || !this.model || !this.wheel) return; this.dragging = false; const minimumDragAngle = 3; const snapAngle = 360 / this.model.level.positions; const base = this.model.state.rotationTurns * snapAngle; if (Math.abs(this.dragDelta) < minimumDragAngle) { this.setWheelAngle(base); this.dragDelta = 0; this.flushPendingRender(); return; } const direction = this.dragDelta > 0 ? 1 : -1; const step = direction * Math.max(1, Math.round(Math.abs(this.dragDelta) / snapAngle)); const target = base + step * snapAngle; this.busy = true; this.tweens.add({ targets: this, visualAngle: target, duration: RDN_MOTION.dragSnapMs, ease: "Cubic.Out", onUpdate: () => this.setWheelAngle(this.visualAngle), onComplete: () => { this.actions.rotate(step > 0 ? "CW" : "CCW", Math.abs(step)); this.dragDelta = 0; this.busy = false; this.flushPendingRender(); } }); }
+  private hasInfoOverlay(model: RdnSceneModel = this.model!): boolean { return !!model && (model.showInfo || model.selectedGemIndex !== null || model.selectedGearGemIndex !== null || model.selectedLinkEffectId !== null); }
+  private openGemInfoFromTap(pointer: Phaser.Input.Pointer, index: number, source: "ring" | "gear" = "ring"): void { const start = this.pointerDownAt; const moved = !start || Math.hypot(pointer.x - start.x, pointer.y - start.y) > 8; if (!moved && !this.busy && !this.hasInfoOverlay()) this.actions.gemInfo(index, source); }
+  /** Blocks the board while keeping dismissal discoverable: tap anywhere outside the card. */
+  private infoBackdrop(cx: number, cy: number, width: number, height: number): void { const backdrop = this.add.rectangle(cx, cy, width, height, 0x020907, .46).setDepth(19).setInteractive(); backdrop.on("pointerup", () => this.actions.closeInfo()); }
   private scrollInfo(delta: number): void { if (!this.model || this.model.selectedGemIndex === null || this.infoScrollMax <= 0) return; const next = Phaser.Math.Clamp(this.infoScrollOffset + delta, 0, this.infoScrollMax); if (next === this.infoScrollOffset) return; this.infoScrollOffset = next; this.render(); }
   private setWheelAngle(angle: number): void { if (!this.wheel) return; this.visualAngle = angle; this.wheel.setAngle(((angle + this.layout.gear.angle + 180) % 360 + 360) % 360 - 180); this.keepLabelsUpright(); }
   /** A quiet visual cue that keeps the central action discoverable without distracting from the board. */
@@ -219,7 +231,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: impulseIcon, scaleX: impulseIcon.scaleX * 1.035, scaleY: impulseIcon.scaleY * 1.035, alpha: .92, duration: 1250, ease: "Sine.InOut", yoyo: true, repeat: -1 });
   }
   private keepLabelsUpright(): void { if (!this.wheel) return; const angle = this.wheel.rotation; const cos = Math.cos(angle); const sin = Math.sin(angle); for (const slot of this.innerSlots) { const x = this.wheel.x + slot.localX * cos - slot.localY * sin; const y = this.wheel.y + slot.localX * sin + slot.localY * cos; slot.sphere.setPosition(x, y); slot.text.setPosition(x, y).setAngle(0); slot.badge?.setPosition(x + slot.sphere.displayWidth * .33, y + slot.sphere.displayHeight * .33).setAngle(0); } }
-  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.model.showInfo || this.model.tutorial) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); this.cameras.main.shake(90, .006); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
+  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.model.showInfo || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); this.cameras.main.shake(90, .006); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
   /** One-shot, multi-particle current from the impulse to every currently active gem. */
   private playImpulseDischarge(model: RdnSceneModel, plan: ImpulseResolutionPlan): number {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const { width, height } = this.scale; const layout = this.layout;
@@ -431,9 +443,19 @@ export class RdnPhaserScene extends Phaser.Scene {
     // The yellow path is a topology preview, not a validity hint: it remains visible
     // even when the next operation will become blocked (for example a spent DIV2).
     // Draw it first so the active green flow always remains the visual priority.
-    for (const preview of model.nextPreviews) if (!currentTargets.has(preview.slot.outerIndex)) this.drawTrail(ringX, ringY, sourceX, sourceY, radius, preview.slot.outerIndex, model.level.positions, EFFECT_PHASER_VISUAL.yellowFlows, true);
+    for (const preview of model.nextPreviews) if (!currentTargets.has(preview.slot.outerIndex)) {
+      const key = `${model.level.id}:${model.state.rotationTurns}:${preview.innerIndex}:${preview.slot.outerIndex}`;
+      const firstAppearance = !this.revealedYellowPreviewKeys.has(key);
+      this.revealedYellowPreviewKeys.add(key);
+      this.drawTrail(ringX, ringY, sourceX, sourceY, radius, preview.slot.outerIndex, model.level.positions, EFFECT_PHASER_VISUAL.yellowFlows, true, firstAppearance ? EFFECT_PHASER_VISUAL.yellowFlows.initialAppearanceFadeInMs : 0);
+    }
     for (const flow of model.flows) {
-      if (flow.interactable) this.drawTrail(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions, EFFECT_PHASER_VISUAL.activeFlows, true);
+      if (flow.interactable) {
+        const key = `${model.level.id}:${model.state.rotationTurns}:${flow.sourceId}:${flow.targetId}`;
+        const firstAppearance = !this.revealedActiveFlowKeys.has(key);
+        this.revealedActiveFlowKeys.add(key);
+        this.drawTrail(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions, EFFECT_PHASER_VISUAL.activeFlows, true, firstAppearance ? EFFECT_PHASER_VISUAL.activeFlows.initialAppearanceFadeInMs : 0);
+      }
       else {
         this.drawTrail(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions, EFFECT_PHASER_VISUAL.blockedFlows, false);
         this.drawBlockedGearSegment(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions);
@@ -451,21 +473,31 @@ export class RdnPhaserScene extends Phaser.Scene {
     const endX = sourceX + Math.cos(angle) * radius * this.layout.gear.diameter * .34;
     const endY = sourceY + Math.sin(angle) * radius * this.layout.gear.diameter * .34;
     const graphics = this.add.graphics().setDepth(2);
-    graphics.lineStyle(radius * config.glowWidth * EFFECT_PHASER_VISUAL.activeFlows.widthMultiplier, EFFECT_PHASER_VISUAL.activeFlows.color, .22);
+    const active = EFFECT_PHASER_VISUAL.activeFlows;
+    const glow = this.add.graphics().setDepth(2);
+    glow.lineStyle(radius * config.glowWidth * active.widthMultiplier, active.color, active.alpha * active.glowTraceAlphaMultiplier);
+    glow.lineBetween(startX, startY, endX, endY);
+    glow.setAlpha(active.glowInitialAlpha);
+    this.trailEffects.push(glow);
+    this.tweens.add({ targets: glow, alpha: active.glowPeakAlpha, duration: active.glowPulseDurationMs, ease: "Sine.InOut", yoyo: true, repeat: -1 });
+    graphics.lineStyle(radius * config.middleWidth * active.widthMultiplier, active.color, active.alpha * .22);
     graphics.lineBetween(startX, startY, endX, endY);
-    graphics.lineStyle(radius * config.middleWidth * EFFECT_PHASER_VISUAL.activeFlows.widthMultiplier, EFFECT_PHASER_VISUAL.activeFlows.color, .58);
-    graphics.lineBetween(startX, startY, endX, endY);
-    graphics.lineStyle(radius * config.coreWidth * EFFECT_PHASER_VISUAL.activeFlows.widthMultiplier, EFFECT_PHASER_VISUAL.activeFlows.coreTrailColor, .92);
+    graphics.lineStyle(radius * config.coreWidth * active.widthMultiplier, active.coreTrailColor, active.alpha * .72);
     graphics.lineBetween(startX, startY, endX, endY);
   }
   /** A curved conduit from the impulse core that coils once around the target sphere. */
-  private drawTrail(ringX: number, ringY: number, sourceX: number, sourceY: number, radius: number, outerIndex: number, total: number, flowVisual: typeof EFFECT_PHASER_VISUAL.activeFlows | typeof EFFECT_PHASER_VISUAL.yellowFlows | typeof EFFECT_PHASER_VISUAL.blockedFlows, animate = true): void {
+  private drawTrail(ringX: number, ringY: number, sourceX: number, sourceY: number, radius: number, outerIndex: number, total: number, flowVisual: typeof EFFECT_PHASER_VISUAL.activeFlows | typeof EFFECT_PHASER_VISUAL.yellowFlows | typeof EFFECT_PHASER_VISUAL.blockedFlows, animate = true, appearanceFadeInMs = 0): void {
     const { color, alpha, widthMultiplier } = flowVisual;
     const config = this.layout.trail; const point = this.point(ringX, ringY, radius * this.layout.outerSlots.radius, outerIndex, total, this.layout.outerSlots.angleOffset); const angle = Math.atan2(point.y - sourceY, point.x - sourceX); const unitX = Math.cos(angle); const unitY = Math.sin(angle);
     const startX = sourceX + unitX * radius * config.startRadius; const startY = sourceY + unitY * radius * config.startRadius; const sphereRadius = radius * config.sphereRadius; const endX = point.x - unitX * sphereRadius; const endY = point.y - unitY * sphereRadius;
     const trace = (width: number, opacity: number): Phaser.GameObjects.Graphics => { const graphics = this.add.graphics().setDepth(1); graphics.lineStyle(width, color, opacity); graphics.lineBetween(startX, startY, endX, endY); graphics.strokeCircle(point.x, point.y, sphereRadius); return graphics; };
-    const pulseGlow = trace(radius * config.glowWidth * widthMultiplier, animate && "glowTraceAlphaMultiplier" in flowVisual ? alpha * flowVisual.glowTraceAlphaMultiplier : alpha * .28).setAlpha(animate && "glowInitialAlpha" in flowVisual ? flowVisual.glowInitialAlpha : .58); if (animate && "glowPulseDurationMs" in flowVisual) { this.trailEffects.push(pulseGlow); this.tweens.add({ targets: pulseGlow, alpha: flowVisual.glowPeakAlpha, duration: flowVisual.glowPulseDurationMs, ease: "Sine.InOut", yoyo: true, repeat: -1 }); }
-    trace(radius * config.middleWidth * widthMultiplier, animate ? alpha * .22 : alpha * .42); trace(radius * config.coreWidth * widthMultiplier, animate ? alpha * .72 : alpha * .78);
+    const pulseGlowAlpha = animate && "glowInitialAlpha" in flowVisual ? flowVisual.glowInitialAlpha : .58;
+    const pulseGlow = trace(radius * config.glowWidth * widthMultiplier, animate && "glowTraceAlphaMultiplier" in flowVisual ? alpha * flowVisual.glowTraceAlphaMultiplier : alpha * .28).setAlpha(appearanceFadeInMs > 0 ? 0 : pulseGlowAlpha);
+    const middle = trace(radius * config.middleWidth * widthMultiplier, animate ? alpha * .22 : alpha * .42).setAlpha(appearanceFadeInMs > 0 ? 0 : 1);
+    const core = trace(radius * config.coreWidth * widthMultiplier, animate ? alpha * .72 : alpha * .78).setAlpha(appearanceFadeInMs > 0 ? 0 : 1);
+    const startPulse = () => { if (animate && "glowPulseDurationMs" in flowVisual) { this.trailEffects.push(pulseGlow); this.tweens.add({ targets: pulseGlow, alpha: flowVisual.glowPeakAlpha, duration: flowVisual.glowPulseDurationMs, ease: "Sine.InOut", yoyo: true, repeat: -1 }); } };
+    if (appearanceFadeInMs > 0) { this.tweens.add({ targets: [middle, core], alpha: 1, duration: appearanceFadeInMs, ease: "Sine.InOut" }); this.tweens.add({ targets: pulseGlow, alpha: pulseGlowAlpha, duration: appearanceFadeInMs, ease: "Sine.InOut", onComplete: startPulse }); }
+    else startPulse();
     if (animate && "particleCount" in flowVisual) for (let index = 0; index < flowVisual.particleCount; index += 1) this.animateTrailFlow(startX, startY, endX, endY, point.x, point.y, sphereRadius, angle, flowVisual, index * flowVisual.particleStaggerMs);
   }
   private animateTrailFlow(startX: number, startY: number, endX: number, endY: number, sphereX: number, sphereY: number, sphereRadius: number, startAngle: number, flowVisual: typeof EFFECT_PHASER_VISUAL.activeFlows | typeof EFFECT_PHASER_VISUAL.yellowFlows, delay: number): void {

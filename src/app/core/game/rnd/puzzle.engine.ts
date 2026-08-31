@@ -98,6 +98,9 @@ export class PuzzleEngine {
   }
   apply(level: LevelDefinition, state: PuzzleState, action: PuzzleAction): PuzzleState {
     if (action.type === "UNDO") { const previous = state.history.at(-1); return previous ? restore(level, previous, state.history.slice(0, -1)) : state; } if (action.type === "RESTART") return this.createInitialState(level); if (state.won) return state;
+    // An impulse resolves the whole active flow set atomically. Advancing while
+    // one branch is invalid would silently skip it, which is never a legal move.
+    if (action.type === "IMPULSE" && this.flows(level, state).some((flow) => !flow.interactable)) return state;
     if (state.effectRuntime && action.type === "IMPULSE") return this.applyWithEffects(level, state);
     const history = [...state.history, snapshot(state)]; if (action.type === "ROTATE") { const steps = Math.max(0, Math.floor(action.steps)); const signed = action.direction === "CW" ? steps : -steps; return { ...state, rotation: modulo(state.rotation + signed, level.positions), rotationTurns: state.rotationTurns + signed, rotationSteps: state.rotationSteps + steps, history }; }
     const phaseCursor = this.relevantPhaseIndex(level, state, 0); const previews = this.previews(level, state); const outerValues = [...state.outerValues]; const targetVisualStates = [...state.targetVisualStates]; const queueCursors = [...state.queueCursors]; const consumedSpecialOperatorIndexes = [...state.consumedSpecialOperatorIndexes]; const lastOperationResults = previews.map((preview) => this.attemptOperation(level, preview.slot.outerIndex, preview.outerValue, preview.innerValue, consumedSpecialOperatorIndexes.includes(preview.innerIndex))); const lastGameplayEvents: GameplayEvent[] = [];

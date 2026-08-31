@@ -18,6 +18,14 @@ export interface GameplaySessionLaunchOverrides {
   freeSlotCount?: number;
   /** Optional Free-only effects. Omitted/false preserves the legacy Free board. */
   freeEffectsEnabled?: boolean;
+  /** Free mode lets each effect family be enabled independently. */
+  freeEffectSelections?: FreeEffectSelections;
+}
+
+export interface FreeEffectSelections {
+  gem: boolean;
+  link: boolean;
+  area: boolean;
 }
 
 export interface GameplaySessionLaunchOptions {
