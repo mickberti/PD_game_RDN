@@ -34,6 +34,368 @@ export interface RdnBoardLayout {
   };
 }
 
+export type RdnVisualSet = 1 | 2 | 3;
+export type RdnGemSlotGroup = "outerSlots" | "innerSlots";
+
+/** Per-gem correction applied on top of the unchanged base layout. Angles are degrees; radius is a parent-radius ratio. */
+export interface RdnGemSlotOffset {
+  angularOffset: number;
+  radialOffset: number;
+}
+
+export interface RdnGemPlacementCalibration {
+  outerSlots: RdnGemSlotOffset[];
+  innerSlots: RdnGemSlotOffset[];
+}
+
+export interface RdnRingThemeOffset {
+  diameterOffset: number;
+  widthScaleMultiplier: number;
+  heightScaleMultiplier: number;
+  offsetX: number;
+  offsetY: number;
+  angleOffset: number;
+}
+
+export interface RdnGearThemeOffset {
+  diameterOffset: number;
+  offsetX: number;
+  offsetY: number;
+  angleOffset: number;
+}
+
+export interface RdnThemeDecorationCalibration {
+  ring: RdnRingThemeOffset;
+  gear: RdnGearThemeOffset;
+}
+
+/**
+ * Theme-specific fine tuning for imperfect ring and gear artwork.
+ * Every slot is explicit: angularOffset is in degrees, radialOffset is a parent-radius ratio.
+ * Zero preserves the base geometry exactly.
+ */
+export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"], Record<RdnVisualSet, RdnGemPlacementCalibration>> = {
+  4: {
+    1: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: -0.8, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0.8, radialOffset: 0 }, // Gemma 4
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+      ],
+    },
+    2: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: -0.8, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0.8, radialOffset: 0 }, // Gemma 4
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+      ],
+    },
+    3: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: -0.8, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0.8, radialOffset: 0 }, // Gemma 4
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+      ],
+    }
+  },
+  5: {
+    1: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 2.8, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: -2.8, radialOffset: 0 }, // Gemma 5
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+      ],
+    },
+    2: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 1, radialOffset: 0 }, // Gemma 2
+        { angularOffset: -8, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 8, radialOffset: 0 }, // Gemma 4
+        { angularOffset: -1, radialOffset: 0 }, // Gemma 5
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+      ],
+    },
+    3: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 8, radialOffset: 0 }, // Gemma 2
+        { angularOffset: -2, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 2, radialOffset: 0 }, // Gemma 4
+        { angularOffset: -8, radialOffset: 0 }, // Gemma 5
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 2.5, radialOffset: 0.05 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+      ],
+    }
+  },
+  6: {
+    1: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+      ],
+    },
+    2: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+      ],
+    },
+    3: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+      ],
+    }
+  },
+  7: {
+    1: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+      ],
+    },
+    2: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+      ],
+    },
+    3: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+      ],
+    }
+  },
+  8: {
+    1: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 8
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 8
+      ],
+    },
+    2: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 8
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 8
+      ],
+    },
+    3: {
+      outerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 8
+      ],
+      innerSlots: [
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 8
+      ],
+    }
+  }
+};
+
+/**
+ * Theme-specific texture calibration for ring and gear. Values are applied on top
+ * of RDN_BOARD_LAYOUTS, so zero/one preserves its base geometry exactly.
+ */
+export const RDN_THEME_DECORATION_CALIBRATIONS: Record<RdnBoardLayout["positions"], Record<RdnVisualSet, RdnThemeDecorationCalibration>> = {
+  4: {
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+  },
+  5: {
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1.05, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+  },
+  6: {
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+  },
+  7: {
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+  },
+  8: {
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+  }
+};
+
+export const getRdnThemeDecorationCalibration = (positions: number, visualSet: number): RdnThemeDecorationCalibration =>
+  RDN_THEME_DECORATION_CALIBRATIONS[positions as RdnBoardLayout["positions"]]?.[visualSet as RdnVisualSet] ??
+  RDN_THEME_DECORATION_CALIBRATIONS[6][1];
+
+export const getRdnGemSlotOffset = (positions: number, visualSet: number, group: RdnGemSlotGroup, index: number): RdnGemSlotOffset =>
+  RDN_GEM_PLACEMENT_CALIBRATIONS[positions as RdnBoardLayout["positions"]]?.[visualSet as RdnVisualSet]?.[group]?.[index] ?? { angularOffset: 0, radialOffset: 0 };
+
 export const RDN_BOARD_LAYOUTS: Record<
   RdnBoardLayout["positions"],
   RdnBoardLayout

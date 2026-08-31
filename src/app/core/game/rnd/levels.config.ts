@@ -1,8 +1,7 @@
-import { AdventureGameConfig, LevelDefinition, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
+import { AdventureGameConfig, DEFAULT_PUZZLE_NUMBER_RANGE, LevelDefinition, PuzzleDifficulty, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "./puzzle.types";
 import { PuzzleEngine } from "./puzzle.engine";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
 import { EffectConfig, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
-import { DIFFICULTY_PROFILES, difficultyForLevel } from "./difficulty-profile.config";
 import { RDN_RELEASE } from "./rdn-release.config";
 import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity } from "./effects/effect-progression.config";
 import { LevelEffectConfiguration } from "./effects/level-effects.types";
@@ -12,6 +11,8 @@ import { GENERATED_RDN_LEVELS, GENERATED_RDN_SOLUTION_AUDIT } from "./generated/
 export const RDN_MAX_LEVEL = 350;
 export const RDN_MIN_SPHERES = 4;
 export const RDN_MAX_SPHERES = 8;
+const DEFAULT_ACTIVE_FLOW_COUNT = 1;
+const freeActiveFlowCount = (difficulty: PuzzleDifficulty): number => difficulty === "EASY" ? 1 : difficulty === "NORMAL" ? 2 : difficulty === "HARD" ? 3 : 4;
 export const RDN_MAX_TIMER_DIRECT_IMPULSES = 10;
 /** Number of levels in each sphere-count band; recalculated when the catalogue size changes. */
 export const RDN_LEVELS_PER_SPHERE_INCREMENT = Math.ceil(RDN_MAX_LEVEL / (RDN_MAX_SPHERES - RDN_MIN_SPHERES + 1));
@@ -102,7 +103,7 @@ const generateBoard = (number: number, seedOffset: number, slotCount?: number, b
   const specialOperators = specialOperatorsForLevel(number, positions, seedOffset);
   const innerValues = gearOperators(positions, specialOperators, next);
   const allAdditives = additiveOperators(innerValues);
-  const range = DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange;
+  const range = DEFAULT_PUZZLE_NUMBER_RANGE;
   const maximumStart = Math.min(Math.abs(range.min), Math.abs(range.max));
   const planForIndex = (index: number, positive: boolean) => planForValue(impulses, allAdditives.filter((operator) => positive ? operator > 0 : operator < 0), next, maximumStart, specialOperators[index]);
   // Free boards use a temporary deterministic plan only to calculate the exact numeric queue weights,
@@ -142,7 +143,7 @@ const generateBoard = (number: number, seedOffset: number, slotCount?: number, b
 /** The tutorial deliberately exposes one target per impulse: UI flow and applied operation stay identical. */
 const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }], [{ outerIndex: 1 }], [{ outerIndex: 2 }], [{ outerIndex: 3 }]], optimalCost: { impulses: 4, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })), seed: 0 });
 
-const generatedMetadata = (number: number, board: GeneratedBoard) => { const profile = DIFFICULTY_PROFILES[difficultyForLevel(number)]; return { seed: board.seed, generatorVersion: RDN_RELEASE.generatorVersion, balanceVersion: RDN_RELEASE.balanceVersion, difficulty: profile.id, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: profile.activeFlowCount, featureFlags: profile.featureFlags }; };
+const generatedMetadata = (number: number, board: GeneratedBoard, difficulty: PuzzleDifficulty = "EASY", activeFlowCount = DEFAULT_ACTIVE_FLOW_COUNT) => ({ seed: board.seed, generatorVersion: RDN_RELEASE.generatorVersion, balanceVersion: RDN_RELEASE.balanceVersion, difficulty, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: activeFlowCount, featureFlags: [] });
 const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameConfig => ({
   version: 1,
   seed: board.seed,
@@ -306,7 +307,7 @@ const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configu
   let calibrationAttempts = 0;
   const failureReasons = new Set<string>();
   const withStats = (candidate: T, solved: boolean): T => ({ ...candidate, generation: candidate.generation ? { ...candidate.generation, generationStats: { elapsedMs: performance.now() - startedAt, structureAttempts: 1, calibrationAttempts, totalComplexity: (candidate.optimalCost?.impulses ?? 0) + (candidate.optimalCost?.rotationSteps ?? 0) + (candidate.effectConfiguration?.effects?.length ?? 0) * 10, failureReasons: solved ? [...failureReasons] : [...failureReasons, "NO_VALID_EFFECT_CONFIGURATION"] } } : candidate.generation } as T);
-  const range = level.numberRange ?? DIFFICULTY_PROFILES[difficultyForLevel(level.number)].numberRange;
+  const range = DEFAULT_PUZZLE_NUMBER_RANGE;
   const attemptsBeforeScaling = Math.max(1, rdnEffectRuleForLevel(level.number).solutionAttemptsBeforeScaling);
   if (!timerPlacementIsCompatible(level, configuration)) { failureReasons.add("TIMER_TARGET_TOO_MANY_DIRECT_IMPULSES"); return withStats(level, false); }
   {
@@ -374,10 +375,10 @@ const effectAwareVariant = <T extends LevelDefinition>(number: number, mode: "ad
 const persistent = (number: number): LevelDefinition => {
   // Keep the first board as the one-step tutorial. Levels 2 and 3 must already
   // be distinct playable boards, otherwise the solution catalogue repeats it too.
-  return effectAwareVariant(number, "adventure", (variation) => { const board = number === 1 ? tutorialBoard() : generateBoard(number, 17 + variation * 101); return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board }; });
+  return effectAwareVariant(number, "adventure", (variation) => { const board = number === 1 ? tutorialBoard() : generateBoard(number, 17 + variation * 101); return { id: `persistent-${number}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, activeFlowCount: DEFAULT_ACTIVE_FLOW_COUNT, generation: generatedMetadata(number, board), adventure: adventureConfig(number, board), ...board }; });
 };
 const loader = (number: number): LevelDefinition => {
-  return effectAwareVariant(number, "time-attack", (variation) => { const board = number === 1 ? tutorialBoard() : generateBoard(number, 71 + variation * 101); return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: DIFFICULTY_PROFILES[difficultyForLevel(number)].numberRange, activeFlowCount: DIFFICULTY_PROFILES[difficultyForLevel(number)].activeFlowCount, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves }; });
+  return effectAwareVariant(number, "time-attack", (variation) => { const board = number === 1 ? tutorialBoard() : generateBoard(number, 71 + variation * 101); return { id: `loader-${number}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, activeFlowCount: DEFAULT_ACTIVE_FLOW_COUNT, generation: generatedMetadata(number, board), positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves }; });
 };
 
 const generateRdnLevelCatalogue = (): readonly LevelDefinition[] => {
@@ -416,12 +417,12 @@ export const RDN_LEVELS: readonly LevelDefinition[] = useGeneratedCatalogue ? GE
 export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): LevelDefinition => RDN_LEVELS.find((level) => level.variant === (variant === "adventure" ? "persistent" : "loader") && level.number === number) ?? RDN_LEVELS[0];
 
 /** Seedable entry point for replay, support and future ranked runs. */
-export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: ReturnType<typeof difficultyForLevel>, seed: number, slotCount?: number, freeEffectsEnabled: boolean | import("./effects/effect-progression.config").FreeEffectSelections = false): LevelDefinition => {
+export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: PuzzleDifficulty, seed: number, slotCount?: number, freeEffectsEnabled: boolean | import("./effects/effect-progression.config").FreeEffectSelections = false): LevelDefinition => {
   const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
-  const board = generateBoard(number, Math.trunc(seed), slotCount, true); const profile = DIFFICULTY_PROFILES[difficulty]; const generation = { ...generatedMetadata(number, board), seed: board.seed, difficulty };
+  const board = generateBoard(number, Math.trunc(seed), slotCount, true); const activeFlowCount = freeActiveFlowCount(difficulty); const generation = { ...generatedMetadata(number, board, difficulty, activeFlowCount), seed: board.seed, difficulty };
   const level = variant === "adventure"
-    ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
-    : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, numberRange: profile.numberRange, activeFlowCount: profile.activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+    ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
+    : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
   return regenerateEffectAwareLevel(level, createFreeModeEffectConfiguration(difficulty, level.positions, generation.seed, freeEffectsEnabled));
 };
 

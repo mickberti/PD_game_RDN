@@ -17,7 +17,7 @@ import { UIButtonSpriteComponent } from "../../shared/basic/ui-button-sprite.com
 import { EventActivationService } from "../../core/services/progression/event-activation.service";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
-import { PuzzleDifficulty } from "../../core/game/rnd/difficulty-profile.config";
+import { PuzzleDifficulty } from "../../core/game/rnd/puzzle.types";
 import { FreeEffectSelections } from "../../core/models/gameplay-session.model";
 
 const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack", "free", "ranked"]);
@@ -125,6 +125,11 @@ interface LevelPickerItem {
                 <ion-range class="free-picker__range" [min]="0" [max]="3" [step]="1" [snaps]="true" [ticks]="true" [value]="freeDifficultyIndex()" (ionChange)="onFreeDifficultyChange($event)" aria-label="Difficoltà"></ion-range>
                 <p class="free-picker__description">{{ freeDescription(freeDifficulty()) }}</p>
               </section>
+              <section class="free-picker__section" aria-labelledby="free-theme-label">
+                <div class="free-picker__heading"><span id="free-theme-label">TEMA GRAFICO</span><strong>SET {{ freeTheme() }}</strong></div>
+                <div class="free-picker__theme-labels" aria-hidden="true">@for (theme of freeThemes; track theme) { <span [class.free-picker__difficulty-label--selected]="freeTheme() === theme">SET {{ theme }}</span> }</div>
+                <ion-range class="free-picker__range" [min]="1" [max]="3" [step]="1" [snaps]="true" [ticks]="true" [value]="freeTheme()" (ionChange)="onFreeThemeChange($event)" aria-label="Tema grafico"></ion-range>
+              </section>
               <button type="button" class="free-picker__start" (click)="startFree(mode)">INIZIA PARTITA</button>
             </section>
           </div>
@@ -169,9 +174,10 @@ interface LevelPickerItem {
     .free-picker__section { margin-top: 16px; padding: 12px 14px 10px; border: 1px solid rgba(255, 212, 105, .33); border-radius: 12px; background: rgba(5, 20, 29, .5); box-shadow: inset 0 1px rgba(255, 246, 195, .12); }
     .free-picker__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #f4d47b; font-size: .75rem; font-weight: 900; letter-spacing: .11em; }
     .free-picker__heading strong { color: #fff0ad; font-size: 1rem; letter-spacing: .04em; }
-    .free-picker__tick-labels, .free-picker__difficulty-labels { display: grid; align-items: end; margin: 10px 8px -5px; color: #b5c8c7; font-size: .74rem; font-weight: 900; text-align: center; }
+    .free-picker__tick-labels, .free-picker__difficulty-labels, .free-picker__theme-labels { display: grid; align-items: end; margin: 10px 8px -5px; color: #b5c8c7; font-size: .74rem; font-weight: 900; text-align: center; }
     .free-picker__tick-labels { grid-template-columns: repeat(5, 1fr); }
     .free-picker__difficulty-labels { grid-template-columns: repeat(4, 1fr); font-size: .62rem; letter-spacing: .02em; }
+    .free-picker__theme-labels { grid-template-columns: repeat(3, 1fr); font-size: .68rem; letter-spacing: .04em; }
     .free-picker__tick-label--selected, .free-picker__difficulty-label--selected { color: #ffea91; text-shadow: 0 0 10px rgba(255, 204, 84, .72); }
     .free-picker__range { padding: 10px 0 0; }
     .free-picker__range::part(tick) { width: 3px; height: 12px; border-radius: 2px; background: #8eb5b7; }
@@ -201,6 +207,8 @@ export class HubPage {
   readonly freeSlotCounts = [4, 5, 6, 7, 8] as const;
   readonly freeSlotCount = signal<number>(4);
   readonly freeDifficulty = signal<PuzzleDifficulty>("EASY");
+  readonly freeThemes = [1, 2, 3] as const;
+  readonly freeTheme = signal<1 | 2 | 3>(3);
   readonly freeEffectSelections = signal<FreeEffectSelections>({ gem: false, link: false, area: false });
   readonly freeEffectOptions: readonly { key: keyof FreeEffectSelections; label: string }[] = [
     { key: "gem", label: "GEMMA" }, { key: "link", label: "LINK" }, { key: "area", label: "AREA" },
@@ -225,11 +233,12 @@ export class HubPage {
 
   startFree(mode: ModeItem): void {
     const selections = this.freeEffectSelections();
-    const session = this.gameplaySession.startSession(mode, 1, mode.mastery ?? 1, { variant: "free", overrides: { freeDifficulty: this.freeDifficulty(), freeSeed: Math.floor(Math.random() * 0x7fffffff), freeSlotCount: this.freeSlotCount(), freeEffectsEnabled: this.enabledEffectCount() > 0, freeEffectSelections: selections } });
+    const session = this.gameplaySession.startSession(mode, 1, mode.mastery ?? 1, { variant: "free", overrides: { freeDifficulty: this.freeDifficulty(), freeSeed: Math.floor(Math.random() * 0x7fffffff), freeSlotCount: this.freeSlotCount(), freeTheme: this.freeTheme(), freeEffectsEnabled: this.enabledEffectCount() > 0, freeEffectSelections: selections } });
     this.freeMode.set(null); this.nav.go(this.gameplaySession.getRouteForVariant(session.variant));
   }
   onFreeSlotCountChange(event: Event): void { this.freeSlotCount.set(Number((event as CustomEvent<{ value: number }>).detail.value)); }
   onFreeDifficultyChange(event: Event): void { this.freeDifficulty.set(this.freeDifficulties[Math.round(Number((event as CustomEvent<{ value: number }>).detail.value))] ?? "EASY"); }
+  onFreeThemeChange(event: Event): void { const theme = Math.round(Number((event as CustomEvent<{ value: number }>).detail.value)); this.freeTheme.set(theme === 1 || theme === 2 || theme === 3 ? theme : 3); }
   toggleFreeEffect(effect: keyof FreeEffectSelections): void { this.freeEffectSelections.update((selections) => ({ ...selections, [effect]: !selections[effect] })); }
   freeDescription(difficulty: PuzzleDifficulty): string { return difficulty === "EASY" ? "Soluzioni brevi" : difficulty === "NORMAL" ? "Segni misti e DIV2" : difficulty === "HARD" ? "Piu flussi e DIV3" : "Massima complessita"; }
 

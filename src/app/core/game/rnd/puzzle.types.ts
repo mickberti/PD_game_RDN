@@ -2,6 +2,7 @@ import type { LevelEffectConfiguration } from "./effects/level-effects.types";
 import type { EffectEngineEvent, EffectRuntimeState } from "./effects/effects.models";
 
 export type PuzzleVariant = "persistent" | "loader";
+export type PuzzleDifficulty = "EASY" | "NORMAL" | "HARD" | "EXPERT";
 export type RotationDirection = "CW" | "CCW";
 export type PuzzleAction = { type: "ROTATE"; direction: RotationDirection; steps: number } | { type: "IMPULSE" } | { type: "UNDO" } | { type: "RESTART" };
 
@@ -15,7 +16,8 @@ export const migrateLegacyPuzzleOperator = (operator: LegacyPuzzleOperator): Puz
 
 export type OperationRejectedReason = "NO_OPERATOR" | "TARGET_ALREADY_RESOLVED" | "DIVIDE_BY_TWO_CONSUMED" | "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" | "DIVIDE_BY_THREE_CONSUMED" | "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" | "SPECIAL_OPERATOR_CONSUMED" | "RESULT_OUT_OF_RANGE" | "COLOR_MISMATCH";
 export interface PuzzleNumberRange { min: number; max: number; policy: "reject"; }
-export const DEFAULT_PUZZLE_NUMBER_RANGE: PuzzleNumberRange = { min: -20, max: 20, policy: "reject" };
+/** One shared bound for every mode and every generated level. */
+export const DEFAULT_PUZZLE_NUMBER_RANGE: PuzzleNumberRange = { min: -256, max: 256, policy: "reject" };
 export interface OperationAttemptResult { outerIndex: number; operator: PuzzleOperator | null; valid: boolean; previousValue: number; nextValue: number; rejectedReason?: OperationRejectedReason; resourceConsumed: boolean; events: readonly ("OperationApplied" | "SpecialResourceConsumed" | "TargetReachedZero" | "OperationRejected")[]; }
 
 export interface PuzzleSlotSolution { startValue: number; operators: PuzzleOperator[]; }
@@ -49,7 +51,7 @@ export interface AdventureGameConfig {
 export type TargetVisualState = "ACTIVE" | "OFF";
 export interface GameplayEvent { type: "OperationApplied" | "TargetReachedZero" | "TargetDeactivated"; targetId: number; impulse: number; }
 
-export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; targetColors?: readonly ColorId[]; operatorColors?: readonly ColorId[]; targetModifiers?: Readonly<Record<number, readonly TargetModifier[]>>; numberRange?: PuzzleNumberRange; activeFlowCount?: number; generation?: PuzzleGenerationMetadata; slotPhases: PuzzleSlot[][]; optimalCost?: PuzzleCost; /** Score threshold calculated after effects are applied; leaves timing/solver cost unchanged. */ starCost?: PuzzleCost; tutorial?: string; solution?: PuzzleSlotSolution[]; solutionMoves?: PuzzleSolutionMove[]; /** Optional future effects; absent or disabled means unchanged gameplay. */ effectConfiguration?: LevelEffectConfiguration; }
+export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; targetColors?: readonly ColorId[]; operatorColors?: readonly ColorId[]; targetModifiers?: Readonly<Record<number, readonly TargetModifier[]>>; activeFlowCount?: number; generation?: PuzzleGenerationMetadata; slotPhases: PuzzleSlot[][]; optimalCost?: PuzzleCost; /** Score threshold calculated after effects are applied; leaves timing/solver cost unchanged. */ starCost?: PuzzleCost; tutorial?: string; solution?: PuzzleSlotSolution[]; solutionMoves?: PuzzleSolutionMove[]; /** Optional future effects; absent or disabled means unchanged gameplay. */ effectConfiguration?: LevelEffectConfiguration; }
 export interface PersistentLevelDefinition extends BaseLevelDefinition { variant: "persistent"; innerValues: PuzzleOperator[]; /** Present on authored Adventure levels; optional for isolated legacy fixtures. */ adventure?: AdventureGameConfig; }
 export interface LoaderLevelDefinition extends BaseLevelDefinition { variant: "loader"; queues: PuzzleOperator[][]; }
 export type LevelDefinition = PersistentLevelDefinition | LoaderLevelDefinition;

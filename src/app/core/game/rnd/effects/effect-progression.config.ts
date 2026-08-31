@@ -1,4 +1,4 @@
-import { PuzzleDifficulty } from "../difficulty-profile.config";
+import { PuzzleDifficulty } from "../puzzle.types";
 import { EffectScope, LinkDirection } from "./effects.models";
 import { LevelEffectConfiguration } from "./level-effects.types";
 import {

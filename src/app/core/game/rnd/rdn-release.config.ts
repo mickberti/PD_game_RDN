@@ -1,5 +1,4 @@
-import { PuzzleDifficulty } from "./difficulty-profile.config";
-import { PuzzleVariant } from "./puzzle.types";
+import { PuzzleDifficulty, PuzzleVariant } from "./puzzle.types";
 
 /** Versions stamped into generated boards and aggregate events, never player data. */
 export const RDN_RELEASE = {

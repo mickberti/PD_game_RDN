@@ -1,5 +1,5 @@
 import { PuzzleEngine } from "./puzzle.engine";
-import { PuzzleDifficulty } from "./difficulty-profile.config";
+import { PuzzleDifficulty } from "./puzzle.types";
 import { generateRdnPuzzle } from "./levels.config";
 import { RDN_RELEASE } from "./rdn-release.config";
 

@@ -1,9 +1,8 @@
 import { Injectable, computed, signal } from "@angular/core";
 import { PuzzleEngine } from "../../game/rnd/puzzle.engine";
 import { generateRdnPuzzle, getRdnLevel } from "../../game/rnd/levels.config";
-import { PuzzleDifficulty } from "../../game/rnd/difficulty-profile.config";
 import { FreeEffectSelections } from "../../game/rnd/effects/effect-progression.config";
-import { ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
+import { DEFAULT_PUZZLE_NUMBER_RANGE, ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleDifficulty, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
 interface AdventureRunSave {
@@ -139,15 +138,15 @@ export class RdnPuzzleService {
   canInvertActiveTarget(): boolean { return this.activeTargetIndex() !== undefined; }
   canDoubleActiveTarget(): boolean {
     const target = this.activeTargetIndex(); if (target === undefined) return false;
-    const range = this.level().numberRange; const value = this.state().outerValues[target] * 2;
-    return !range || (value >= range.min && value <= range.max);
+    const value = this.state().outerValues[target] * 2;
+    return value >= DEFAULT_PUZZLE_NUMBER_RANGE.min && value <= DEFAULT_PUZZLE_NUMBER_RANGE.max;
   }
   canSkipCurrentFlow(): boolean { const level = this.level(); return level.slotPhases.length > 1 && this.engine.flows(level, this.state()).some((flow) => flow.active); }
   private activeTargetIndex(): number | undefined { return this.engine.flows(this.level(), this.state()).find((flow) => flow.interactable)?.targetId; }
   private transformActiveTarget(transform: (value: number) => number): boolean {
     const state = this.state(); const target = this.activeTargetIndex(); if (target === undefined) return false;
-    const value = transform(state.outerValues[target]); const range = this.level().numberRange;
-    if ((range && (value < range.min || value > range.max)) || value === 0) return false;
+    const value = transform(state.outerValues[target]);
+    if (value < DEFAULT_PUZZLE_NUMBER_RANGE.min || value > DEFAULT_PUZZLE_NUMBER_RANGE.max || value === 0) return false;
     this.state.set({ ...state, outerValues: state.outerValues.map((item, index) => index === target ? value : item) });
     return true;
   }

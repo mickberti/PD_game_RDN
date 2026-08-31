@@ -5,7 +5,7 @@ import { atlasData as gameActionAtlas } from "../../../../assets/game/fantasy_bg
 import { atlasData as effectAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-effect-set1";
 import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-gem-set1";
 import { atlasData as uiIconAtlas } from "../../../../assets/ui/fantasy_bg/atlas/atlas-icons-set1";
-import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
+import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, getRdnGemSlotOffset, getRdnThemeDecorationCalibration, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
 import { LevelEffectConfigResolver } from "../rnd/effects/level-effect-config.resolver";
 import { EffectEngineEvent, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../rnd/effects/effects.models";
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
@@ -14,11 +14,10 @@ import { EffectTutorialDefinition } from "../rnd/effects/effect-tutorial.config"
 import { effectAssetFrame, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "../rnd/effects/effect-presentation.config";
 
 export interface RdnHudAction { icon: string; charges: number; disabled: boolean; }
-export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
+export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
 export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; info(): void; closeInfo(): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value);
 const VISUAL_SET_COUNT = 3;
-const BASE_SET_BY_VARIANT = { persistent: 1, loader: 2 } as const;
 const format = (value: number | null): string => value === null ? "—" : value > 0 ? `+${value}` : String(value);
 const GEM_THEME_CONFIG = {
   1: { frame: "gem-sphere-green", tint: 0xffffff },
@@ -38,6 +37,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   private wheelCenter = { x: 0, y: 0, radius: 0 };
   private wheel?: Phaser.GameObjects.Container;
   private layout: RdnBoardLayout = getRdnBoardLayout(6);
+  private gearThemeAngleOffset = 0;
   /** Unwrapped rotation used by tweens; Phaser's `angle` property itself wraps at +/-180°. */
   private visualAngle = 0;
   private trailFlows: Array<{ progress: number }> = [];
@@ -74,6 +74,8 @@ export class RdnPhaserScene extends Phaser.Scene {
   private readonly revealedYellowPreviewKeys = new Set<string>();
   /** Active flow gets the same calm first appearance as its secondary preview. */
   private readonly revealedActiveFlowKeys = new Set<string>();
+  /** Fade-in is armed only by a successful impulse, never by a wheel rotation. */
+  private fadeFlowsAfterImpulse = false;
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
@@ -137,7 +139,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.lastHudImpulseCount = model.state.impulses;
   }
   render(): void {
-    if (!this.model) return; const { width, height } = this.scale; const m = this.model; const cx = width / 2; const cy = height * .49; const outerR = Math.min(width * RDN_PHASER_VISUAL_CONFIG.boardWidthRadiusRatio, height * RDN_PHASER_VISUAL_CONFIG.boardHeightRadiusRatio); const visualSet = this.visualSet(m.level); this.layout = getRdnBoardLayout(m.level.positions); const layout = this.layout; const wheelR = outerR * layout.gear.diameter / 2; const ringX = cx + outerR * layout.ring.offsetX; const ringY = cy + outerR * layout.ring.offsetY; const gearX = cx + outerR * layout.gear.offsetX; const gearY = cy + outerR * layout.gear.offsetY;
+    if (!this.model) return; const { width, height } = this.scale; const m = this.model; const cx = width / 2; const cy = height * .49; const outerR = Math.min(width * RDN_PHASER_VISUAL_CONFIG.boardWidthRadiusRatio, height * RDN_PHASER_VISUAL_CONFIG.boardHeightRadiusRatio); const visualSet = this.visualSet(m); this.layout = getRdnBoardLayout(m.level.positions); const layout = this.layout; const themeDecoration = getRdnThemeDecorationCalibration(layout.positions, visualSet); this.gearThemeAngleOffset = themeDecoration.gear.angleOffset; const wheelR = outerR * (layout.gear.diameter + themeDecoration.gear.diameterOffset) / 2; const ringX = cx + outerR * (layout.ring.offsetX + themeDecoration.ring.offsetX); const ringY = cy + outerR * (layout.ring.offsetY + themeDecoration.ring.offsetY); const gearX = cx + outerR * (layout.gear.offsetX + themeDecoration.gear.offsetX); const gearY = cy + outerR * (layout.gear.offsetY + themeDecoration.gear.offsetY);
     for (const flow of this.trailFlows) this.tweens.killTweensOf(flow);
     this.trailFlows = [];
     for (const effect of this.trailEffects) this.tweens.killTweensOf(effect);
@@ -161,11 +163,11 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.label(cx + hudWidth * .12, 46 + hudOffsetY, "IMPULSI", 10, 0xf3d27c); this.label(cx + hudWidth * .12, 73 + hudOffsetY, String(m.state.impulses), 27, 0xf3d27c);
     this.label(cx + hudWidth * .29, 46 + hudOffsetY, "ROT.", 10, 0xf3d27c); this.label(cx + hudWidth * .29, 73 + hudOffsetY, String(m.state.rotationSteps), 27, 0xf3d27c);
     this.starProgressHud(hudLeft + 88, 111 + hudOffsetY, m);
-    this.button(hudLeft + hudWidth - 38, 48 + hudOffsetY, "↻", () => this.actions.restart()); const info = this.add.circle(cx, 48 + hudOffsetY, 27, 0x183e28).setInteractive(); info.on("pointerdown", () => this.actions.info()); this.add.image(cx, 48 + hudOffsetY, "rdn-ui-icons", "icon-info").setDisplaySize(48, 48).setDepth(1);
-    this.addDecor(ringX, ringY, outerR * layout.ring.diameter, rdnRingTextureKey(layout, visualSet), layout.ring.angle, layout.ring.widthScale, layout.ring.heightScale); this.drawConnections(ringX, ringY, gearX, gearY, outerR, m);
+    this.button(hudLeft + hudWidth - 38, 48 + hudOffsetY, "↻", () => this.actions.restart()); const info = this.add.circle(cx, 48 + hudOffsetY, 27, 0x183e28).setInteractive(); info.on("pointerup", () => this.actions.info()); this.add.image(cx, 48 + hudOffsetY, "rdn-ui-icons", "icon-info").setDisplaySize(48, 48).setDepth(1);
+    this.addDecor(ringX, ringY, outerR * (layout.ring.diameter + themeDecoration.ring.diameterOffset), rdnRingTextureKey(layout, visualSet), layout.ring.angle + themeDecoration.ring.angleOffset, layout.ring.widthScale * themeDecoration.ring.widthScaleMultiplier, layout.ring.heightScale * themeDecoration.ring.heightScaleMultiplier); this.drawConnections(ringX, ringY, gearX, gearY, outerR, m, this.fadeFlowsAfterImpulse); this.fadeFlowsAfterImpulse = false;
     const effectGemPositions = new Map<string, EffectGemPosition>();
     const numeralConfig = RDN_GEM_NUMERAL_CONFIG[layout.positions];
-    for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, index, m.level.positions, layout.outerSlots.angleOffset); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); const sphere = this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet, outerR * numeralConfig.outerFontSizeRatio, numeralConfig.reservedWidthRatio); sphere.gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, index)); this.outerSlots.set(index, sphere); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
+    for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.outerSlotPoint(ringX, ringY, outerR, index, m.level.positions, layout.outerSlots.angleOffset, visualSet); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); const sphere = this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet, outerR * numeralConfig.outerFontSizeRatio, numeralConfig.reservedWidthRatio); sphere.gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, index)); this.outerSlots.set(index, sphere); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
     const resolvedEffects = this.effectResolver.resolve(m.level.effectConfiguration, m.level.positions).effects;
     if (resolvedEffects.length) {
       this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY), (effectId) => this.actions.linkInfo(effectId));
@@ -181,12 +183,12 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (m.state.impulses === 0) { this.lastZeroBurstKey = ""; this.lastOperationFloatKey = ""; this.skipOperationFloatKey = ""; this.lastEffectVisualKey = ""; this.operationFloatStartedAt = 0; }
     const burstKey = `${m.level.id}-${m.state.impulses}`;
     if (m.state.impulses > 0 && burstKey !== this.lastZeroBurstKey) {
-      for (const result of m.state.lastImpulseResults) if (result.result === 0) { const point = this.point(ringX, ringY, outerR * layout.outerSlots.radius, result.outerIndex, m.level.positions, layout.outerSlots.angleOffset); this.zeroBurst(point.x, point.y, outerR * layout.outerSlots.sphereRadius); }
+      for (const result of m.state.lastImpulseResults) if (result.result === 0) { const point = this.outerSlotPoint(ringX, ringY, outerR, result.outerIndex, m.level.positions, layout.outerSlots.angleOffset, visualSet); this.zeroBurst(point.x, point.y, outerR * layout.outerSlots.sphereRadius); }
       this.lastZeroBurstKey = burstKey;
     }
-    this.wheelCenter = { x: gearX, y: gearY, radius: wheelR }; this.wheel = this.add.container(gearX, gearY); this.wheel.add(this.addGear(outerR * layout.gear.diameter, rdnGearTextureKey(layout, visualSet)));
+    this.wheelCenter = { x: gearX, y: gearY, radius: wheelR }; this.wheel = this.add.container(gearX, gearY); this.wheel.add(this.addGear(wheelR * 2, rdnGearTextureKey(layout, visualSet)));
     const blockedSources = new Set(m.flows.filter((flow) => flow.active && !flow.interactable).map((flow) => flow.sourceId));
-    for (let index = 0; index < m.level.positions; index += 1) { const point = this.point(0, 0, wheelR * layout.innerSlots.radius, index, m.level.positions, layout.innerSlots.angleOffset); const innerIndex = index; const queue = m.level.variant === "loader" ? m.queueStates[innerIndex] : undefined; const rawValue = m.level.variant === "persistent" ? m.level.innerValues[innerIndex] : queue?.current ?? null; const consumed = typeof rawValue === "string" && m.state.consumedSpecialOperatorIndexes.includes(innerIndex); const exhausted = queue?.exhausted ?? false; const value = consumed || exhausted ? null : rawValue; const sphereRadius = outerR * layout.innerSlots.sphereRadius; const blocked = blockedSources.has(innerIndex); const deactivated = blocked || consumed || exhausted; const specialIcon = deactivated ? undefined : this.gearSpecialIcon(value); const gem = specialIcon ? this.add.image(gearX + point.x, gearY + point.y, specialIcon.texture, specialIcon.frame).setDisplaySize(sphereRadius * 2.18, sphereRadius * 2.18).setDepth(4) : this.gem(gearX + point.x, gearY + point.y, sphereRadius, index, visualSet, deactivated, typeof rawValue === "string").setDepth(4); gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, innerIndex, "gear")); const text = this.sphereLabel(gearX + point.x, gearY + point.y, specialIcon ? "" : consumed || exhausted ? "" : formatOperator(value), sphereRadius, deactivated ? 0xd8d8d8 : 0xffffff, outerR * numeralConfig.innerFontSizeRatio, numeralConfig.reservedWidthRatio).setDepth(5); const badge = queue ? this.queueBadge(gearX + point.x + sphereRadius * .72, gearY + point.y + sphereRadius * .72, queue.remainingCount, exhausted) : undefined; this.innerSlots.push({ sphere: gem, text, badge, localX: point.x, localY: point.y }); }
+    for (let index = 0; index < m.level.positions; index += 1) { const point = this.innerSlotPoint(0, 0, wheelR, index, m.level.positions, layout.innerSlots.angleOffset, visualSet); const innerIndex = index; const queue = m.level.variant === "loader" ? m.queueStates[innerIndex] : undefined; const rawValue = m.level.variant === "persistent" ? m.level.innerValues[innerIndex] : queue?.current ?? null; const consumed = typeof rawValue === "string" && m.state.consumedSpecialOperatorIndexes.includes(innerIndex); const exhausted = queue?.exhausted ?? false; const value = consumed || exhausted ? null : rawValue; const sphereRadius = outerR * layout.innerSlots.sphereRadius; const blocked = blockedSources.has(innerIndex); const deactivated = blocked || consumed || exhausted; const specialIcon = deactivated ? undefined : this.gearSpecialIcon(value); const gem = specialIcon ? this.add.image(gearX + point.x, gearY + point.y, specialIcon.texture, specialIcon.frame).setDisplaySize(sphereRadius * 2.18, sphereRadius * 2.18).setDepth(4) : this.gem(gearX + point.x, gearY + point.y, sphereRadius, index, visualSet, deactivated, typeof rawValue === "string").setDepth(4); gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, innerIndex, "gear")); const text = this.sphereLabel(gearX + point.x, gearY + point.y, specialIcon ? "" : consumed || exhausted ? "" : formatOperator(value), sphereRadius, deactivated ? 0xd8d8d8 : 0xffffff, outerR * numeralConfig.innerFontSizeRatio, numeralConfig.reservedWidthRatio).setDepth(5); const badge = queue ? this.queueBadge(gearX + point.x + sphereRadius * .72, gearY + point.y + sphereRadius * .72, queue.remainingCount, exhausted) : undefined; this.innerSlots.push({ sphere: gem, text, badge, localX: point.x, localY: point.y }); }
     const impulse = this.add.circle(gearX, gearY, wheelR * layout.impulse.radius, 0x2b6240).setStrokeStyle(5, 0xd6b75d).setDepth(2).setInteractive();
     impulse.on("pointerdown", () => this.fireImpulse(impulse));
     const impulseIcon = this.actionIcon(gearX, gearY, wheelR * layout.impulse.iconSize, "action-holy-star", 3);
@@ -208,7 +210,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const operationFloatElapsed = this.time.now - this.operationFloatStartedAt;
     if (m.state.impulses > 0 && operationFloatKey !== this.skipOperationFloatKey && operationFloatElapsed < RDN_MOTION.operationFloatMs) {
       for (const result of m.state.lastOperationResults.filter((item) => item.valid)) {
-        const target = this.point(ringX, ringY, outerR * layout.outerSlots.radius, result.outerIndex, m.level.positions, layout.outerSlots.angleOffset);
+        const target = this.outerSlotPoint(ringX, ringY, outerR, result.outerIndex, m.level.positions, layout.outerSlots.angleOffset, visualSet);
         this.operationFloat(target.x, target.y, outerR * layout.outerSlots.sphereRadius, result.operator, operationFloatElapsed);
       }
     }
@@ -224,22 +226,22 @@ export class RdnPhaserScene extends Phaser.Scene {
   /** Blocks the board while keeping dismissal discoverable: tap anywhere outside the card. */
   private infoBackdrop(cx: number, cy: number, width: number, height: number): void { const backdrop = this.add.rectangle(cx, cy, width, height, 0x020907, .46).setDepth(19).setInteractive(); backdrop.on("pointerup", () => this.actions.closeInfo()); }
   private scrollInfo(delta: number): void { if (!this.model || this.model.selectedGemIndex === null || this.infoScrollMax <= 0) return; const next = Phaser.Math.Clamp(this.infoScrollOffset + delta, 0, this.infoScrollMax); if (next === this.infoScrollOffset) return; this.infoScrollOffset = next; this.render(); }
-  private setWheelAngle(angle: number): void { if (!this.wheel) return; this.visualAngle = angle; this.wheel.setAngle(((angle + this.layout.gear.angle + 180) % 360 + 360) % 360 - 180); this.keepLabelsUpright(); }
+  private setWheelAngle(angle: number): void { if (!this.wheel) return; this.visualAngle = angle; this.wheel.setAngle(((angle + this.layout.gear.angle + this.gearThemeAngleOffset + 180) % 360 + 360) % 360 - 180); this.keepLabelsUpright(); }
   /** A quiet visual cue that keeps the central action discoverable without distracting from the board. */
   private addImpulseIdlePulse(impulseIcon: Phaser.GameObjects.Image): void {
     if (globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
     this.tweens.add({ targets: impulseIcon, scaleX: impulseIcon.scaleX * 1.035, scaleY: impulseIcon.scaleY * 1.035, alpha: .92, duration: 1250, ease: "Sine.InOut", yoyo: true, repeat: -1 });
   }
   private keepLabelsUpright(): void { if (!this.wheel) return; const angle = this.wheel.rotation; const cos = Math.cos(angle); const sin = Math.sin(angle); for (const slot of this.innerSlots) { const x = this.wheel.x + slot.localX * cos - slot.localY * sin; const y = this.wheel.y + slot.localX * sin + slot.localY * cos; slot.sphere.setPosition(x, y); slot.text.setPosition(x, y).setAngle(0); slot.badge?.setPosition(x + slot.sphere.displayWidth * .33, y + slot.sphere.displayHeight * .33).setAngle(0); } }
-  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.model.showInfo || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); this.cameras.main.shake(90, .006); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
+  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.model.showInfo || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.fadeFlowsAfterImpulse = true; this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); this.cameras.main.shake(90, .006); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
   /** One-shot, multi-particle current from the impulse to every currently active gem. */
   private playImpulseDischarge(model: RdnSceneModel, plan: ImpulseResolutionPlan): number {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const { width, height } = this.scale; const layout = this.layout;
-    const outerRadius = Math.min(width * .39, height * .31); const centerX = width / 2; const centerY = height * .49;
-    const ringX = centerX + outerRadius * layout.ring.offsetX; const ringY = centerY + outerRadius * layout.ring.offsetY;
+    const outerRadius = Math.min(width * .39, height * .31); const centerX = width / 2; const centerY = height * .49; const themeDecoration = getRdnThemeDecorationCalibration(layout.positions, this.visualSet(model));
+    const ringX = centerX + outerRadius * (layout.ring.offsetX + themeDecoration.ring.offsetX); const ringY = centerY + outerRadius * (layout.ring.offsetY + themeDecoration.ring.offsetY);
     const startX = this.wheelCenter.x; const startY = this.wheelCenter.y;
     for (const flow of model.flows.filter((item) => item.interactable)) {
-      const destination = this.point(ringX, ringY, outerRadius * layout.outerSlots.radius, flow.targetId, model.level.positions, layout.outerSlots.angleOffset);
+      const destination = this.outerSlotPoint(ringX, ringY, outerRadius, flow.targetId, model.level.positions, layout.outerSlots.angleOffset, this.visualSet(model));
       this.animateImpulseDischargeSegment(startX, startY, destination.x, destination.y, 0, `target-${flow.targetId}`);
     }
     this.effectRenderer?.playImpulseDischarge(model.effectPreviewEvents);
@@ -273,7 +275,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   }
   private impulseDischargeArrival(gemId: string, delay: number): void {
     const index = Number(gemId.replace("target-", "")); const model = this.model; if (!model || !Number.isInteger(index)) return;
-    const { width, height } = this.scale; const outerRadius = Math.min(width * .39, height * .31); const point = this.point(width / 2 + outerRadius * this.layout.ring.offsetX, height * .49 + outerRadius * this.layout.ring.offsetY, outerRadius * this.layout.outerSlots.radius, index, model.level.positions, this.layout.outerSlots.angleOffset); const visual = EFFECT_PHASER_VISUAL.impulseDischarge;
+    const { width, height } = this.scale; const outerRadius = Math.min(width * .39, height * .31); const themeDecoration = getRdnThemeDecorationCalibration(this.layout.positions, this.visualSet(model)); const point = this.outerSlotPoint(width / 2 + outerRadius * (this.layout.ring.offsetX + themeDecoration.ring.offsetX), height * .49 + outerRadius * (this.layout.ring.offsetY + themeDecoration.ring.offsetY), outerRadius, index, model.level.positions, this.layout.outerSlots.angleOffset, this.visualSet(model)); const visual = EFFECT_PHASER_VISUAL.impulseDischarge;
     for (let sparkIndex = 0; sparkIndex < visual.arrivalBurstCount; sparkIndex += 1) { const angle = sparkIndex * Math.PI * 2 / visual.arrivalBurstCount + .23; const spark = this.add.circle(point.x, point.y, Math.max(1.4, visual.particleRadius * .8), visual.color, visual.particleAlpha).setDepth(visual.depth + 1); this.tweens.add({ targets: spark, x: point.x + Math.cos(angle) * visual.arrivalBurstDistance, y: point.y + Math.sin(angle) * visual.arrivalBurstDistance, alpha: 0, scale: .3, delay, duration: visual.arrivalBurstDurationMs, ease: "Cubic.Out", onComplete: () => spark.destroy() }); }
   }
   /** Values arrive with their own flow, so chained gems never wait for the first target's label. */
@@ -283,7 +285,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       if (event.type !== "FLOW_ARRIVED" || !event.gemId || !event.value) continue;
       const index = Number(event.gemId.replace("target-", "")); if (!Number.isInteger(index)) continue;
       const count = occurrences.get(event.gemId) ?? 0; occurrences.set(event.gemId, count + 1);
-      const target = this.point(ringX, ringY, outerRadius * this.layout.outerSlots.radius, index, model.level.positions, this.layout.outerSlots.angleOffset);
+      const target = this.outerSlotPoint(ringX, ringY, outerRadius, index, model.level.positions, this.layout.outerSlots.angleOffset, this.visualSet(model));
       const delay = event.generation === 0 ? visual.directDurationMs + (visual.particleCount - 1) * visual.particleStaggerMs : visual.directDurationMs + (event.generation - 1) * visual.linkGenerationDelayMs + visual.linkSegmentDurationMs + (visual.particleCount - 1) * visual.particleStaggerMs;
       this.dischargeValueFloat(target.x + (count % 2 ? 13 : -13), target.y, outerRadius * this.layout.outerSlots.sphereRadius, event.value, delay);
     }
@@ -438,23 +440,23 @@ export class RdnPhaserScene extends Phaser.Scene {
   private releaseImpact(object: Phaser.GameObjects.GameObject): void { this.tweens.killTweensOf(object); this.impactObjects.delete(object); if (object instanceof Phaser.GameObjects.Arc) { object.setVisible(false).setActive(false); this.impactParticlePool.push(object); return; } if (object.active) object.destroy(); }
   private clearImpactFeedback(): void { for (const object of this.impactObjects) { this.tweens.killTweensOf(object); if (object instanceof Phaser.GameObjects.Arc) object.destroy(); else if (object.active) object.destroy(); } this.impactObjects.clear(); this.impactParticlePool.forEach((object) => object.destroy()); this.impactParticlePool = []; this.impactSlots.clear(); }
   private triggerImpactHaptic(zero: boolean): void { const haptics = EFFECT_PHASER_VISUAL.impactFeedback.haptics; const vibrate = typeof navigator === "undefined" ? undefined : navigator.vibrate; if (!haptics.enabled || typeof vibrate !== "function") return; try { vibrate.call(navigator, zero ? haptics.zeroMs : haptics.normalMs); } catch { /* Haptics are optional and must never disrupt gameplay. */ } }
-  private drawConnections(ringX: number, ringY: number, sourceX: number, sourceY: number, radius: number, model: RdnSceneModel): void {
+  private drawConnections(ringX: number, ringY: number, sourceX: number, sourceY: number, radius: number, model: RdnSceneModel, fadeInAfterImpulse: boolean): void {
     const currentTargets = new Set(model.flows.map((flow) => flow.targetId));
     // The yellow path is a topology preview, not a validity hint: it remains visible
     // even when the next operation will become blocked (for example a spent DIV2).
     // Draw it first so the active green flow always remains the visual priority.
     for (const preview of model.nextPreviews) if (!currentTargets.has(preview.slot.outerIndex)) {
-      const key = `${model.level.id}:${model.state.rotationTurns}:${preview.innerIndex}:${preview.slot.outerIndex}`;
+      const key = `${model.level.id}:${model.state.impulses}:${preview.innerIndex}:${preview.slot.outerIndex}`;
       const firstAppearance = !this.revealedYellowPreviewKeys.has(key);
       this.revealedYellowPreviewKeys.add(key);
-      this.drawTrail(ringX, ringY, sourceX, sourceY, radius, preview.slot.outerIndex, model.level.positions, EFFECT_PHASER_VISUAL.yellowFlows, true, firstAppearance ? EFFECT_PHASER_VISUAL.yellowFlows.initialAppearanceFadeInMs : 0);
+      this.drawTrail(ringX, ringY, sourceX, sourceY, radius, preview.slot.outerIndex, model.level.positions, EFFECT_PHASER_VISUAL.yellowFlows, true, fadeInAfterImpulse && firstAppearance ? EFFECT_PHASER_VISUAL.yellowFlows.initialAppearanceFadeInMs : 0);
     }
     for (const flow of model.flows) {
       if (flow.interactable) {
-        const key = `${model.level.id}:${model.state.rotationTurns}:${flow.sourceId}:${flow.targetId}`;
+        const key = `${model.level.id}:${model.state.impulses}:${flow.sourceId}:${flow.targetId}`;
         const firstAppearance = !this.revealedActiveFlowKeys.has(key);
         this.revealedActiveFlowKeys.add(key);
-        this.drawTrail(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions, EFFECT_PHASER_VISUAL.activeFlows, true, firstAppearance ? EFFECT_PHASER_VISUAL.activeFlows.initialAppearanceFadeInMs : 0);
+        this.drawTrail(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions, EFFECT_PHASER_VISUAL.activeFlows, true, fadeInAfterImpulse && firstAppearance ? EFFECT_PHASER_VISUAL.activeFlows.initialAppearanceFadeInMs : 0);
       }
       else {
         this.drawTrail(ringX, ringY, sourceX, sourceY, radius, flow.targetId, model.level.positions, EFFECT_PHASER_VISUAL.blockedFlows, false);
@@ -462,16 +464,17 @@ export class RdnPhaserScene extends Phaser.Scene {
       }
     }
   }
-  /** A blocked move remains readable: green up to the gear, gray from there to the target. */
+  /** A blocked move remains readable: green up to the gear, red from there to the target. */
   private drawBlockedGearSegment(ringX: number, ringY: number, sourceX: number, sourceY: number, radius: number, outerIndex: number, total: number): void {
     const config = this.layout.trail;
-    const point = this.point(ringX, ringY, radius * this.layout.outerSlots.radius, outerIndex, total, this.layout.outerSlots.angleOffset);
+    const point = this.outerSlotPoint(ringX, ringY, radius, outerIndex, total, this.layout.outerSlots.angleOffset, this.model ? this.visualSet(this.model) : 1);
     const angle = Math.atan2(point.y - sourceY, point.x - sourceX);
     const startX = sourceX + Math.cos(angle) * radius * config.startRadius;
     const startY = sourceY + Math.sin(angle) * radius * config.startRadius;
-    // This is the edge of the rotating gear, immediately before the outgoing gray conduit.
-    const endX = sourceX + Math.cos(angle) * radius * this.layout.gear.diameter * .34;
-    const endY = sourceY + Math.sin(angle) * radius * this.layout.gear.diameter * .34;
+    // This is the edge of the rotating gear, immediately before the outgoing red conduit.
+    const gearDiameter = this.layout.gear.diameter + getRdnThemeDecorationCalibration(this.layout.positions, this.model ? this.visualSet(this.model) : 1).gear.diameterOffset;
+    const endX = sourceX + Math.cos(angle) * radius * gearDiameter * .34;
+    const endY = sourceY + Math.sin(angle) * radius * gearDiameter * .34;
     const graphics = this.add.graphics().setDepth(2);
     const active = EFFECT_PHASER_VISUAL.activeFlows;
     const glow = this.add.graphics().setDepth(2);
@@ -488,7 +491,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   /** A curved conduit from the impulse core that coils once around the target sphere. */
   private drawTrail(ringX: number, ringY: number, sourceX: number, sourceY: number, radius: number, outerIndex: number, total: number, flowVisual: typeof EFFECT_PHASER_VISUAL.activeFlows | typeof EFFECT_PHASER_VISUAL.yellowFlows | typeof EFFECT_PHASER_VISUAL.blockedFlows, animate = true, appearanceFadeInMs = 0): void {
     const { color, alpha, widthMultiplier } = flowVisual;
-    const config = this.layout.trail; const point = this.point(ringX, ringY, radius * this.layout.outerSlots.radius, outerIndex, total, this.layout.outerSlots.angleOffset); const angle = Math.atan2(point.y - sourceY, point.x - sourceX); const unitX = Math.cos(angle); const unitY = Math.sin(angle);
+    const config = this.layout.trail; const point = this.outerSlotPoint(ringX, ringY, radius, outerIndex, total, this.layout.outerSlots.angleOffset, this.model ? this.visualSet(this.model) : 1); const angle = Math.atan2(point.y - sourceY, point.x - sourceX); const unitX = Math.cos(angle); const unitY = Math.sin(angle);
     const startX = sourceX + unitX * radius * config.startRadius; const startY = sourceY + unitY * radius * config.startRadius; const sphereRadius = radius * config.sphereRadius; const endX = point.x - unitX * sphereRadius; const endY = point.y - unitY * sphereRadius;
     const trace = (width: number, opacity: number): Phaser.GameObjects.Graphics => { const graphics = this.add.graphics().setDepth(1); graphics.lineStyle(width, color, opacity); graphics.lineBetween(startX, startY, endX, endY); graphics.strokeCircle(point.x, point.y, sphereRadius); return graphics; };
     const pulseGlowAlpha = animate && "glowInitialAlpha" in flowVisual ? flowVisual.glowInitialAlpha : .58;
@@ -513,12 +516,15 @@ export class RdnPhaserScene extends Phaser.Scene {
       particle.setPosition(x, y).setScale(flowVisual.particleMinScale + intensity * flowVisual.particleScaleRange).setAlpha(intensity * flowVisual.alpha);
     } });
   }
-  /** Adventure uses set 1 and Time Attack set 2; later hundreds rotate through the remaining themes. */
-  private visualSet(level: LevelDefinition): number { const baseSet = BASE_SET_BY_VARIANT[level.variant]; const levelNumber = Math.max(1, level.number); return ((baseSet - 1 + Math.floor((levelNumber - 1) / 100)) % VISUAL_SET_COUNT) + 1; }
+  /** Fixed visual identity: Adventure = set 1, Time Attack = set 2, Free = set 3. */
+  private visualSet(model: RdnSceneModel): 1 | 2 | 3 { return model.freeSettings?.theme ?? (model.level.variant === "loader" ? 2 : 1); }
   private addBackground(x: number, y: number, width: number, height: number, key: string): void { const background = this.add.image(x, y, key); const scale = RDN_PHASER_VISUAL_CONFIG.backgroundScalePercent / 100; background.setDisplaySize(width * scale, height * scale).setDepth(-4); }
   private addDecor(x: number, y: number, diameter: number, key: string, angle: number, widthScale = 1, heightScale = 1): void { const ring = this.add.image(x, y, key); const baseScale = diameter / Math.max(ring.width, ring.height); ring.setScale(baseScale * widthScale, baseScale * heightScale).setAngle(angle); }
   private addGear(diameter: number, key: string): Phaser.GameObjects.Image { const gear = this.add.image(0, 0, key); return gear.setScale(diameter / Math.max(gear.width, gear.height)); }
   private gearSpecialIcon(operator: PuzzleOperator | null): { texture: string; frame: string } | undefined { return operator === "zero" ? { texture: "rdn-actions", frame: "action-lightning" } : operator === "invert" ? { texture: "rdn-effects", frame: "effect-inverter" } : operator === "skip" ? { texture: "rdn-actions", frame: "action-speed" } : undefined; }
+  private outerSlotPoint(cx: number, cy: number, boardRadius: number, index: number, total: number, angleOffset: number, visualSet: number): { x: number; y: number } { return this.calibratedSlotPoint(cx, cy, boardRadius, this.layout.outerSlots.radius, index, total, angleOffset, visualSet, "outerSlots"); }
+  private innerSlotPoint(cx: number, cy: number, gearRadius: number, index: number, total: number, angleOffset: number, visualSet: number): { x: number; y: number } { return this.calibratedSlotPoint(cx, cy, gearRadius, this.layout.innerSlots.radius, index, total, angleOffset, visualSet, "innerSlots"); }
+  private calibratedSlotPoint(cx: number, cy: number, parentRadius: number, baseRadius: number, index: number, total: number, angleOffset: number, visualSet: number, group: "outerSlots" | "innerSlots"): { x: number; y: number } { const offset = getRdnGemSlotOffset(this.layout.positions, visualSet, group, index); return this.point(cx, cy, parentRadius * (baseRadius + offset.radialOffset), index, total, angleOffset + offset.angularOffset); }
   private point(cx: number, cy: number, radius: number, index: number, total: number, angleOffset = 0): { x: number; y: number } { const a = -Math.PI / 2 + angleOffset * Math.PI / 180 + index * Math.PI * 2 / total; return { x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius }; }
   private gem(x: number, y: number, radius: number, _index: number, visualSet: number, off: boolean, special = false): Phaser.GameObjects.Image { const theme = GEM_THEME_CONFIG[visualSet as 1 | 2 | 3]; const frame = special ? "gem-sphere-purple" : theme.frame; const gem = this.add.image(x, y, "rdn-gems", frame).setDisplaySize(radius * 2.18, radius * 2.18); return off ? gem.setTint(0x858585).setAlpha(.78) : gem.setTint(theme.tint); }
   private sphere(x: number, y: number, radius: number, value: number, off: boolean, index: number, visualSet: number, fontSize: number, reservedWidthRatio: number): { gem: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text } { const gem = this.gem(x, y, radius, index, visualSet, off).setDepth(6); const text = this.sphereLabel(x, y, off ? "0" : format(value), radius, off ? 0xe6e6e6 : 0xffffff, fontSize, reservedWidthRatio).setDepth(7); return { gem, text }; }
@@ -540,8 +546,8 @@ export class RdnPhaserScene extends Phaser.Scene {
     const ratio = Math.max(0, Math.min(1, model.timeRemainingMs / (model.timeTotalSeconds * 1000)));
     const color = ratio > .5 ? 0x63e586 : ratio > .25 ? 0xf3ce55 : 0xef6b69;
     this.countdownValue.setText(this.formatTime(model.timeRemaining)).setColor(`#${color.toString(16).padStart(6, "0")}`);
-    const { width, height } = this.scale; const outerRadius = Math.min(width * RDN_PHASER_VISUAL_CONFIG.boardWidthRadiusRatio, height * RDN_PHASER_VISUAL_CONFIG.boardHeightRadiusRatio); const layout = this.layout;
-    this.drawCountdownArc(width / 2 + outerRadius * layout.ring.offsetX, height * .49 + outerRadius * layout.ring.offsetY, outerRadius * layout.ring.diameter / 2, ratio, color);
+    const { width, height } = this.scale; const outerRadius = Math.min(width * RDN_PHASER_VISUAL_CONFIG.boardWidthRadiusRatio, height * RDN_PHASER_VISUAL_CONFIG.boardHeightRadiusRatio); const layout = this.layout; const themeDecoration = getRdnThemeDecorationCalibration(layout.positions, this.visualSet(model));
+    this.drawCountdownArc(width / 2 + outerRadius * (layout.ring.offsetX + themeDecoration.ring.offsetX), height * .49 + outerRadius * (layout.ring.offsetY + themeDecoration.ring.offsetY), outerRadius * (layout.ring.diameter + themeDecoration.ring.diameterOffset) / 2, ratio, color);
   }
   private drawCountdownArc(cx: number, cy: number, radius: number, ratio: number, color: number): void {
     const graphics = this.countdownArc; if (!graphics) return;
@@ -625,7 +631,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const contentHeight = Math.max(44, effects.length * 168); this.infoScrollMax = Math.max(0, contentHeight - viewportHeight); this.infoScrollOffset = Math.min(this.infoScrollOffset, this.infoScrollMax);
     this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(342, height).setDepth(depth).setInteractive();
     const headerY = cy - height / 2 + 57; const off = model.state.targetVisualStates[index] === "OFF";
-    const headerSphere = this.sphere(cx - 112, headerY, 27, model.state.outerValues[index], off, index, this.visualSet(model.level), 44, .8);
+    const headerSphere = this.sphere(cx - 112, headerY, 27, model.state.outerValues[index], off, index, this.visualSet(model), 44, .8);
     headerSphere.gem.setDepth(depth + 2); headerSphere.text.setDepth(depth + 3);
     this.label(cx - 46, headerY - 13, `GEMMA ${index + 1}`, 18, 0x9cf5ff).setOrigin(0, .5).setDepth(depth + 2);
     this.label(cx - 46, headerY + 15, off ? "RISOLTA" : "ATTIVA", 12, off ? 0x9df3a8 : 0xffdf70).setOrigin(0, .5).setDepth(depth + 2);
@@ -656,7 +662,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.label(cx, cy - 126, "OPERATORE INGRANAGGIO", 16, 0x9cf5ff).setDepth(depth + 2);
     if (specialIcon) this.add.image(cx - 112, cy - 76, specialIcon.texture, specialIcon.frame).setDisplaySize(54, 54).setTint(presentation.color).setDepth(depth + 2);
     else {
-      const gem = this.gem(cx - 112, cy - 76, 27, index, this.visualSet(model.level), operator === null, special).setDepth(depth + 2);
+      const gem = this.gem(cx - 112, cy - 76, 27, index, this.visualSet(model), operator === null, special).setDepth(depth + 2);
       this.sphereLabel(cx - 112, cy - 76, formatOperator(operator), 27, special ? 0xffffff : 0xe6dfc3, 31, .76).setDepth(depth + 3);
       gem.setDepth(depth + 2);
     }
