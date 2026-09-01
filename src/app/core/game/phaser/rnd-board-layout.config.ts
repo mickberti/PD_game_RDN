@@ -123,10 +123,10 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
     1: {
       outerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 2.8, radialOffset: 0 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
-        { angularOffset: -2.8, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 2.8, radialOffset: 0.01 }, // Gemma 2
+        { angularOffset: -2, radialOffset: 0.03 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 5
       ],
       innerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
@@ -139,33 +139,33 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
     2: {
       outerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 1, radialOffset: 0 }, // Gemma 2
-        { angularOffset: -8, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 8, radialOffset: 0 }, // Gemma 4
-        { angularOffset: -1, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 3, radialOffset: 0.03 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 3
+        { angularOffset: 2, radialOffset: 0.03 }, // Gemma 4
+        { angularOffset: -1, radialOffset: 0.03 }, // Gemma 5
       ],
       innerSlots: [
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 1
+        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 2
+        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 3
+        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 4
+        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 5
       ],
     },
     3: {
       outerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 8, radialOffset: 0 }, // Gemma 2
-        { angularOffset: -2, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 2, radialOffset: 0 }, // Gemma 4
-        { angularOffset: -8, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 3
+        { angularOffset: 4, radialOffset: 0.03 }, // Gemma 4
+        { angularOffset: -1, radialOffset: 0.03 }, // Gemma 5
       ],
       innerSlots: [
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 2.5, radialOffset: 0.05 }, // Gemma 4
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0.01 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 3
+        { angularOffset: 2, radialOffset: 0.03 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 5
       ],
     }
   },
@@ -228,22 +228,22 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
   7: {
     1: {
       outerSlots: [
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: -0.05 }, // Gemma 1
+        { angularOffset: 6, radialOffset: -0.02 }, // Gemma 2
+        { angularOffset: 9, radialOffset: -0.05 }, // Gemma 3
+        { angularOffset: 4, radialOffset: -0.02 }, // Gemma 4
+        { angularOffset: -2, radialOffset: -0.01 }, // Gemma 5
+        { angularOffset: -7, radialOffset: -0.02 }, // Gemma 6
+        { angularOffset: -5, radialOffset: -0.01 }, // Gemma 7
       ],
       innerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
-        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 3, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 8, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 4, radialOffset: 0 }, // Gemma 4
+        { angularOffset: -2, radialOffset: 0 }, // Gemma 5
+        { angularOffset: -4, radialOffset: 0 }, // Gemma 6
+        { angularOffset: -3, radialOffset: 0 }, // Gemma 7
       ],
     },
     2: {
@@ -369,7 +369,7 @@ export const RDN_THEME_DECORATION_CALIBRATIONS: Record<RdnBoardLayout["positions
   },
   5: {
     1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
-    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1.05, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
     3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
   },
   6: {
@@ -378,9 +378,9 @@ export const RDN_THEME_DECORATION_CALIBRATIONS: Record<RdnBoardLayout["positions
     3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
   },
   7: {
-    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
-    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
-    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 0.85, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 0.85, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 0.85, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
   },
   8: {
     1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },

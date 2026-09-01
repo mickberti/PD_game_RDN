@@ -357,6 +357,10 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (event.type === "TIMER_TICK" || event.type === "TIMER_EXPIRED" || event.type === "TIMER_COMPLETED") return "effect-timer";
     if (event.type === "CORRUPTION_APPLIED") return "effect-corruption";
     if (event.type === "BOMB_TRIGGERED" || event.type === "AREA_TRIGGERED") return "effect-area-bomb";
+    if (event.type === "AREA_ICE_TRIGGERED") return "effect-ice";
+    if (event.type === "AREA_ICE_APPLIED") return "effect-ice";
+    if (event.type === "AREA_INVERTER_TRIGGERED") return "effect-inverter";
+    if (event.type === "AREA_INVERTER_APPLIED") return "effect-inverter";
     if (event.type === "FLOW_PROPAGATED" && event.linkId && this.model) {
       const effect = this.effectResolver.resolve(this.model.level.effectConfiguration, this.model.level.positions).effects.find((item) => item.id === event.linkId);
       return effect ? effectAssetFrame(effect) : undefined;

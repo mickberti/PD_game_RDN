@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
+import { AreaEffectType, EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
 import { effectAssetFrame, isEffectVisuallyActive } from "../../rnd/effects/effect-presentation.config";
@@ -32,7 +32,7 @@ export class EffectPhaserRenderer {
         const view = new LinkEffectView(this.scene, effect, geometry, this.onLinkInfo); this.linkLayer.add(view); this.links.set(effect.id, view);
       }
       if (effect.config.scope === EffectScope.GEM && effect.target.type === EffectScope.GEM) this.drawGemEffect(effect, runtime, values);
-      if (effect.config.scope === EffectScope.AREA && effect.target.type === EffectScope.AREA) this.drawBomb(effect);
+      if (effect.config.scope === EffectScope.AREA && effect.target.type === EffectScope.AREA) this.drawAreaEffect(effect);
     }
   }
   /** Mirrors the engine's pre-impulse traversal on the static link visuals. */
@@ -61,6 +61,10 @@ export class EffectPhaserRenderer {
       case "TIMER_EXPIRED": this.flashGem(event.gemId, 0xff675d); break;
       case "CORRUPTION_APPLIED": this.pulseGem(event.gemId, 0xb35cff, 1.48); break;
       case "BOMB_TRIGGERED": this.bombBurst(event.gemId); break;
+      case "AREA_ICE_TRIGGERED": this.flashGem(event.gemId, 0x8cecff); break;
+      case "AREA_ICE_APPLIED": this.flashGem(event.gemId, 0x8cecff); break;
+      case "AREA_INVERTER_TRIGGERED": this.flashGem(event.gemId, 0xc890ff); break;
+      case "AREA_INVERTER_APPLIED": this.flashGem(event.gemId, 0xc890ff); break;
     }
   }
   /**
@@ -115,12 +119,12 @@ export class EffectPhaserRenderer {
     if (effect.config.type === GemEffectType.CORRUPTION && values[effect.target.gem.index] === 0) return;
     this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value));
   }
-  private drawBomb(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA) return; this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect), "", "bottom-right"); }
+  private drawAreaEffect(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA || effect.config.scope !== EffectScope.AREA) return; const value = effect.config.type === AreaEffectType.BOMB && effect.config.value !== undefined ? `${effect.config.value > 0 ? "+" : ""}${effect.config.value}` : ""; this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect), value, "bottom-right"); }
   private iconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
   private iconColor(effect: ResolvedEffect): number {
     if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff;
     if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff;
-    return 0xff9378;
+    return effect.config.type === AreaEffectType.ICE ? 0x8cecff : effect.config.type === AreaEffectType.INVERTER ? 0xc890ff : 0xff9378;
   }
   /** Gem effects sit top-right; area effects reserve the bottom-right corner. */
   private drawEffectMarker(gemId: string, frame: string, color: number, value = "", placement: "top-right" | "bottom-right" = "top-right"): void {

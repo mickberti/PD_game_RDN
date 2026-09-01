@@ -1,4 +1,4 @@
-import { AreaEffectType, EffectConfig, EffectScope, GemEffectType, LinkEffectType, TimerUnit } from "./effects.models";
+import { AreaEffectRange, AreaEffectType, EffectConfig, EffectScope, GemEffectType, LinkEffectType, TimerUnit } from "./effects.models";
 
 /** Central catalogue: levels only reference these stable names. */
 export const EFFECT_PRESETS = {
@@ -27,6 +27,18 @@ export const EFFECT_PRESETS = {
   INVERT_LINK: { scope: EffectScope.LINK, type: LinkEffectType.INVERT },
   BOMB_1: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, strength: 1, radius: 1 },
   BOMB_2: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, strength: 2, radius: 1 },
+  AREA_BOMB_MINUS_2: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: -2, range: AreaEffectRange.ADJACENT },
+  AREA_BOMB_PLUS_2: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: 2, range: AreaEffectRange.ADJACENT },
+  AREA_BOMB_MINUS_4: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: -4, range: AreaEffectRange.TWO_ADJACENT },
+  AREA_BOMB_PLUS_4: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: 4, range: AreaEffectRange.TWO_ADJACENT },
+  AREA_BOMB_MINUS_7: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: -7, range: AreaEffectRange.ALL },
+  AREA_BOMB_PLUS_7: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: 7, range: AreaEffectRange.ALL },
+  AREA_ICE_ADJACENT: { scope: EffectScope.AREA, type: AreaEffectType.ICE, strength: 1, range: AreaEffectRange.ADJACENT },
+  AREA_ICE_TWO_ADJACENT: { scope: EffectScope.AREA, type: AreaEffectType.ICE, strength: 1, range: AreaEffectRange.TWO_ADJACENT },
+  AREA_ICE_ALL: { scope: EffectScope.AREA, type: AreaEffectType.ICE, strength: 1, range: AreaEffectRange.ALL },
+  AREA_INVERTER_ADJACENT: { scope: EffectScope.AREA, type: AreaEffectType.INVERTER, range: AreaEffectRange.ADJACENT },
+  AREA_INVERTER_TWO_ADJACENT: { scope: EffectScope.AREA, type: AreaEffectType.INVERTER, range: AreaEffectRange.TWO_ADJACENT },
+  AREA_INVERTER_ALL: { scope: EffectScope.AREA, type: AreaEffectType.INVERTER, range: AreaEffectRange.ALL },
 } satisfies Record<string, EffectConfig>;
 
 export type EffectPresetKey = keyof typeof EFFECT_PRESETS;

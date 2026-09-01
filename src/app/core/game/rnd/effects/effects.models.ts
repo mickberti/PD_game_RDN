@@ -30,6 +30,15 @@ export enum LinkEffectType {
 
 export enum AreaEffectType {
   BOMB = "BOMB",
+  ICE = "ICE",
+  INVERTER = "INVERTER",
+}
+
+/** Targets selected around the source gem. ALL always excludes the source itself. */
+export enum AreaEffectRange {
+  ADJACENT = "ADJACENT",
+  TWO_ADJACENT = "TWO_ADJACENT",
+  ALL = "ALL",
 }
 
 export enum LinkDirection {
@@ -68,7 +77,12 @@ export interface LinkEffectConfig extends BaseEffectConfig {
 export interface AreaEffectConfig extends BaseEffectConfig {
   scope: EffectScope.AREA;
   type: AreaEffectType;
+  /** Signed value applied by a BOMB. New presets use values from -7 to -2 and +2 to +7. */
+  value?: number;
+  /** Number of hits applied by propagated ICE. */
   strength?: number;
+  range?: AreaEffectRange;
+  /** Legacy radius alias: 1 = ADJACENT, 2 = TWO_ADJACENT. */
   radius?: number;
 }
 
@@ -141,6 +155,8 @@ export interface FlowEvent {
 export interface EffectRuntimeState {
   wallRemainingStrength: Readonly<Record<string, number>>;
   iceRemainingStrength: Readonly<Record<string, number>>;
+  /** Temporary ice applied by an area effect, keyed by target gem id. */
+  areaIceRemainingStrength: Readonly<Record<string, number>>;
   shieldRemainingStrength: Readonly<Record<string, number>>;
   timerRemainingTurns: Readonly<Record<string, number>>;
   completedTimerIds: readonly string[];
@@ -148,7 +164,7 @@ export interface EffectRuntimeState {
   turn: number;
 }
 
-export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "SHIELD_ABSORBED" | "SHIELD_DEPLETED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "GEM_AMPLIFIER_APPLIED" | "GEM_INVERTER_APPLIED" | "ICE_HIT" | "ICE_BROKEN" | "TIMER_TICK" | "TIMER_EXPIRED" | "TIMER_COMPLETED" | "CORRUPTION_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "GEM_VALUE_CHANGED";
+export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "SHIELD_ABSORBED" | "SHIELD_DEPLETED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "GEM_AMPLIFIER_APPLIED" | "GEM_INVERTER_APPLIED" | "ICE_HIT" | "ICE_BROKEN" | "TIMER_TICK" | "TIMER_EXPIRED" | "TIMER_COMPLETED" | "CORRUPTION_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "AREA_ICE_TRIGGERED" | "AREA_ICE_APPLIED" | "AREA_INVERTER_TRIGGERED" | "AREA_INVERTER_APPLIED" | "GEM_VALUE_CHANGED";
 export interface EffectEngineEvent {
   type: EffectEngineEventType;
   flowId?: string;

@@ -211,7 +211,9 @@ export const RDN_GEM_EFFECT_PRESETS: Readonly<
 
 /** Pool dei preset link scelti dal generatore. */
 export const RDN_LINK_EFFECT_PRESETS: readonly EffectPresetKey[] = ["ECHO_LINK", "DOUBLE_LINK", "INVERT_LINK"];
-/** Preset area unico. Sostituirlo cambia l'effetto area per tutte le fasce che lo abilitano. */
+/** Pool area per i livelli generati: valori firmati, gelo e inversione con portate diverse. */
+export const RDN_AREA_EFFECT_PRESETS: readonly EffectPresetKey[] = ["AREA_BOMB_MINUS_2", "AREA_BOMB_PLUS_2", "AREA_BOMB_MINUS_4", "AREA_BOMB_PLUS_4", "AREA_BOMB_MINUS_7", "AREA_BOMB_PLUS_7", "AREA_ICE_ADJACENT", "AREA_ICE_TWO_ADJACENT", "AREA_ICE_ALL", "AREA_INVERTER_ADJACENT", "AREA_INVERTER_TWO_ADJACENT", "AREA_INVERTER_ALL"];
+/** CompatibilitÃ  per configurazioni esterne che usavano il preset singolo. */
 export const RDN_AREA_EFFECT_PRESET: EffectPresetKey = "BOMB_2";
 /** Regole di propagazione comuni a tutti gli effetti generati. */
 export const RDN_EFFECT_FLOW_RULES = { maxDepth: 6, allowMultipleIncomingFlows: true, combineStrategy: FlowCombineStrategy.SUM } as const;

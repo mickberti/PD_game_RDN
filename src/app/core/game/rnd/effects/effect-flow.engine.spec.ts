@@ -1,5 +1,5 @@
 import { EffectFlowEngine } from "./effect-flow.engine";
-import { AreaEffectType, EffectScope, GemEffectType, LinkDirection, LinkEffectType, ResolvedEffect } from "./effects.models";
+import { AreaEffectRange, AreaEffectType, EffectScope, GemEffectType, LinkDirection, LinkEffectType, ResolvedEffect } from "./effects.models";
 
 const gem = (id: string, index: number, type: GemEffectType, strength?: number): ResolvedEffect => ({ id, config: { scope: EffectScope.GEM, type, strength } as unknown as ResolvedEffect["config"], target: { type: EffectScope.GEM, gem: { id: `target-${index}`, index } } });
 const gemConfig = (id: string, index: number, config: ResolvedEffect["config"]): ResolvedEffect => ({ id, config, target: { type: EffectScope.GEM, gem: { id: `target-${index}`, index } } });
@@ -89,6 +89,20 @@ describe("EffectFlowEngine", () => {
     expect(result.values).toEqual([0, 3, 3, 3]);
     expect(result.events.some((event) => event.type === "BOMB_TRIGGERED")).toBeTrue();
     expect(result.events.some((event) => event.type === "AREA_TRIGGERED")).toBeTrue();
+  });
+
+  it("applies signed area values to the selected range", () => {
+    const area: ResolvedEffect = { id: "all-plus", config: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: 3, range: AreaEffectRange.ALL }, target: { type: EffectScope.AREA, sourceGem: { id: "target-0", index: 0 } } };
+    expect(resolve([2, 4, -4, 1], [area], [{ gemId: "target-0", value: -2 }]).values).toEqual([0, 7, -1, 4]);
+  });
+
+  it("propagates temporary ice and inverts every target in its configured area", () => {
+    const ice: ResolvedEffect = { id: "ice", config: { scope: EffectScope.AREA, type: AreaEffectType.ICE, strength: 1, range: AreaEffectRange.TWO_ADJACENT }, target: { type: EffectScope.AREA, sourceGem: { id: "target-0", index: 0 } } };
+    const frozen = resolve([2, 4, 5, 6, 7], [ice], [{ gemId: "target-0", value: -2 }]);
+    expect(frozen.runtime.areaIceRemainingStrength).toEqual({ "target-1": 1, "target-2": 1, "target-3": 1, "target-4": 1 });
+    expect(resolve(frozen.values as number[], [ice], [{ gemId: "target-2", value: -3 }], frozen.runtime).values[2]).toBe(5);
+    const inverter: ResolvedEffect = { id: "invert", config: { scope: EffectScope.AREA, type: AreaEffectType.INVERTER, range: AreaEffectRange.ADJACENT }, target: { type: EffectScope.AREA, sourceGem: { id: "target-0", index: 0 } } };
+    expect(resolve([2, 4, -5, 6], [inverter], [{ gemId: "target-0", value: -2 }]).values).toEqual([0, -4, -5, -6]);
   });
 
   it("combines gem and link effects", () => {

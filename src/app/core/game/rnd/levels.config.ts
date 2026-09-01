@@ -36,10 +36,18 @@ interface ValuePlan { start: number; operators: PuzzleOperator[]; }
 const specialOperatorsForLevel = (level: number, positions: number, variation = 0): PuzzleOperator[] => {
   return [...rdnSpecialOperatorsForBoard(level, positions, variation)];
 };
-const gearOperators = (positions: number, specialOperators: readonly PuzzleOperator[], next: () => number): PuzzleOperator[] => {
+const gearOperators = (positions: number, specialOperators: readonly PuzzleOperator[], next: () => number, allowDuplicateSignedValues = false): PuzzleOperator[] => {
   const subtractorCount = positions - specialOperators.length;
-  // Values are intentionally non-sequential: every gear can contain any signed 1..9.
-  const magnitudes = Array.from({ length: subtractorCount }, () => 1 + Math.floor(next() * 9));
+  // Adventure and Time Attack expose a stable gear: each signed additive value
+  // is unique. Free deliberately keeps duplicates because its gear changes per impulse.
+  const usedNegative = new Set<number>(); const usedPositive = new Set<number>();
+  const magnitudes = Array.from({ length: subtractorCount }, (_, index) => {
+    const used = index % 2 === 0 ? usedNegative : usedPositive;
+    let value = 1 + Math.floor(next() * 9);
+    if (!allowDuplicateSignedValues) while (used.has(value)) value = value % 9 + 1;
+    used.add(value);
+    return value;
+  });
   return [...magnitudes.map((value, index) => index % 2 === 0 ? -value : value), ...specialOperators];
 };
 const additiveOperators = (operators: PuzzleOperator[]): number[] => operators.filter((operator): operator is number => typeof operator === "number" && operator !== 0);
@@ -95,13 +103,13 @@ const planForValue = (impulses: number, available: number[], next: () => number,
   return subtractivePlan(impulses, available, next, maximumStart);
 };
 
-const generateBoard = (number: number, seedOffset: number, slotCount?: number, balanceQueueSigns = false): GeneratedBoard => {
+const generateBoard = (number: number, seedOffset: number, slotCount?: number, balanceQueueSigns = false, allowDuplicateSignedGearValues = false): GeneratedBoard => {
   const positions = slotCount && slotCount >= RDN_MIN_SPHERES && slotCount <= RDN_MAX_SPHERES ? slotCount as GeneratedBoard["positions"] : rdnSphereCountForLevel(number);
   const impulses = impulsesPerValue(number);
   const seed = number * 977 + seedOffset;
   const next = random(seed);
   const specialOperators = specialOperatorsForLevel(number, positions, seedOffset);
-  const innerValues = gearOperators(positions, specialOperators, next);
+  const innerValues = gearOperators(positions, specialOperators, next, allowDuplicateSignedGearValues);
   const allAdditives = additiveOperators(innerValues);
   const range = DEFAULT_PUZZLE_NUMBER_RANGE;
   const maximumStart = Math.min(Math.abs(range.min), Math.abs(range.max));
@@ -141,7 +149,11 @@ const generateBoard = (number: number, seedOffset: number, slotCount?: number, b
 };
 
 /** The tutorial deliberately exposes one target per impulse: UI flow and applied operation stay identical. */
-const tutorialBoard = (): GeneratedBoard => ({ positions: 4, initialRotation: 0, innerValues: [-1, -1, -1, -1], loaderQueues: [[-1], [-1], [-1], [-1]], outerValues: [1, 1, 1, 1], slotPhases: [[{ outerIndex: 0 }], [{ outerIndex: 1 }], [{ outerIndex: 2 }], [{ outerIndex: 3 }]], optimalCost: { impulses: 4, rotationSteps: 0 }, solution: Array.from({ length: 4 }, () => ({ startValue: 1, operators: [-1] })), solutionMoves: Array.from({ length: 4 }, (_, outerIndex) => ({ outerIndex, rotation: 0, operator: -1 })), seed: 0 });
+const tutorialBoard = (): GeneratedBoard => {
+  const operators = [-1, -2, -3, -4] as const;
+  const values = operators.map((operator) => -operator);
+  return { positions: 4, initialRotation: 0, innerValues: [...operators], loaderQueues: operators.map((operator) => [operator]), outerValues: values, slotPhases: [[{ outerIndex: 0 }], [{ outerIndex: 1 }], [{ outerIndex: 2 }], [{ outerIndex: 3 }]], optimalCost: { impulses: 4, rotationSteps: 0 }, solution: operators.map((operator, index) => ({ startValue: values[index], operators: [operator] })), solutionMoves: operators.map((operator, outerIndex) => ({ outerIndex, rotation: 0, operator })), seed: 0 };
+};
 
 const generatedMetadata = (number: number, board: GeneratedBoard, difficulty: PuzzleDifficulty = "EASY", activeFlowCount = DEFAULT_ACTIVE_FLOW_COUNT) => ({ seed: board.seed, generatorVersion: RDN_RELEASE.generatorVersion, balanceVersion: RDN_RELEASE.balanceVersion, difficulty, estimatedMinimumSolutionLength: board.optimalCost.impulses, branchingFactor: activeFlowCount, featureFlags: [] });
 const adventureConfig = (number: number, board: GeneratedBoard): AdventureGameConfig => ({
@@ -413,13 +425,40 @@ const generateRdnLevelCatalogue = (): readonly LevelDefinition[] => {
 const catalogueGenerationRequested = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.["RDN_GENERATE_CATALOGUE"] === "1";
 const useGeneratedCatalogue = !catalogueGenerationRequested && GENERATED_RDN_LEVELS.length > 0;
 
-export const RDN_LEVELS: readonly LevelDefinition[] = useGeneratedCatalogue ? GENERATED_RDN_LEVELS : generateRdnLevelCatalogue();
+/** Upgrades pre-generated persistent boards without altering their declared solution:
+ * a duplicated additive was never needed twice because the solver always selected
+ * its first matching gear slot. */
+const removeDuplicateSignedGearValues = (level: LevelDefinition): LevelDefinition => {
+  if (level.variant !== "persistent") return level;
+  const usedNegative = new Set<number>(); const usedPositive = new Set<number>();
+  const innerValues = level.innerValues.map((operator) => {
+    if (typeof operator !== "number") return operator;
+    const used = operator < 0 ? usedNegative : usedPositive;
+    const sign = operator < 0 ? -1 : 1; let magnitude = Math.abs(operator);
+    while (used.has(magnitude)) magnitude = magnitude % 9 + 1;
+    used.add(magnitude);
+    return sign * magnitude;
+  });
+  return innerValues.every((value, index) => value === level.innerValues[index]) ? level : { ...level, innerValues };
+};
+
+/** The original pre-generated tutorial used four -1 values. Upgrade it at load
+ * time so the active catalogue obeys the same uniqueness rule as new boards. */
+const upgradeLegacyTutorial = (level: LevelDefinition): LevelDefinition => {
+  if (level.number !== 1) return level;
+  const board = tutorialBoard();
+  return level.variant === "persistent"
+    ? { ...level, ...board, innerValues: board.innerValues }
+    : { ...level, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+};
+
+export const RDN_LEVELS: readonly LevelDefinition[] = (useGeneratedCatalogue ? GENERATED_RDN_LEVELS : generateRdnLevelCatalogue()).map(upgradeLegacyTutorial).map(removeDuplicateSignedGearValues);
 export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): LevelDefinition => RDN_LEVELS.find((level) => level.variant === (variant === "adventure" ? "persistent" : "loader") && level.number === number) ?? RDN_LEVELS[0];
 
 /** Seedable entry point for replay, support and future ranked runs. */
 export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: PuzzleDifficulty, seed: number, slotCount?: number, freeEffectsEnabled: boolean | import("./effects/effect-progression.config").FreeEffectSelections = false): LevelDefinition => {
   const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
-  const board = generateBoard(number, Math.trunc(seed), slotCount, true); const activeFlowCount = freeActiveFlowCount(difficulty); const generation = { ...generatedMetadata(number, board, difficulty, activeFlowCount), seed: board.seed, difficulty };
+  const board = generateBoard(number, Math.trunc(seed), slotCount, true, true); const activeFlowCount = freeActiveFlowCount(difficulty); const generation = { ...generatedMetadata(number, board, difficulty, activeFlowCount), seed: board.seed, difficulty };
   const level = variant === "adventure"
     ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
     : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };

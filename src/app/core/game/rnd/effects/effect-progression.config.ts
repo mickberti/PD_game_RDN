@@ -7,7 +7,7 @@ import {
   RDN_EFFECT_PROGRESSION_RULES,
   RDN_GEM_EFFECT_PRESETS,
   RDN_LINK_EFFECT_PRESETS,
-  RDN_AREA_EFFECT_PRESET,
+  RDN_AREA_EFFECT_PRESETS,
   RdnEffectProgressionRule,
   rdnEffectRuleForLevel,
   rdnGemEffectCountForBoard,
@@ -60,7 +60,7 @@ export const createProgressionEffectConfiguration = (mode: EffectProgressionMode
     const toGemIndex = positiveModulo(destination + index * 2, gemCount);
     effects.push({ preset: pick(RDN_LINK_EFFECT_PRESETS, key + 2 + index), target: { type: EffectScope.LINK, fromGemIndex, toGemIndex: toGemIndex === fromGemIndex ? positiveModulo(toGemIndex + 1, gemCount) : toGemIndex }, overrides: { direction: level >= 100 && (key + index) % 2 === 0 ? LinkDirection.BIDIRECTIONAL : LinkDirection.FORWARD } });
   }
-  if (tier.maxAreaEffects > 0) effects.push({ preset: RDN_AREA_EFFECT_PRESET, target: { type: EffectScope.AREA, sourceGemIndex: second } });
+  if (tier.maxAreaEffects > 0) effects.push({ preset: pick(RDN_AREA_EFFECT_PRESETS, key + 5), target: { type: EffectScope.AREA, sourceGemIndex: second } });
   return effects.length ? { enabled: true, effects, flowRules: RDN_EFFECT_FLOW_RULES } : undefined;
 };
 
