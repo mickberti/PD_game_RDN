@@ -9,8 +9,10 @@
     "build": "ng build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "rdn:catalogue": "node scripts/generate-rdn-catalogue.mjs",
+    "rdn:catalogue:migrate": "node scripts/generate-rdn-catalogue.mjs --migrate-legacy",
     "rdn:catalogue:check": "node scripts/generate-rdn-catalogue.mjs --check",
     "rdn:catalogue:activate": "node scripts/generate-rdn-catalogue.mjs --activate",
+    "rdn:catalogue:fork": "node scripts/fork-rdn-catalogue-version.mjs",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint"

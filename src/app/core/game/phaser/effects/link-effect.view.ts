@@ -1,5 +1,5 @@
 import * as Phaser from "phaser";
-import { EffectScope, LinkDirection, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
+import { EffectScope, LinkDirection, LinkEffectType, ResolvedEffect } from "./effects.models";
 import { EFFECT_PHASER_VISUAL } from "./effect-phaser-visual.config";
 
 export interface LinkEffectGeometry { from: Phaser.Math.Vector2; to: Phaser.Math.Vector2; control: Phaser.Math.Vector2; radius: number; iconProgress: number; }
@@ -14,7 +14,7 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
   private baseGraphic?: Phaser.GameObjects.Graphics;
   private direction = LinkDirection.BIDIRECTIONAL;
   private linkColor = 0xffffff;
-  constructor(scene: Phaser.Scene, readonly effect: ResolvedEffect, geometry: LinkEffectGeometry, onInfo?: (effectId: string) => void) {
+  constructor(scene: Phaser.Scene, readonly effect: ResolvedEffect, geometry: LinkEffectGeometry, onInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void) {
     super(scene); this.geometry = geometry; scene.add.existing(this); this.setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     const config = effect.config; if (config.scope !== EffectScope.LINK) return;
     const color = config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : config.type === LinkEffectType.INVERT ? 0xc890ff : 0x7edbff; this.linkColor = color;
@@ -25,8 +25,8 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     if (direction !== LinkDirection.FORWARD) this.drawArrow(graphic, this.pointAt(.07), this.tangentAt(.07).negate(), color);
     const iconPosition = this.pointAt(geometry.iconProgress); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : "effect-mirror-link";
     const background = scene.add.circle(iconPosition.x, iconPosition.y, 17, 0x101c18, .94).setStrokeStyle(2, color, 1).setInteractive({ useHandCursor: true });
-    const icon = scene.add.image(iconPosition.x, iconPosition.y - 2, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color);
-    if (onInfo) background.on("pointerdown", () => onInfo(effect.id));
+    const icon = scene.add.image(iconPosition.x, iconPosition.y - 2, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color).setInteractive({ useHandCursor: true });
+    if (onInfo) { background.on("pointerup", (pointer: Phaser.Input.Pointer) => onInfo(effect.id, pointer)); icon.on("pointerup", (pointer: Phaser.Input.Pointer) => onInfo(effect.id, pointer)); }
     this.add([graphic, background, icon]);
     if (direction !== LinkDirection.REVERSE) this.animateDirection(scene, color, true, 0);
     if (direction !== LinkDirection.FORWARD) this.animateDirection(scene, color, false, direction === LinkDirection.BIDIRECTIONAL ? 620 : 0);

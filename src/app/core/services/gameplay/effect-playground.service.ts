@@ -1,5 +1,5 @@
 import { Injectable, computed, signal } from "@angular/core";
-import { EFFECT_PLAYGROUND_ORDER, EFFECT_PLAYGROUND_SCENARIOS, EffectPlaygroundScenario } from "../../game/rnd/effects/effect-playground.config";
+import { EFFECT_PLAYGROUND_ORDER, EFFECT_PLAYGROUND_SCENARIOS, EffectPlaygroundScenario } from "../../game/phaser/effects/effect-playground.config";
 
 /** Scenario selector only; gameplay remains delegated to RdnPuzzleService and PuzzleEngine. */
 @Injectable({ providedIn: "root" })

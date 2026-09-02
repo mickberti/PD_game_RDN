@@ -1,7 +1,8 @@
-import type { PuzzleOperator } from "./puzzle.types";
-import { EffectScope, FlowCombineStrategy, LinkDirection } from "./effects/effects.models";
-import type { LevelEffectConfiguration } from "./effects/level-effects.types";
-import type { EffectPresetKey } from "./effects/effect-presets.config";
+import type { PuzzleOperator } from "../../puzzle.types";
+import { EffectScope, FlowCombineStrategy, LinkDirection } from "../../effects/effects.models";
+import type { LevelEffectConfiguration } from "../../effects/level-effects.types";
+import type { EffectPresetKey } from "../../effects/effect-presets.config";
+import { RDN_MAX_SPECIAL_OPERATORS } from "./levels.config";
 
 export interface RdnProgressionRule {
   readonly minSpheres: number;
@@ -138,17 +139,17 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
  */
 export const RDN_EFFECT_PROGRESSION_RULES: readonly RdnEffectProgressionRule[] = [
   { id: "LEGACY", minLevel: 1, maxLevel: 9, maxGemEffects: 0, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 0, structureAttemptsBeforeScaling: 0 },
-  { id: "SHIELD", minLevel: 10, maxLevel: 19, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "WALL", minLevel: 20, maxLevel: 29, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "MIRROR", minLevel: 30, maxLevel: 34, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "AMPLIFY", minLevel: 35, maxLevel: 39, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "INVERTER", minLevel: 40, maxLevel: 44, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "ICE", minLevel: 45, maxLevel: 49, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "TIMER", minLevel: 50, maxLevel: 59, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "CORRUPTION", minLevel: 60, maxLevel: 69, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "LINKS", minLevel: 70, maxLevel: 79, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "AREA", minLevel: 80, maxLevel: 100, maxGemEffects: 2, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
-  { id: "STABLE", minLevel: 101, maxGemEffects: 5, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 12 },
+  { id: "SHIELD", minLevel: 10, maxLevel: 19, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "WALL", minLevel: 20, maxLevel: 29, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "MIRROR", minLevel: 30, maxLevel: 34, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "AMPLIFY", minLevel: 35, maxLevel: 39, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "INVERTER", minLevel: 40, maxLevel: 44, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "ICE", minLevel: 45, maxLevel: 49, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "TIMER", minLevel: 50, maxLevel: 59, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "CORRUPTION", minLevel: 60, maxLevel: 69, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "LINKS", minLevel: 70, maxLevel: 79, maxGemEffects: 1, maxAreaEffects: 0, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "AREA", minLevel: 80, maxLevel: 100, maxGemEffects: 2, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
+  { id: "STABLE", minLevel: 101, maxGemEffects: 5, maxAreaEffects: 1, solutionAttemptsBeforeScaling: 500, structureAttemptsBeforeScaling: 30 },
 ] as const;
 
 /**
@@ -243,7 +244,7 @@ export const rdnSpecialOperatorsForBoard = (level: number, spheres: number, vari
   const rule = rdnProgressionRuleForSpheres(spheres);
   const key = Math.floor(level + variation);
   const optional = rule.optionalSpecialEvery > 0 && key % rule.optionalSpecialEvery === 0 ? rule.optionalSpecials : 0;
-  const count = Math.min(2, rule.guaranteedSpecials + optional);
+  const count = Math.min(spheres, RDN_MAX_SPECIAL_OPERATORS, rule.guaranteedSpecials + optional);
   const start = ((key % RDN_SPECIAL_OPERATOR_CANDIDATES.length) + RDN_SPECIAL_OPERATOR_CANDIDATES.length) % RDN_SPECIAL_OPERATOR_CANDIDATES.length;
   return Array.from({ length: count }, (_, index) => RDN_SPECIAL_OPERATOR_CANDIDATES[(start + index) % RDN_SPECIAL_OPERATOR_CANDIDATES.length]);
 };

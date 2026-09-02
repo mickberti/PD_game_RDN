@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { rdnSphereCountForLevel } from "../../../game/rnd/levels.config";
+import { rdnSphereCountForLevel } from "../../../game/phaser/config/levels.config";
 
 @Injectable({ providedIn: "root" })
 export class GameUtilsService {

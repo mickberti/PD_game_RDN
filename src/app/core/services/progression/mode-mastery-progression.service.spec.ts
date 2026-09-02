@@ -1,5 +1,5 @@
 import { calculateModeMasteryProgression } from './mode-mastery-progression.service';
-import { RDN_LEVELS_PER_SPHERE_INCREMENT } from '../../game/rnd/levels.config';
+import { RDN_LEVELS_PER_SPHERE_INCREMENT } from '../../game/phaser/config/levels.config';
 
 describe('mode mastery progression', () => {
   it('changes difficulty exactly when a new board gem is introduced', () => {

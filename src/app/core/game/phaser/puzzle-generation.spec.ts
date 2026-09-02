@@ -1,4 +1,5 @@
-import { generateRdnPuzzle, getRdnLevel, getRdnSolutionTable, RDN_LEVELS_PER_SPHERE_INCREMENT, RDN_MAX_LEVEL, rdnSphereCountForLevel, validateAdventureLevelBatch } from "./levels.config";
+import { generateRdnPuzzle, getRdnLevel, getRdnSolutionTable, validateAdventureLevelBatch } from "./catalog.builder";
+import { RDN_LEVELS_PER_SPHERE_INCREMENT, RDN_MAX_LEVEL, rdnSphereCountForLevel } from "./config/levels.config";
 import { solvePuzzle } from "./puzzle-solver";
 
 describe("seeded RDN generation", () => {

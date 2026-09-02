@@ -17,11 +17,11 @@ import { GameplaySession } from "../../core/models/gameplay-session.model";
 import { RdnPuzzleService } from "../../core/services/gameplay/rnd-puzzle.service";
 import { AppNavigationService } from "../../core/services/app/navigation/app-navigation.service";
 import { RdnPhaserScene } from "../../core/game/phaser/rnd-phaser.scene";
-import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
+import { RDN_MAX_LEVEL } from "../../core/game/phaser/config/levels.config";
 import { GameStateService } from "../../core/services/state/game-state.service";
-import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/rnd/puzzle-score.policy";
-import { RDN_ACTION_CATALOG, RdnActionId, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/rnd/rdn-actions.config";
-import { ImpulseResolutionPlan } from "../../core/game/rnd/puzzle.types";
+import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/phaser/puzzle-score.policy";
+import { RDN_ACTION_CATALOG, RdnActionId, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/phaser/config/rdn-actions.config";
+import { ImpulseResolutionPlan } from "../../core/game/phaser/puzzle.types";
 import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
 
@@ -191,7 +191,7 @@ export class GameplayPageComponent implements AfterViewInit {
     });
   }
   private dispatch(
-    action: import("../../core/game/rnd/puzzle.types").PuzzleAction,
+    action: import("../../core/game/phaser/puzzle.types").PuzzleAction,
   ): void {
     this.puzzle.dispatch(action);
     this.puzzle.saveAdventureRun();

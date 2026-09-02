@@ -1,4 +1,4 @@
-import { dedupeRdnTelemetry, RDN_RELEASE, RdnTelemetryEvent } from "./rdn-release.config";
+import { dedupeRdnTelemetry, RDN_RELEASE, RdnTelemetryEvent } from "./config/rdn-release.config";
 import { simulateRdnGeneration } from "./rdn-simulation";
 
 describe("RDN release gates", () => {

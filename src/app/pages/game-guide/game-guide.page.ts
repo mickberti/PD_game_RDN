@@ -5,15 +5,15 @@ import {
   IonHeader,
   IonToolbar,
 } from "@ionic/angular/standalone";
-import { EffectScope } from "../../core/game/rnd/effects/effects.models";
+import { EffectScope } from "../../core/game/phaser/effects/effects.models";
 import {
   EffectTutorialDefinition,
   effectTutorialsForScope,
-} from "../../core/game/rnd/effects/effect-tutorial.config";
+} from "../../core/game/phaser/effects/effect-tutorial.config";
 import { UIBottomNavComponent } from "../../shared/components/ui-bottom-nav.component";
 import { UIHeaderComponent } from "../../shared/components/ui-header.component";
 import { UiSpriteComponent } from "../../shared/basic/ui-sprite.component";
-import { RDN_ACTION_CATALOG } from "../../core/game/rnd/rdn-actions.config";
+import { RDN_ACTION_CATALOG } from "../../core/game/phaser/config/rdn-actions.config";
 
 interface GuideMode {
   title: string;

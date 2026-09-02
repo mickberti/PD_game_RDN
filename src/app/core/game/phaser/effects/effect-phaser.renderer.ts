@@ -1,8 +1,8 @@
 import * as Phaser from "phaser";
-import { AreaEffectType, EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../../rnd/effects/effects.models";
+import { AreaEffectType, EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects.models";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
-import { effectAssetFrame, isEffectVisuallyActive } from "../../rnd/effects/effect-presentation.config";
+import { effectAssetFrame, isEffectVisuallyActive } from "./effect-presentation.config";
 
 export interface EffectGemPosition { x: number; y: number; radius: number; }
 
@@ -16,7 +16,7 @@ export class EffectPhaserRenderer {
   private readonly dischargeLayer: Phaser.GameObjects.Container;
   private readonly links = new Map<string, LinkEffectView>();
   private readonly markerCounts = new Map<string, number>();
-  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string) => void) {
+  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void) {
     this.linkLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     this.previewGemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth + 2);
     this.gemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.gemDepth);

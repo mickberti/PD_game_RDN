@@ -1,7 +1,7 @@
 import { PuzzleEngine } from "./puzzle.engine";
 import { PuzzleDifficulty } from "./puzzle.types";
-import { generateRdnPuzzle } from "./levels.config";
-import { RDN_RELEASE } from "./rdn-release.config";
+import { generateRdnPuzzle } from "./catalog.builder";
+import { RDN_RELEASE } from "./config/rdn-release.config";
 
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
 

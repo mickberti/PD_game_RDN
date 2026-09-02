@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Progress, masteryType } from '../../models/game.models';
-import { RDN_MAX_LEVEL, rdnSphereCountForLevel } from '../../game/rnd/levels.config';
+import { RDN_MAX_LEVEL, rdnSphereCountForLevel } from '../../game/phaser/config/levels.config';
 
 export interface ModeMasteryProgression {
   mastery: masteryType;

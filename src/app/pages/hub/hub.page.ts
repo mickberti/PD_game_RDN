@@ -16,8 +16,8 @@ import { UIEventDetailPopupComponent } from "../../shared/components/popup/ui-ev
 import { UIButtonSpriteComponent } from "../../shared/basic/ui-button-sprite.component";
 import { EventActivationService } from "../../core/services/progression/event-activation.service";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
-import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
-import { PuzzleDifficulty } from "../../core/game/rnd/puzzle.types";
+import { RDN_MAX_LEVEL } from "../../core/game/phaser/config/levels.config";
+import { PuzzleDifficulty } from "../../core/game/phaser/puzzle.types";
 import { FreeEffectSelections } from "../../core/models/gameplay-session.model";
 
 const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack", "free", "ranked"]);

@@ -1,6 +1,6 @@
-import { PuzzleDifficulty } from "../puzzle.types";
-import { EffectScope, LinkDirection } from "./effects.models";
-import { LevelEffectConfiguration } from "./level-effects.types";
+import { PuzzleDifficulty } from "../../puzzle.types";
+import { EffectScope, LinkDirection } from "../../effects/effects.models";
+import { LevelEffectConfiguration } from "../../effects/level-effects.types";
 import {
   RDN_EFFECT_CHECKPOINTS,
   RDN_EFFECT_FLOW_RULES,
@@ -14,7 +14,7 @@ import {
   rdnLinkCountForBoard,
   rdnMaximumGemEffectsForSpheres,
   rdnMaximumLinksForSpheres,
-} from "../progression-rules.config";
+} from "./progression-rules.config";
 
 export type EffectProgressionMode = "adventure" | "time-attack" | "free";
 export type EffectProgressionTier = RdnEffectProgressionRule;

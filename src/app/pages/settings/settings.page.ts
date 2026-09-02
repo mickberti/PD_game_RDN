@@ -14,7 +14,7 @@ import { STATISTIC_TYPES, StatisticType } from "../../core/models/remote/progres
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { UIButtonSpriteComponent } from "src/app/shared/basic/ui-button-sprite.component";
 import { DirectRouteAccessService } from "../../core/services/app/navigation/direct-route-access.service";
-import { RDN_MAX_LEVEL } from "../../core/game/rnd/levels.config";
+import { RDN_MAX_LEVEL } from "../../core/game/phaser/config/levels.config";
 import { environment } from "../../../environments/environment";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";

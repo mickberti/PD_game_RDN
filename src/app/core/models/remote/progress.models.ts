@@ -1,7 +1,7 @@
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { ShopItem } from '../shop.models';
 import { AvailabilityWindow } from './event.model';
-import { RdnActionLoadout } from '../../game/rnd/rdn-actions.config';
+import { RdnActionLoadout } from '../../game/phaser/config/rdn-actions.config';
 
 export const STATISTIC_TYPES = [
   'enemiesKilled',

@@ -1,8 +1,9 @@
-import { Injectable, computed, signal } from "@angular/core";
-import { PuzzleEngine } from "../../game/rnd/puzzle.engine";
-import { generateRdnPuzzle, getRdnLevel } from "../../game/rnd/levels.config";
-import { FreeEffectSelections } from "../../game/rnd/effects/effect-progression.config";
-import { DEFAULT_PUZZLE_NUMBER_RANGE, ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleDifficulty, PuzzleOperator, PuzzleState } from "../../game/rnd/puzzle.types";
+import { Injectable, computed, inject, signal } from "@angular/core";
+import { PuzzleEngine } from "../../game/phaser/puzzle.engine";
+import { activeRdnCatalogueRuntime } from "../../game/phaser/catalogues/catalogue.registry";
+import { FreeEffectSelections } from "../../game/phaser/effects/effect-progression.config";
+import { DEFAULT_PUZZLE_NUMBER_RANGE, ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleDifficulty, PuzzleOperator, PuzzleState } from "../../game/phaser/puzzle.types";
+import { RdnCatalogueService } from "./rdn-catalogue.service";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
 interface AdventureRunSave {
@@ -17,18 +18,19 @@ interface AdventureRunSave {
 @Injectable({ providedIn: "root" })
 export class RdnPuzzleService {
   private readonly engine = new PuzzleEngine();
+  private readonly catalogue = inject(RdnCatalogueService);
   private freeMode = false;
   private freeRerollState = 1;
   private freeDifficulty: PuzzleDifficulty = "EASY";
-  readonly level = signal(getRdnLevel("adventure"));
+  readonly level = signal(activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", "EASY", 0));
   readonly state = signal<PuzzleState>(this.engine.createInitialState(this.level()));
   readonly previews = computed(() => this.engine.previews(this.level(), this.state()));
   readonly nextPreviews = computed(() => this.engine.previews(this.level(), this.state(), 1));
   readonly flows = computed(() => this.engine.flows(this.level(), this.state()));
   readonly effectPreviewEvents = computed(() => this.engine.effectPreviewEvents(this.level(), this.state()));
   readonly queueStates = computed(() => this.engine.queueStates(this.level(), this.state()));
-  load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number, freeEffectsEnabled: boolean | FreeEffectSelections = false): void {
-    const level = variant === "free" ? generateRdnPuzzle("adventure", difficulty, seed, slotCount, freeEffectsEnabled) : getRdnLevel(variant, number);
+  async load(variant: "adventure" | "time-attack" | "free", number = 1, difficulty: PuzzleDifficulty = "EASY", seed = 0, slotCount?: number, freeEffectsEnabled: boolean | FreeEffectSelections = false): Promise<void> {
+    const level = variant === "free" ? activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", difficulty, seed, slotCount, freeEffectsEnabled) : await this.catalogue.getLevel(variant, number);
     this.freeMode = variant === "free";
     this.freeDifficulty = difficulty;
     this.freeRerollState = (Math.trunc(seed) ^ 0x6d2b79f5) >>> 0 || 1;
@@ -68,8 +70,8 @@ export class RdnPuzzleService {
   }
 
   /** Restores a compatible run atomically. Changed level/configuration data is discarded safely. */
-  resumeAdventure(number: number): boolean {
-    const level = getRdnLevel("adventure", number);
+  async resumeAdventure(number: number): Promise<boolean> {
+    const level = await this.catalogue.getLevel("adventure", number);
     if (level.variant !== "persistent" || !level.adventure) return false;
     const raw = localStorage.getItem(ADVENTURE_RUN_STORAGE_KEY);
     if (!raw) return false;

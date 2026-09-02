@@ -378,9 +378,9 @@ export const RDN_THEME_DECORATION_CALIBRATIONS: Record<RdnBoardLayout["positions
     3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
   },
   7: {
-    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 0.85, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
-    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 0.85, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
-    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 0.85, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
   },
   8: {
     1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
@@ -471,7 +471,7 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   7: {
     positions: 7,
-    ring: { diameter: 2.35, widthScale: 1, heightScale: 0.85, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.05, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
     gear: { diameter: 1.45, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
       radius: 0.91,

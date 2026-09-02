@@ -1,8 +1,7 @@
 import { Injectable, computed, signal } from "@angular/core";
-import { LevelDefinition } from "../../game/rnd/puzzle.types";
-import { LevelEffectConfigResolver } from "../../game/rnd/effects/level-effect-config.resolver";
-import { EFFECT_TUTORIALS, EffectTutorialDefinition, getEffectTutorial } from "../../game/rnd/effects/effect-tutorial.config";
-import { RDN_LEVELS } from "../../game/rnd/levels.config";
+import { LevelDefinition } from "../../game/phaser/puzzle.types";
+import { LevelEffectConfigResolver } from "../../game/phaser/effects/level-effect-config.resolver";
+import { EFFECT_TUTORIALS, EffectTutorialDefinition, getEffectTutorial } from "../../game/phaser/effects/effect-tutorial.config";
 
 const STORAGE_KEY = "rdn-effect-tutorials-v2";
 const LEGACY_STORAGE_KEY = "rdn-effect-tutorials-v1";
@@ -17,21 +16,10 @@ interface TutorialStorage { readonly version: number; readonly seenIds: readonly
 export class EffectTutorialService {
   private readonly resolver = new LevelEffectConfigResolver();
   private readonly seenIds = signal<readonly string[]>(this.readSeenIds());
-  /** Inventory for Settings; level groups are derived from the playable catalogue. */
+  /** Inventory for Settings; never load the full gameplay catalogue just to render Settings. */
   readonly tutorialEntries = computed<readonly TutorialResetEntry[]>(() => {
     const seen = this.seenIds();
-    return EFFECT_TUTORIALS.map((tutorial) => {
-      const byMode = new Map<Exclude<TutorialMode, "free">, number[]>();
-      for (const level of RDN_LEVELS) {
-        const effects = this.resolver.resolve(level.effectConfiguration, level.positions).effects;
-        if (!effects.some((effect) => getEffectTutorial(effect.config)?.id === tutorial.id)) continue;
-        const mode = level.variant === "persistent" ? "adventure" : "time-attack";
-        const values = byMode.get(mode) ?? []; values.push(level.number); byMode.set(mode, values);
-      }
-      const modes = [...byMode.keys()];
-      const levelLabel = modes.length ? modes.map((mode) => `${mode === "adventure" ? "Avventura" : "Time Attack"} ${this.compactLevelList(byMode.get(mode) ?? [])}`).join(" · ") : "Disponibile nelle partite Free con effetti";
-      return { ...tutorial, modes, levelLabel, seen: seen.includes(tutorial.id) };
-    });
+    return EFFECT_TUTORIALS.map((tutorial) => ({ ...tutorial, modes: ["adventure", "time-attack"] as const, levelLabel: "Disponibile nei livelli con effetti e nelle partite Free", seen: seen.includes(tutorial.id) }));
   });
 
   tutorialForLevel(level: LevelDefinition): EffectTutorialDefinition | null {

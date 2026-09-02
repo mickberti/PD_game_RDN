@@ -1,5 +1,5 @@
 import { GameUtilsService } from './game-utils.service';
-import { RDN_LEVELS_PER_SPHERE_INCREMENT } from '../../../game/rnd/levels.config';
+import { RDN_LEVELS_PER_SPHERE_INCREMENT } from '../../../game/phaser/config/levels.config';
 
 describe('GameUtilsService', () => {
   const service = new GameUtilsService();

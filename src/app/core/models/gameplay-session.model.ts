@@ -1,4 +1,4 @@
-import { PuzzleDifficulty } from "../game/rnd/puzzle.types";
+import { PuzzleDifficulty } from "../game/phaser/puzzle.types";
 
 export type GameplaySessionVariant = "time-attack" | "adventure" | "free" | "effect-playground";
 

@@ -1,6 +1,6 @@
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { DEFAULT_GAME_PROGRESS, DEFAULT_PLAYER_STATISTICS, GameInventory, GameProgress } from './progress.models';
-import { validateRdnActionLoadout } from '../../game/rnd/rdn-actions.config';
+import { validateRdnActionLoadout } from '../../game/phaser/config/rdn-actions.config';
 
 export interface MockGameProgressSeed {
   resources?: ResourceItem[];

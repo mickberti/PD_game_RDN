@@ -264,4 +264,8 @@ PIN android studio pixel 10Pro -> 1234
 GENERAZIONE CATALOGO LIVELLI
 ===============================================================
 
+npm run rdn:catalogue:fork -- --from v004 --to v005
+npm run rdn:catalogue -- --version v005
+npm run rdn:catalogue:activate -- --version v005
+
  & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v003

@@ -7,7 +7,7 @@ import { UIProgressbarComponent } from "../../../shared/basic/ui-progress-bar.co
 import { UIProgressStarsComponent } from "../../basic/ui-progress-stars.component";
 import { UiSpriteComponent } from "../../basic/ui-sprite.component";
 import { ModeMasteryProgressionService } from "../../../core/services/progression/mode-mastery-progression.service";
-import { RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
+import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
 
 @Component({
   selector: "ui-mode-box",

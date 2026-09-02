@@ -1,12 +1,13 @@
 import { CommonModule } from "@angular/common";
-import { Component, computed, inject } from "@angular/core";
+import { Component, computed, inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
-import { IonContent, IonFooter, IonToolbar } from "@ionic/angular/standalone";
-import { PuzzleOperator } from "../../../core/game/rnd/puzzle.types";
-import { EffectScope, ResolvedEffect } from "../../../core/game/rnd/effects/effects.models";
-import { effectAssetFrame } from "../../../core/game/rnd/effects/effect-presentation.config";
+import { IonContent, IonFooter, IonSelect, IonSelectOption, IonToolbar } from "@ionic/angular/standalone";
+import { PuzzleOperator } from "../../../core/game/phaser/puzzle.types";
+import { EffectScope, ResolvedEffect } from "../../../core/game/phaser/effects/effects.models";
+import { effectAssetFrame } from "../../../core/game/phaser/effects/effect-presentation.config";
 import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
-import { getRdnSolutionTable, RDN_MAX_LEVEL } from "../../../core/game/rnd/levels.config";
+import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
+import { RdnCatalogueService } from "../../../core/services/gameplay/rdn-catalogue.service";
 import { UIBottomUtilsComponent } from "../../../shared/components/ui-bottom-utils.component";
 import { UiUtilsPageHeaderComponent } from "../../../shared/components/ui-utils-page-header.component";
 
@@ -15,11 +16,14 @@ type SolutionVariant = "adventure" | "time-attack";
 @Component({
   selector: "app-rnd-solution-table",
   standalone: true,
-  imports: [CommonModule, IonContent, IonFooter, IonToolbar, UIBottomUtilsComponent, UiUtilsPageHeaderComponent, UiSpriteComponent],
+  imports: [CommonModule, IonContent, IonFooter, IonSelect, IonSelectOption, IonToolbar, UIBottomUtilsComponent, UiUtilsPageHeaderComponent, UiSpriteComponent],
   template: `
     <ion-content>
       <div class="screen solution-page">
         <ui-utils-page-header group="game" [title]="title()" [description]="description()" />
+        <ion-select class="catalogue-selector" label="Versione catalogo" label-placement="stacked" interface="popover" [value]="selectedVersion()" (ionChange)="selectVersion($event.detail.value)">
+          @for (version of versions(); track version) { <ion-select-option [value]="version">{{ version }}</ion-select-option> }
+        </ion-select>
 
         <section class="summary">
           <strong>{{ rows().length }} livelli</strong>
@@ -145,6 +149,7 @@ type SolutionVariant = "adventure" | "time-attack";
   `,
   styles: [`
     .solution-page { padding-bottom: 96px; }
+    .catalogue-selector { max-width: 240px; margin: 16px 0 0; border: 1px solid rgba(103, 232, 249, .35); border-radius: 12px; padding: 0 12px; color: #dff9ff; background: rgba(8, 35, 46, .72); }
     .summary { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 16px 0; padding: 14px; border: 1px solid rgba(103, 232, 249, .35); border-radius: 14px; color: #dff9ff; background: rgba(8, 35, 46, .72); }
     .level-card { margin: 10px 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, .18); border-radius: 14px; color: #ecfeff; background: rgba(15, 23, 42, .9); }
     summary { display: grid; grid-template-columns: minmax(110px, 1fr) minmax(130px, 1fr) auto; gap: 12px; padding: 15px; cursor: pointer; font-weight: 700; }
@@ -172,10 +177,15 @@ type SolutionVariant = "adventure" | "time-attack";
     @media (max-width: 500px) { summary { grid-template-columns: 1fr auto; } .effects-in-play__row > strong { width: 100%; } }
   `],
 })
-export class RdnSolutionTablePage {
+export class RdnSolutionTablePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly catalogue = inject(RdnCatalogueService);
   readonly variant = (this.route.snapshot.data["variant"] === "time-attack" ? "time-attack" : "adventure") as SolutionVariant;
-  readonly rows = computed(() => getRdnSolutionTable(this.variant));
+  readonly rows = signal<readonly import("../../../core/game/phaser/catalog.builder").PuzzleSolutionAudit[]>([]);
+  readonly versions = signal<readonly string[]>([]);
+  readonly selectedVersion = signal("");
+  ngOnInit(): void { void this.catalogue.versions().then((catalogues) => { const versions = catalogues.map((catalogue) => catalogue.version); this.versions.set(versions); if (versions[0]) this.selectVersion(versions[0]); }); }
+  selectVersion(version: string): void { if (!version || version === this.selectedVersion()) return; this.selectedVersion.set(version); void this.catalogue.audit(this.variant, version).then((rows) => this.rows.set(rows)); }
   readonly allVerified = computed(() => this.rows().every((row) => row.verified));
   readonly title = computed(() => this.variant === "adventure" ? "Soluzioni RDN · Avventura" : "Soluzioni RDN · Time Attack");
   readonly description = computed(() => `Catalogo dei ${RDN_MAX_LEVEL} livelli, con sequenze per castone, rotazioni richieste e controllo di risolvibilità.`);

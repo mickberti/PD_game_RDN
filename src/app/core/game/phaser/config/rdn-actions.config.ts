@@ -1,4 +1,4 @@
-import { GameplaySessionVariant } from "../../models/gameplay-session.model";
+import { GameplaySessionVariant } from "../../../models/gameplay-session.model";
 
 /** The four gameplay actions always shown in the bottom HUD. */
 export const RDN_ACTION_IDS = ["zero", "invert", "double", "skip"] as const;

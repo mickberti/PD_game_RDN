@@ -1,17 +1,17 @@
 import * as Phaser from "phaser";
-import { AlignmentPreview, FlowState, ImpulseResolutionPlan, LevelDefinition, PuzzleOperator, PuzzleState, QueueState } from "../rnd/puzzle.types";
-import { getPuzzleScorePolicy, getPuzzleStars } from "../rnd/puzzle-score.policy";
+import { AlignmentPreview, FlowState, ImpulseResolutionPlan, LevelDefinition, PuzzleOperator, PuzzleState, QueueState } from "./puzzle.types";
+import { getPuzzleScorePolicy, getPuzzleStars } from "./puzzle-score.policy";
 import { atlasData as gameActionAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-game-action-set1";
 import { atlasData as effectAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-effect-set1";
 import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-gem-set1";
 import { atlasData as uiIconAtlas } from "../../../../assets/ui/fantasy_bg/atlas/atlas-icons-set1";
 import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, getRdnGemSlotOffset, getRdnThemeDecorationCalibration, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
-import { LevelEffectConfigResolver } from "../rnd/effects/level-effect-config.resolver";
-import { EffectEngineEvent, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "../rnd/effects/effects.models";
+import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
+import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs } from "./effects/effect-phaser-visual.config";
-import { EffectTutorialDefinition } from "../rnd/effects/effect-tutorial.config";
-import { effectAssetFrame, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "../rnd/effects/effect-presentation.config";
+import { EffectTutorialDefinition } from "./effects/effect-tutorial.config";
+import { effectAssetFrame, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
 
 export interface RdnHudAction { icon: string; charges: number; disabled: boolean; }
 export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
@@ -170,7 +170,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.outerSlotPoint(ringX, ringY, outerR, index, m.level.positions, layout.outerSlots.angleOffset, visualSet); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); const sphere = this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet, outerR * numeralConfig.outerFontSizeRatio, numeralConfig.reservedWidthRatio); sphere.gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, index)); this.outerSlots.set(index, sphere); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
     const resolvedEffects = this.effectResolver.resolve(m.level.effectConfiguration, m.level.positions).effects;
     if (resolvedEffects.length) {
-      this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY), (effectId) => this.actions.linkInfo(effectId));
+      this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY), (effectId, pointer) => this.openLinkInfoFromTap(pointer, effectId));
       this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues);
       this.effectRenderer.setActiveLinkPreview(m.effectPreviewEvents);
       const visualKey = `${m.level.id}-${m.state.impulses}`;
@@ -223,6 +223,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   private release(): void { if (this.infoScrollDragY !== null) { this.infoScrollDragY = null; return; } if (!this.dragging || !this.model || !this.wheel) return; this.dragging = false; const minimumDragAngle = 3; const snapAngle = 360 / this.model.level.positions; const base = this.model.state.rotationTurns * snapAngle; if (Math.abs(this.dragDelta) < minimumDragAngle) { this.setWheelAngle(base); this.dragDelta = 0; this.flushPendingRender(); return; } const direction = this.dragDelta > 0 ? 1 : -1; const step = direction * Math.max(1, Math.round(Math.abs(this.dragDelta) / snapAngle)); const target = base + step * snapAngle; this.busy = true; this.tweens.add({ targets: this, visualAngle: target, duration: RDN_MOTION.dragSnapMs, ease: "Cubic.Out", onUpdate: () => this.setWheelAngle(this.visualAngle), onComplete: () => { this.actions.rotate(step > 0 ? "CW" : "CCW", Math.abs(step)); this.dragDelta = 0; this.busy = false; this.flushPendingRender(); } }); }
   private hasInfoOverlay(model: RdnSceneModel = this.model!): boolean { return !!model && (model.showInfo || model.selectedGemIndex !== null || model.selectedGearGemIndex !== null || model.selectedLinkEffectId !== null); }
   private openGemInfoFromTap(pointer: Phaser.Input.Pointer, index: number, source: "ring" | "gear" = "ring"): void { const start = this.pointerDownAt; const moved = !start || Math.hypot(pointer.x - start.x, pointer.y - start.y) > 8; if (!moved && !this.busy && !this.hasInfoOverlay()) this.actions.gemInfo(index, source); }
+  private openLinkInfoFromTap(pointer: Phaser.Input.Pointer, effectId: string): void { const start = this.pointerDownAt; const moved = !start || Math.hypot(pointer.x - start.x, pointer.y - start.y) > 8; if (!moved && !this.busy && !this.hasInfoOverlay()) this.actions.linkInfo(effectId); }
   /** Blocks the board while keeping dismissal discoverable: tap anywhere outside the card. */
   private infoBackdrop(cx: number, cy: number, width: number, height: number): void { const backdrop = this.add.rectangle(cx, cy, width, height, 0x020907, .46).setDepth(19).setInteractive(); backdrop.on("pointerup", () => this.actions.closeInfo()); }
   private scrollInfo(delta: number): void { if (!this.model || this.model.selectedGemIndex === null || this.infoScrollMax <= 0) return; const next = Phaser.Math.Clamp(this.infoScrollOffset + delta, 0, this.infoScrollMax); if (next === this.infoScrollOffset) return; this.infoScrollOffset = next; this.render(); }
@@ -710,7 +711,13 @@ export class RdnPhaserScene extends Phaser.Scene {
   private isEffectActive(effect: ResolvedEffect, values: readonly number[], runtime?: PuzzleState["effectRuntime"]): boolean { return isEffectVisuallyActive(effect, values, runtime); }
   private effectIconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
   private effectColor(effect: ResolvedEffect): number { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff; return 0xff9378; }
-  private effectLabel(effect: ResolvedEffect, model: RdnSceneModel): string { if (effect.config.scope === EffectScope.GEM) { const config = effect.config; const detail = config.type === GemEffectType.WALL ? model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.ICE ? model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.TIMER ? model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? config.turns : config.type === GemEffectType.AMPLIFIER ? `x${config.multiplier}` : config.type === GemEffectType.SHIELD ? config.strength : undefined; return `${config.type}${detail === undefined ? "" : ` ${detail}`}`; } if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) return `${effect.config.type}${effect.config.multiplier ? ` x${effect.config.multiplier}` : ""} ${effect.target.fromGem.index + 1} -> ${effect.target.toGem.index + 1}`; if (effect.config.scope === EffectScope.AREA) return `${effect.config.type} raggio ${effect.config.radius ?? 1}`; return effect.config.type; }
+  private areaRangeLabel(effect: ResolvedEffect): string {
+    if (effect.config.scope !== EffectScope.AREA) return "";
+    const range = effect.config.range ?? (effect.config.radius === 2 ? AreaEffectRange.TWO_ADJACENT : AreaEffectRange.ADJACENT);
+    return range === AreaEffectRange.ALL ? "tutte le altre gemme" : range === AreaEffectRange.TWO_ADJACENT ? "2 gemme per lato" : "1 gemma per lato";
+  }
+  private areaValue(effect: ResolvedEffect): number { return effect.config.scope === EffectScope.AREA ? effect.config.value ?? -(effect.config.strength ?? 1) : 0; }
+  private effectLabel(effect: ResolvedEffect, model: RdnSceneModel): string { if (effect.config.scope === EffectScope.GEM) { const config = effect.config; const detail = config.type === GemEffectType.WALL ? model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.ICE ? model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.TIMER ? model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? config.turns : config.type === GemEffectType.AMPLIFIER ? `x${config.multiplier}` : config.type === GemEffectType.SHIELD ? config.strength : undefined; return `${config.type}${detail === undefined ? "" : ` ${detail}`}`; } if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) return `${effect.config.type}${effect.config.multiplier ? ` x${effect.config.multiplier}` : ""} ${effect.target.fromGem.index + 1} -> ${effect.target.toGem.index + 1}`; if (effect.config.scope === EffectScope.AREA) { const detail = effect.config.type === AreaEffectType.BOMB ? ` ${format(this.areaValue(effect))}` : effect.config.type === AreaEffectType.ICE ? ` gelo ${effect.config.strength ?? 1}` : ""; return `${effect.config.type}${detail} · ${this.areaRangeLabel(effect)}`; } return effect.config.type; }
   private effectDetails(effect: ResolvedEffect, model: RdnSceneModel): readonly [string, string, string] {
     if (effect.config.scope === EffectScope.GEM) {
       if (effect.config.type === GemEffectType.SHIELD) { const strength = effect.config.strength ?? 1; return ["Natura: barriera difensiva.", `Fa: assorbe fino a ${strength} punti da ogni flusso in arrivo.`, "Soluzione: supera l'assorbimento con un impulso più forte."]; }
@@ -727,13 +734,17 @@ export class RdnPhaserScene extends Phaser.Scene {
       if (effect.config.type === LinkEffectType.AMPLIFY) return ["Natura: collegamento amplificatore.", `Fa: trasferisce il valore moltiplicato per ${effect.config.multiplier ?? 1}.`, "Soluzione: usa valori piccoli e controlla il risultato sulla gemma collegata."];
       return ["Natura: collegamento invertitore.", "Fa: trasferisce il valore cambiandone il segno.", "Soluzione: scegli un impulso opposto al risultato che vuoi ottenere in arrivo."];
     }
-    return ["Natura: esplosione ad area.", `Fa: quando questa gemma arriva a zero, applica -${Math.abs(effect.config.strength ?? 1)} alle gemme entro raggio ${effect.config.radius ?? 1}.`, "Soluzione: portala a zero quando la riduzione ai vicini è utile."];
+    const range = this.areaRangeLabel(effect);
+    if (effect.config.type === AreaEffectType.BOMB) return ["Natura: esplosione ad area.", `Fa: quando questa gemma arriva a zero, applica ${format(this.areaValue(effect))} a ${range}.`, "Soluzione: portala a zero quando la variazione sulle gemme coinvolte è utile."];
+    if (effect.config.type === AreaEffectType.ICE) return ["Natura: gelo ad area.", `Fa: quando questa gemma arriva a zero, applica gelo di forza ${effect.config.strength ?? 1} a ${range}.`, "Soluzione: attivala quando puoi rimandare gli impulsi sulle gemme coinvolte."];
+    return ["Natura: inversione ad area.", `Fa: quando questa gemma arriva a zero, inverte il segno di ${range}.`, "Soluzione: attivala quando il cambio di segno favorisce tutte le gemme coinvolte."];
   }
   private effectLegendIcon(x: number, y: number, frame: string, color: number, depth: number): void { const background = this.add.circle(x, y, 14, 0x101c18, .95).setStrokeStyle(1, color, .95).setDepth(depth); this.add.image(x, y, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color).setDepth(depth + 1); background.setDepth(depth); }
   private tutorialDialog(cx: number, cy: number, tutorial: EffectTutorialDefinition): void {
     const depth = 40;
     const color = Number.parseInt(tutorial.color.slice(1), 16);
-    this.add.rectangle(cx, cy, 360, 410, 0x101c18, .985).setStrokeStyle(3, color).setDepth(depth).setInteractive();
+    this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(360, 410).setDepth(depth).setInteractive();
+    this.add.rectangle(cx, cy, 360, 410, 0x101c18, 0).setStrokeStyle(3, color).setDepth(depth + 1);
     this.label(cx, cy - 166, "NUOVO EFFETTO", 15, 0xf8dc8b).setDepth(depth + 1);
     this.effectLegendIcon(cx - 112, cy - 120, tutorial.iconFrame, color, depth + 1);
     this.label(cx - 88, cy - 120, tutorial.title.toUpperCase(), 20, color).setOrigin(0, .5).setDepth(depth + 1);
