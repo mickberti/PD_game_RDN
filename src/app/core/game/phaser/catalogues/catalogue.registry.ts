@@ -5,6 +5,9 @@ import * as v004Builder from "./v004/catalog.builder";
 import { RDN_CATALOGUE_CONTRACT as v005Contract } from "./v005/catalogue.contract";
 import * as v005Builder from "./v005/catalog.builder";
 
+import { RDN_CATALOGUE_CONTRACT as v006Contract } from "./v006/catalogue.contract";
+import * as v006Builder from "./v006/catalog.builder";
+
 const catalogueRuntimes = {
   v004: {
     contract: v004Contract,
@@ -15,6 +18,11 @@ const catalogueRuntimes = {
     contract: v005Contract,
     generateRdnPuzzle: v005Builder.generateRdnPuzzle,
     prepareRdnCatalogueLevel: v005Builder.prepareRdnCatalogueLevel,
+  },
+  v006: {
+    contract: v006Contract,
+    generateRdnPuzzle: v006Builder.generateRdnPuzzle,
+    prepareRdnCatalogueLevel: v006Builder.prepareRdnCatalogueLevel,
   },
 } as const;
 

@@ -3,6 +3,7 @@ import { AlignmentPreview, FlowState, ImpulseResolutionPlan, LevelDefinition, Pu
 import { getPuzzleScorePolicy, getPuzzleStars } from "./puzzle-score.policy";
 import { atlasData as gameActionAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-game-action-set1";
 import { atlasData as effectAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-effect-set1";
+import { atlasData as effectActionAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-effect-set2";
 import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-gem-set1";
 import { atlasData as uiIconAtlas } from "../../../../assets/ui/fantasy_bg/atlas/atlas-icons-set1";
 import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, getRdnGemSlotOffset, getRdnThemeDecorationCalibration, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
@@ -80,6 +81,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
     this.load.atlas("rdn-effects", "assets/game/fantasy_bg/effect-set1.png", effectAtlas);
+    this.load.atlas("rdn-effect-actions", "assets/game/fantasy_bg/effect-set2.png", effectActionAtlas);
     this.load.atlas("rdn-gems", "assets/game/fantasy_bg/gem-set1.png", gemAtlas);
     this.load.atlas("rdn-ui-icons", "assets/ui/fantasy_bg/icon-set1.png", uiIconAtlas);
     this.load.image("rdn-info-panel", "assets/ui/fantasy_bg/panel/panel2-set1.png");
@@ -214,7 +216,7 @@ export class RdnPhaserScene extends Phaser.Scene {
         this.operationFloat(target.x, target.y, outerR * layout.outerSlots.sphereRadius, result.operator, operationFloatElapsed);
       }
     }
-    m.actions.forEach((action, index) => this.bonus(cx + (index - (m.actions.length - 1) / 2) * 84, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset, action, () => this.actions.action(index)));
+    m.actions.forEach((action, index) => this.bonus(cx + (index - (m.actions.length - 1) / 2) * 98, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset, action, () => this.actions.action(index)));
     if (m.playground) this.playgroundOverlay(width, height, m.playground);
     if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m); }
   }
@@ -526,7 +528,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   private addBackground(x: number, y: number, width: number, height: number, key: string): void { const background = this.add.image(x, y, key); const scale = RDN_PHASER_VISUAL_CONFIG.backgroundScalePercent / 100; background.setDisplaySize(width * scale, height * scale).setDepth(-4); }
   private addDecor(x: number, y: number, diameter: number, key: string, angle: number, widthScale = 1, heightScale = 1): void { const ring = this.add.image(x, y, key); const baseScale = diameter / Math.max(ring.width, ring.height); ring.setScale(baseScale * widthScale, baseScale * heightScale).setAngle(angle); }
   private addGear(diameter: number, key: string): Phaser.GameObjects.Image { const gear = this.add.image(0, 0, key); return gear.setScale(diameter / Math.max(gear.width, gear.height)); }
-  private gearSpecialIcon(operator: PuzzleOperator | null): { texture: string; frame: string } | undefined { return operator === "zero" ? { texture: "rdn-actions", frame: "action-lightning" } : operator === "invert" ? { texture: "rdn-effects", frame: "effect-inverter" } : operator === "skip" ? { texture: "rdn-actions", frame: "action-speed" } : undefined; }
+  private gearSpecialIcon(operator: PuzzleOperator | null): { texture: string; frame: string } | undefined { return operator === "zero" ? { texture: "rdn-effect-actions", frame: "reset-zero" } : operator === "divide2" ? { texture: "rdn-effect-actions", frame: "divide-2" } : operator === "divide3" ? { texture: "rdn-effect-actions", frame: "divide-3" } : operator === "invert" ? { texture: "rdn-effects", frame: "effect-inverter" } : operator === "skip" ? { texture: "rdn-effect-actions", frame: "skip-flow" } : undefined; }
   private outerSlotPoint(cx: number, cy: number, boardRadius: number, index: number, total: number, angleOffset: number, visualSet: number): { x: number; y: number } { return this.calibratedSlotPoint(cx, cy, boardRadius, this.layout.outerSlots.radius, index, total, angleOffset, visualSet, "outerSlots"); }
   private innerSlotPoint(cx: number, cy: number, gearRadius: number, index: number, total: number, angleOffset: number, visualSet: number): { x: number; y: number } { return this.calibratedSlotPoint(cx, cy, gearRadius, this.layout.innerSlots.radius, index, total, angleOffset, visualSet, "innerSlots"); }
   private calibratedSlotPoint(cx: number, cy: number, parentRadius: number, baseRadius: number, index: number, total: number, angleOffset: number, visualSet: number, group: "outerSlots" | "innerSlots"): { x: number; y: number } { const offset = getRdnGemSlotOffset(this.layout.positions, visualSet, group, index); return this.point(cx, cy, parentRadius * (baseRadius + offset.radialOffset), index, total, angleOffset + offset.angularOffset); }
@@ -761,7 +763,8 @@ export class RdnPhaserScene extends Phaser.Scene {
   private label(x: number, y: number, value: string, size: number, color: number, digital = false): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: digital ? "Arial, Helvetica, sans-serif" : "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold", stroke: "#111814", strokeThickness: Math.max(2, Math.round(size * .14)) }).setOrigin(.5); }
   private button(x: number, y: number, value: string, action: () => void, depth = 0): void { const button = this.add.circle(x, y, 24, 0x3b2b19).setDepth(depth).setInteractive(); button.on("pointerdown", action); const frame = UI_ICON_BY_BUTTON_LABEL[value]; if (frame) this.add.image(x, y, "rdn-ui-icons", frame).setDisplaySize(48, 48).setDepth(depth + 1); else this.label(x, y, value, 24, 0xffe3a0).setDepth(depth + 1); }
   private actionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-actions", frame).setDisplaySize(size, size).setDepth(depth); }
-  private bonus(x: number, y: number, action: RdnHudAction, activate: () => void): void { const button = this.add.circle(x, y, 31, action.disabled ? 0x4d4d4d : 0x245438).setInteractive(); button.on("pointerdown", () => { if (!action.disabled) activate(); }); this.actionIcon(x, y, 90, action.icon, 3); this.add.circle(x + 23, y + 23, 12, 0x241b12).setStrokeStyle(1, 0xb18b48).setDepth(4); this.label(x + 23, y + 23, String(action.charges), 12, 0xffffff).setDepth(5); }
+  private effectActionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-effect-actions", frame).setDisplaySize(size, size).setDepth(depth); }
+  private bonus(x: number, y: number, action: RdnHudAction, activate: () => void): void { this.add.image(x, y, "rdn-info-panel").setDisplaySize(94, 94).setDepth(1); const button = this.add.circle(x, y, 31, action.disabled ? 0x4d4d4d : 0x245438).setDepth(2).setInteractive(); button.on("pointerdown", () => { if (!action.disabled) activate(); }); this.effectActionIcon(x, y, 82, action.icon, 3); this.add.circle(x + 23, y + 23, 12, 0x241b12).setStrokeStyle(1, 0xb18b48).setDepth(4); this.label(x + 23, y + 23, String(action.charges), 12, 0xffffff).setDepth(5); }
   private infoDialog(cx: number, cy: number, model: RdnSceneModel): void {
     const depth = 20;
     const panelHeight = model.level.variant === "persistent" ? 340 : 238;

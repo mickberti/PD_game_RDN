@@ -30,6 +30,7 @@ type SummaryVariant = "adventure" | "time-attack";
               <tr>
                 <th scope="col">Livello</th>
                 <th scope="col">Gemme</th>
+                <th scope="col">Speciali</th>
                 <th scope="col">Effetti gemma</th>
                 <th scope="col">Effetti link</th>
                 <th scope="col">Effetti area</th>
@@ -45,6 +46,7 @@ type SummaryVariant = "adventure" | "time-attack";
                 <tr>
                   <th scope="row">{{ row.level }}</th>
                   <td>{{ row.slots.length }}</td>
+                  <td>{{ specialOperatorsText(row.level) }}</td>
                   <td><span class="effect-icons">@for (effect of gemEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of linkEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of areaEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
@@ -66,7 +68,7 @@ type SummaryVariant = "adventure" | "time-attack";
     .effects-summary-page { padding-bottom: 22px; width: 100%}
     .catalogue-selector { display: block; max-width: 240px; margin: 16px 0; border: 1px solid rgba(103, 232, 249, .35); border-radius: 12px; padding: 0 12px; color: #dff9ff; background: rgba(8, 35, 46, .72); }
     .table-wrap { overflow-x: auto; border: 1px solid rgba(255,255,255,.15); border-radius: 16px; background: rgba(15,23,42,.72); }
-    table { width: 100%; min-width: 1120px; border-collapse: collapse; color: #e2e8f0; }
+    table { width: 100%; min-width: 1260px; border-collapse: collapse; color: #e2e8f0; }
     th, td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,.1); text-align: left; vertical-align: middle; }
     thead th { position: sticky; top: 0; z-index: 1; color: #fef3c7; background: #1e293b; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
     tbody tr:nth-child(even) { background: rgba(148,163,184,.06); }
@@ -93,6 +95,7 @@ export class RdnEffectsSummaryPage implements OnInit {
   ngOnInit(): void { void this.catalogue.versions().then((catalogues) => { const versions = catalogues.map((catalogue) => catalogue.version); this.versions.set(versions); if (versions[0]) this.selectVersion(versions[0]); }); }
   selectVersion(version: string): void { if (!version || version === this.selectedVersion()) return; this.selectedVersion.set(version); void Promise.all([this.catalogue.audit(this.variant, version), this.catalogue.levels(version)]).then(([rows, levels]) => { this.rows.set(rows); this.levels.set(levels); }); }
   generationStats(level: number) { return this.levels().find((item) => item.number === level && item.variant === (this.variant === "adventure" ? "persistent" : "loader"))?.generation?.generationStats; }
+  specialOperatorsText(level: number): string { const item = this.levels().find((candidate) => candidate.number === level && candidate.variant === (this.variant === "adventure" ? "persistent" : "loader")); if (!item) return "-"; const specials = item.generation?.specialOperators ?? [...new Set((item.solutionMoves ?? []).map((move) => move.operator).filter((operator): operator is Exclude<typeof operator, number> => typeof operator !== "number"))]; if (!specials.length) return "0 · -"; const label: Record<Exclude<typeof specials[number], number>, string> = { divide2: "÷2", divide3: "÷3", zero: "0", invert: "±", skip: "≫" }; return `${specials.length} · ${specials.map((operator) => label[operator]).join(" ")}`; }
   attemptsText(level: number): string { const stats = this.generationStats(level); if (!stats) return "—"; const solutionAttempts = stats.solutionAttempts ?? stats.calibrationAttempts; return `strutt. ${stats.structureAttempts} (lim. ${stats.structureAttemptsBeforeScaling ?? "—"}/stadio) · sol. ${solutionAttempts} (lim. ${stats.solutionAttemptsBeforeScaling ?? "—"}/candidato)`; }
   officialSolutionImpulses(level: number): number | undefined { const item = this.levels().find((candidate) => candidate.number === level && candidate.variant === (this.variant === "adventure" ? "persistent" : "loader")); return item?.generation?.officialSolutionImpulses ?? item?.starCost?.impulses ?? item?.optimalCost?.impulses; }
   failureText(level: number): string { const reasons = this.generationStats(level)?.failureReasons ?? []; return reasons.length ? reasons.join(", ") : "OK"; }

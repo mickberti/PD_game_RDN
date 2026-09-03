@@ -10,7 +10,7 @@ export const RDN_MAX_GEAR_OPERATOR_MAGNITUDE = 15;
 /** Absolute cap for one-use special operators placed in the gear. */
 export const RDN_MAX_SPECIAL_OPERATORS = 2;
 /** Absolute cap for area effects assigned to one generated board. */
-export const RDN_MAX_AREA_EFFECTS_PER_BOARD = 1;
+export const RDN_MAX_AREA_EFFECTS_PER_BOARD = 2;
 
 /** Number of levels in each sphere-count band; recalculated when the catalogue size changes. */
 export const RDN_LEVELS_PER_SPHERE_INCREMENT = Math.ceil(RDN_MAX_LEVEL / (RDN_MAX_SPHERES - RDN_MIN_SPHERES + 1));
