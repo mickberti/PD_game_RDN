@@ -1,11 +1,11 @@
 import { AdventureGameConfig, DEFAULT_PUZZLE_NUMBER_RANGE, LevelDefinition, PuzzleDifficulty, PuzzleOperator, PuzzleSlotSolution, PuzzleSolutionMove } from "../../puzzle.types";
 import { PuzzleEngine } from "../../puzzle.engine";
 import { LevelEffectConfigResolver } from "../../effects/level-effect-config.resolver";
-import { EffectConfig, EffectScope, GemEffectType, LinkDirection, ResolvedEffect } from "../../effects/effects.models";
+import { EffectConfig, EffectScope, ElementalAffinity, GemEffectType, LinkDirection, ResolvedEffect } from "../../effects/effects.models";
 import { RDN_RELEASE } from "./rdn-release.config";
 import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity } from "./effect-progression.config";
 import { LevelEffectConfiguration } from "../../effects/level-effects.types";
-import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, RDN_RISKY_GEM_EFFECT_REPLACEMENTS, rdnEffectRuleForLevel, rdnProgressionRuleForSpheres, rdnSpecialOperatorsForBoard } from "./progression-rules.config";
+import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, RDN_RISKY_GEM_EFFECT_REPLACEMENTS, rdnEffectRuleForLevel, rdnElementalAffinitiesForBoard, rdnProgressionRuleForSpheres, rdnSpecialOperatorsForBoard } from "./progression-rules.config";
 import { RDN_MAX_GEAR_OPERATOR_MAGNITUDE, RDN_MAX_LEVEL, RDN_MAX_OPERATIONS_PER_SPHERE, RDN_MAX_SPHERES, RDN_MAX_TIMER_DIRECT_IMPULSES, RDN_MIN_SPHERES, rdnSphereCountForLevel } from "./levels.config";
 
 const DEFAULT_ACTIVE_FLOW_COUNT = 1;
@@ -303,6 +303,20 @@ const timerPlacementIsCompatible = (level: LevelDefinition, configuration: Level
 
 const buildEffectCandidate = <T extends LevelDefinition>(level: T, outerValues: readonly number[], effectConfiguration: LevelEffectConfiguration): T => ({ ...level, outerValues: [...outerValues], solution: level.solution?.map((slot, index) => ({ ...slot, startValue: outerValues[index] })), effectConfiguration } as T);
 
+/** Assigns elemental affinity after the final barrier configuration is known. */
+const withElementalOperators = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration, variation = 0): T => {
+  const barriers = new LevelEffectConfigResolver().resolve(configuration, level.positions).effects
+    .flatMap((effect) => effect.config.scope === EffectScope.GEM && (effect.config.type === GemEffectType.FIRE || effect.config.type === GemEffectType.ICE) ? [effect.config.type] : []);
+  const numericSlots = level.variant === "persistent"
+    ? level.innerValues.map((operator, index) => typeof operator === "number" ? index : -1).filter((index) => index >= 0)
+    : level.queues.map((queue, index) => queue.some((operator) => typeof operator === "number") ? index : -1).filter((index) => index >= 0);
+  const affinities = rdnElementalAffinitiesForBoard(level.number, level.positions, numericSlots.length, barriers, variation);
+  const bySlot = new Map<number, ElementalAffinity>();
+  numericSlots.forEach((slot, index) => { const affinity = affinities[index]; if (affinity) bySlot.set(slot, affinity); });
+  if (level.variant === "persistent") return { ...level, innerElements: level.innerValues.map((operator, index) => typeof operator === "number" ? bySlot.get(index) ?? null : null) } as T;
+  return { ...level, queueElements: level.queues.map((queue, index) => queue.map((operator) => typeof operator === "number" ? bySlot.get(index) ?? null : null)) } as T;
+};
+
 const needsSignedValueCalibration = (configuration: LevelEffectConfiguration): boolean => (configuration.effects ?? []).some((effect) => effect.preset === "INVERTER_1" || effect.preset === "MIRROR_1" || effect.preset === "CORRUPTION_1" || effect.preset === "CORRUPTION_2");
 
 /** Uses a one-unit probe for effects whose output slope can be -1 (for example INVERTER). */
@@ -353,7 +367,7 @@ const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configu
       if (seenValueVectors.has(valueVector)) { failureReasons.add("CALIBRATION_VALUE_CYCLE"); break; }
       seenValueVectors.add(valueVector);
       calibrationAttempts += 1;
-      const candidate = buildEffectCandidate(level, outerValues, candidateConfiguration);
+      const candidate = withElementalOperators(buildEffectCandidate(level, outerValues, candidateConfiguration), candidateConfiguration);
       const result = replaySolution(candidate);
       if (result.won && !timerDeadlineFailed(result)) {
         const canonicalImpulses = result.impulses;

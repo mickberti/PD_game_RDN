@@ -56,10 +56,11 @@ export const createProgressionEffectConfiguration = (mode: EffectProgressionMode
   // Adventure and Time Attack must follow the visible level cadence exactly.
   // Free keeps the seed as variation so its optional link is not always fixed.
   const linkCount = rdnLinkCountForBoard(level, gemCount, mode === "free" ? seed : 0);
+  const linkPresets = level >= 100 ? RDN_LINK_EFFECT_PRESETS : RDN_LINK_EFFECT_PRESETS.filter((preset) => preset !== "CHAIN_LINK");
   for (let index = 0; index < linkCount; index += 1) {
     const fromGemIndex = positiveModulo(source + index, gemCount);
     const toGemIndex = positiveModulo(destination + index * 2, gemCount);
-    effects.push({ preset: pick(RDN_LINK_EFFECT_PRESETS, key + 2 + index), target: { type: EffectScope.LINK, fromGemIndex, toGemIndex: toGemIndex === fromGemIndex ? positiveModulo(toGemIndex + 1, gemCount) : toGemIndex }, overrides: { direction: level >= 100 && (key + index) % 2 === 0 ? LinkDirection.BIDIRECTIONAL : LinkDirection.FORWARD } });
+    effects.push({ preset: pick(linkPresets, key + 2 + index), target: { type: EffectScope.LINK, fromGemIndex, toGemIndex: toGemIndex === fromGemIndex ? positiveModulo(toGemIndex + 1, gemCount) : toGemIndex }, overrides: { direction: level >= 100 && (key + index) % 2 === 0 ? LinkDirection.BIDIRECTIONAL : LinkDirection.FORWARD } });
   }
   const areaEffectCount = Math.min(tier.maxAreaEffects, RDN_MAX_AREA_EFFECTS_PER_BOARD);
   for (let index = 0; index < areaEffectCount; index += 1) effects.push({ preset: pick(RDN_AREA_EFFECT_PRESETS, key + 5 + index), target: { type: EffectScope.AREA, sourceGemIndex: positiveModulo(second + index, gemCount) } });

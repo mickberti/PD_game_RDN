@@ -1,5 +1,5 @@
 import type { LevelEffectConfiguration } from "./effects/level-effects.types";
-import type { EffectEngineEvent, EffectRuntimeState } from "./effects/effects.models";
+import type { EffectEngineEvent, EffectRuntimeState, ElementalAffinity } from "./effects/effects.models";
 
 export type PuzzleVariant = "persistent" | "loader";
 export type PuzzleDifficulty = "EASY" | "NORMAL" | "HARD" | "EXPERT";
@@ -14,7 +14,7 @@ export type ColorId = "green" | "red" | "yellow" | "blue" | "cyan" | "purple";
 export type LegacyPuzzleOperator = PuzzleOperator | "x2";
 export const migrateLegacyPuzzleOperator = (operator: LegacyPuzzleOperator): PuzzleOperator => operator === "x2" ? "divide2" : operator;
 
-export type OperationRejectedReason = "NO_OPERATOR" | "TARGET_ALREADY_RESOLVED" | "DIVIDE_BY_TWO_CONSUMED" | "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" | "DIVIDE_BY_THREE_CONSUMED" | "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" | "SPECIAL_OPERATOR_CONSUMED" | "RESULT_OUT_OF_RANGE" | "COLOR_MISMATCH";
+export type OperationRejectedReason = "NO_OPERATOR" | "TARGET_ALREADY_RESOLVED" | "DIVIDE_BY_TWO_CONSUMED" | "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" | "DIVIDE_BY_THREE_CONSUMED" | "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" | "SPECIAL_OPERATOR_CONSUMED" | "RESULT_OUT_OF_RANGE" | "COLOR_MISMATCH" | "CHAIN_LOCKED";
 export interface PuzzleNumberRange { min: number; max: number; policy: "reject"; }
 /** One shared bound for every mode and every generated level. */
 export const DEFAULT_PUZZLE_NUMBER_RANGE: PuzzleNumberRange = { min: -256, max: 256, policy: "reject" };
@@ -52,10 +52,10 @@ export type TargetVisualState = "ACTIVE" | "OFF";
 export interface GameplayEvent { type: "OperationApplied" | "TargetReachedZero" | "TargetDeactivated"; targetId: number; impulse: number; }
 
 export interface BaseLevelDefinition { id: string; number: number; title: string; schemaVersion: 1; variant: PuzzleVariant; positions: number; initialRotation: number; outerValues: number[]; targetColors?: readonly ColorId[]; operatorColors?: readonly ColorId[]; targetModifiers?: Readonly<Record<number, readonly TargetModifier[]>>; activeFlowCount?: number; generation?: PuzzleGenerationMetadata; slotPhases: PuzzleSlot[][]; optimalCost?: PuzzleCost; /** Score threshold calculated after effects are applied; leaves timing/solver cost unchanged. */ starCost?: PuzzleCost; tutorial?: string; solution?: PuzzleSlotSolution[]; solutionMoves?: PuzzleSolutionMove[]; /** Optional future effects; absent or disabled means unchanged gameplay. */ effectConfiguration?: LevelEffectConfiguration; }
-export interface PersistentLevelDefinition extends BaseLevelDefinition { variant: "persistent"; innerValues: PuzzleOperator[]; /** Present on authored Adventure levels; optional for isolated legacy fixtures. */ adventure?: AdventureGameConfig; }
-export interface LoaderLevelDefinition extends BaseLevelDefinition { variant: "loader"; queues: PuzzleOperator[][]; }
+export interface PersistentLevelDefinition extends BaseLevelDefinition { variant: "persistent"; innerValues: PuzzleOperator[]; /** Optional elemental affinity for each numeric gear slot. */ innerElements?: readonly (ElementalAffinity | null)[]; /** Present on authored Adventure levels; optional for isolated legacy fixtures. */ adventure?: AdventureGameConfig; }
+export interface LoaderLevelDefinition extends BaseLevelDefinition { variant: "loader"; queues: PuzzleOperator[][]; /** Optional elemental affinity aligned with every queue entry. */ queueElements?: readonly (readonly (ElementalAffinity | null)[])[]; }
 export type LevelDefinition = PersistentLevelDefinition | LoaderLevelDefinition;
 
 export interface PuzzleState { levelId: string; rotation: number; rotationTurns: number; outerValues: number[]; targetVisualStates: TargetVisualState[]; modifierStates: TargetModifierState[]; queueCursors: number[]; consumedSpecialOperatorIndexes: number[]; impulses: number; phaseCursor: number; rotationSteps: number; lastImpulseResults: ImpulseResult[]; lastOperationResults: OperationAttemptResult[]; lastGameplayEvents: GameplayEvent[]; effectRuntime?: EffectRuntimeState; lastEffectEvents?: readonly EffectEngineEvent[]; history: PuzzleSnapshot[]; won: boolean; }
 export interface PuzzleSnapshot { rotation: number; rotationTurns: number; outerValues: number[]; targetVisualStates?: TargetVisualState[]; modifierStates?: TargetModifierState[]; queueCursors: number[]; consumedSpecialOperatorIndexes?: number[]; impulses: number; phaseCursor: number; rotationSteps: number; lastImpulseResults: ImpulseResult[]; lastOperationResults?: OperationAttemptResult[]; lastGameplayEvents?: GameplayEvent[]; effectRuntime?: EffectRuntimeState; lastEffectEvents?: readonly EffectEngineEvent[]; won: boolean; }
-export interface AlignmentPreview { slot: PuzzleSlot; innerIndex: number; innerValue: PuzzleOperator | null; outerValue: number; result: number; active: boolean; rejectedReason?: OperationRejectedReason; trend: "zero" | "closer" | "same" | "farther"; }
+export interface AlignmentPreview { slot: PuzzleSlot; innerIndex: number; innerValue: PuzzleOperator | null; innerElement: ElementalAffinity | null; outerValue: number; result: number; active: boolean; rejectedReason?: OperationRejectedReason; trend: "zero" | "closer" | "same" | "farther"; }

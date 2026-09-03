@@ -1,5 +1,5 @@
 import type { PuzzleOperator } from "../../puzzle.types";
-import { EffectScope, FlowCombineStrategy, LinkDirection } from "../../effects/effects.models";
+import { EffectScope, ElementalAffinity, FlowCombineStrategy, GemEffectType, LinkDirection } from "../../effects/effects.models";
 import type { LevelEffectConfiguration } from "../../effects/level-effects.types";
 import type { EffectPresetKey } from "../../effects/effect-presets.config";
 import { RDN_MAX_SPECIAL_OPERATORS } from "./levels.config";
@@ -11,6 +11,13 @@ export interface RdnProgressionRule {
   readonly guaranteedSpecials: number;
   readonly optionalSpecials: number;
   readonly optionalSpecialEvery: number;
+  /** Numeric gear gems with fire/ice affinity always present on this board size. */
+  readonly guaranteedElementals: number;
+  /** Additional elemental gems enabled on the configured cadence. */
+  readonly optionalElementals: number;
+  readonly optionalElementalEvery: number;
+  /** Reserve the opposite affinity for every elemental wall found on the board. */
+  readonly ensureOppositeElementForWall: boolean;
   readonly fixedLinks: number;
   readonly optionalLinks: number;
   readonly optionalLinkEvery: number;
@@ -61,6 +68,10 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
     guaranteedSpecials: 0,
     optionalSpecials: 0,
     optionalSpecialEvery: 0,
+    guaranteedElementals: 0,
+    optionalElementals: 0,
+    optionalElementalEvery: 0,
+    ensureOppositeElementForWall: true,
     fixedLinks: 0,
     optionalLinks: 0,
     optionalLinkEvery: 0,
@@ -74,6 +85,10 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
     guaranteedSpecials: 0,
     optionalSpecials: 0,
     optionalSpecialEvery: 0,
+    guaranteedElementals: 0,
+    optionalElementals: 0,
+    optionalElementalEvery: 0,
+    ensureOppositeElementForWall: true,
     fixedLinks: 0,
     optionalLinks: 1,
     optionalLinkEvery: 3,
@@ -86,6 +101,10 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
     guaranteedSpecials: 0,
     optionalSpecials: 0,
     optionalSpecialEvery: 0,
+    guaranteedElementals: 1,
+    optionalElementals: 0,
+    optionalElementalEvery: 0,
+    ensureOppositeElementForWall: true,
     fixedLinks: 1,
     optionalLinks: 1,
     optionalLinkEvery: 3,
@@ -98,6 +117,10 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
     guaranteedSpecials: 1,
     optionalSpecials: 1,
     optionalSpecialEvery: 3,
+    guaranteedElementals: 1,
+    optionalElementals: 1,
+    optionalElementalEvery: 3,
+    ensureOppositeElementForWall: true,
     fixedLinks: 2,
     optionalLinks: 1,
     optionalLinkEvery: 3,
@@ -110,6 +133,10 @@ export const RDN_PROGRESSION_RULES: readonly RdnProgressionRule[] = [
     guaranteedSpecials: 1,
     optionalSpecials: 1,
     optionalSpecialEvery: 3,
+    guaranteedElementals: 2,
+    optionalElementals: 1,
+    optionalElementalEvery: 3,
+    ensureOppositeElementForWall: true,
     fixedLinks: 3,
     optionalLinks: 1,
     optionalLinkEvery: 5,
@@ -181,11 +208,11 @@ export const RDN_GEM_EFFECT_PRESETS: Readonly<
   MIRROR: ["MIRROR_1"],
   AMPLIFY: ["AMPLIFIER_X2", "AMPLIFIER_X3"],
   INVERTER: ["INVERTER_1"],
-  ICE: ["ICE_1", "ICE_2", "ICE_3"],
+  ICE: ["ICE_1", "ICE_2", "ICE_3", "FIRE_1", "FIRE_2", "FIRE_3"],
   TIMER: ["TIMER_3", "TIMER_5", "TIMER_7", "TIMER_10"],
   CORRUPTION: ["CORRUPTION_1", "CORRUPTION_2"],
-  LINKS: ["SHIELD_1", "WALL_1","MIRROR_1","AMPLIFIER_X2","INVERTER_1","ICE_1","CORRUPTION_1"],
-  AREA: ["SHIELD_1", "WALL_1","MIRROR_1","AMPLIFIER_X2","INVERTER_1","ICE_1","CORRUPTION_1"],
+  LINKS: ["SHIELD_1", "WALL_1","MIRROR_1","AMPLIFIER_X2","INVERTER_1","ICE_1","FIRE_1","CORRUPTION_1"],
+  AREA: ["SHIELD_1", "WALL_1","MIRROR_1","AMPLIFIER_X2","INVERTER_1","ICE_1","FIRE_1","CORRUPTION_1"],
   STABLE: [
     "SHIELD_1",
     "SHIELD_2",
@@ -201,6 +228,9 @@ export const RDN_GEM_EFFECT_PRESETS: Readonly<
     "ICE_1",
     "ICE_2",
     "ICE_3",
+    "FIRE_1",
+    "FIRE_2",
+    "FIRE_3",
     "TIMER_3",
     "TIMER_5",
     "TIMER_7",
@@ -211,7 +241,7 @@ export const RDN_GEM_EFFECT_PRESETS: Readonly<
 };
 
 /** Pool dei preset link scelti dal generatore. */
-export const RDN_LINK_EFFECT_PRESETS: readonly EffectPresetKey[] = ["ECHO_LINK", "DOUBLE_LINK", "INVERT_LINK"];
+export const RDN_LINK_EFFECT_PRESETS: readonly EffectPresetKey[] = ["ECHO_LINK", "DOUBLE_LINK", "INVERT_LINK", "CHAIN_LINK"];
 /** Pool area per i livelli generati: valori firmati, gelo e inversione con portate diverse. */
 export const RDN_AREA_EFFECT_PRESETS: readonly EffectPresetKey[] = ["AREA_BOMB_MINUS_2", "AREA_BOMB_PLUS_2", "AREA_BOMB_MINUS_4", "AREA_BOMB_PLUS_4", "AREA_BOMB_MINUS_7", "AREA_BOMB_PLUS_7", "AREA_ICE_ADJACENT", "AREA_ICE_TWO_ADJACENT", "AREA_ICE_ALL", "AREA_INVERTER_ADJACENT", "AREA_INVERTER_TWO_ADJACENT", "AREA_INVERTER_ALL"];
 /** CompatibilitÃ  per configurazioni esterne che usavano il preset singolo. */
@@ -227,6 +257,7 @@ export const RDN_EFFECT_SIMPLIFICATIONS: Readonly<Partial<Record<EffectPresetKey
   WALL_4: "WALL_3", WALL_3: "WALL_2", WALL_2: "WALL_1",
   AMPLIFIER_X3: "AMPLIFIER_X2",
   ICE_3: "ICE_2", ICE_2: "ICE_1",
+  FIRE_3: "FIRE_2", FIRE_2: "FIRE_1",
   TIMER_3: "TIMER_5", TIMER_5: "TIMER_7", TIMER_7: "TIMER_10",
   CORRUPTION_2: "CORRUPTION_1",
   DOUBLE_LINK: "ECHO_LINK", INVERT_LINK: "ECHO_LINK",
@@ -244,7 +275,7 @@ export const RDN_RISKY_GEM_EFFECT_REPLACEMENTS: Readonly<Partial<Record<EffectPr
 };
 
 /** Last-resort GEM presets, tried after same-category scaling fails. Ordered from simpler to richer. */
-export const RDN_GEM_EFFECT_FALLBACK_PRESETS: readonly EffectPresetKey[] = ["SHIELD_1", "WALL_1", "AMPLIFIER_X2", "INVERTER_1", "ICE_1"];
+export const RDN_GEM_EFFECT_FALLBACK_PRESETS: readonly EffectPresetKey[] = ["SHIELD_1", "WALL_1", "AMPLIFIER_X2", "INVERTER_1", "ICE_1", "FIRE_1"];
 
 export const rdnEffectRuleForLevel = (level: number): RdnEffectProgressionRule => RDN_EFFECT_PROGRESSION_RULES.find((rule) => level >= rule.minLevel && (rule.maxLevel === undefined || level <= rule.maxLevel)) ?? RDN_EFFECT_PROGRESSION_RULES[0];
 
@@ -257,6 +288,22 @@ export const rdnSpecialOperatorsForBoard = (level: number, spheres: number, vari
   const count = Math.min(spheres, RDN_MAX_SPECIAL_OPERATORS, rule.guaranteedSpecials + optional);
   const start = ((key % RDN_SPECIAL_OPERATOR_CANDIDATES.length) + RDN_SPECIAL_OPERATOR_CANDIDATES.length) % RDN_SPECIAL_OPERATOR_CANDIDATES.length;
   return Array.from({ length: count }, (_, index) => RDN_SPECIAL_OPERATOR_CANDIDATES[(start + index) % RDN_SPECIAL_OPERATOR_CANDIDATES.length]);
+};
+
+/**
+ * Elemental operator affinities are deterministic and independent of Phaser.
+ * Opposite affinities are reserved first, so a FIRE/ICE wall always has a
+ * configured bypass when the board contains a numeric gear slot.
+ */
+export const rdnElementalAffinitiesForBoard = (level: number, spheres: number, numericSlots: number, barrierTypes: readonly GemEffectType[], variation = 0): readonly ElementalAffinity[] => {
+  const rule = rdnProgressionRuleForSpheres(spheres);
+  const key = Math.floor(level + variation);
+  const optional = rule.optionalElementalEvery > 0 && key % rule.optionalElementalEvery === 0 ? rule.optionalElementals : 0;
+  const opposite = rule.ensureOppositeElementForWall
+    ? [...new Set(barrierTypes.flatMap((type): ElementalAffinity[] => type === GemEffectType.FIRE ? ["ice"] : type === GemEffectType.ICE ? ["fire"] : []))]
+    : [];
+  const count = Math.min(numericSlots, Math.max(rule.guaranteedElementals + optional, opposite.length));
+  return Array.from({ length: count }, (_, index) => opposite[index] ?? ((key + index) % 2 === 0 ? "fire" : "ice"));
 };
 
 export const rdnLinkCountForBoard = (level: number, spheres: number, variation = 0): number => {

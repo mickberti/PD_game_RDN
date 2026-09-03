@@ -8,13 +8,13 @@ import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/
 import { atlasData as uiIconAtlas } from "../../../../assets/ui/fantasy_bg/atlas/atlas-icons-set1";
 import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, getRdnGemSlotOffset, getRdnThemeDecorationCalibration, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
-import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
+import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, ElementalAffinity, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs } from "./effects/effect-phaser-visual.config";
 import { EffectTutorialDefinition } from "./effects/effect-tutorial.config";
-import { effectAssetFrame, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
+import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
 
-export interface RdnHudAction { icon: string; charges: number; disabled: boolean; }
+export interface RdnHudAction { icon: string; label: string; description: string; charges: number; disabled: boolean; }
 export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
 export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; info(): void; closeInfo(): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value);
@@ -77,6 +77,13 @@ export class RdnPhaserScene extends Phaser.Scene {
   private readonly revealedActiveFlowKeys = new Set<string>();
   /** Fade-in is armed only by a successful impulse, never by a wheel rotation. */
   private fadeFlowsAfterImpulse = false;
+  /** The action tray is kept in-scene so opening it does not require an Angular state update. */
+  private actionPanelOpen = false;
+  private actionPanelHandleStartY: number | null = null;
+  /** Starting scroll position used only for the open/close transition. */
+  private actionPanelTransitionFrom?: number;
+  private actionHoldTimer?: Phaser.Time.TimerEvent;
+  private actionHoldTriggered = false;
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
@@ -95,7 +102,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.scale.on("resize", () => this.requestRender());
     this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => this.beginDrag(pointer));
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.drag(pointer));
-    this.input.on("pointerup", () => this.release());
+    this.input.on("pointerup", () => { this.release(); if (this.actionHoldTriggered) this.render(); });
     this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => this.scrollInfo(deltaY));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.clearImpactFeedback());
     this.render();
@@ -190,7 +197,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     this.wheelCenter = { x: gearX, y: gearY, radius: wheelR }; this.wheel = this.add.container(gearX, gearY); this.wheel.add(this.addGear(wheelR * 2, rdnGearTextureKey(layout, visualSet)));
     const blockedSources = new Set(m.flows.filter((flow) => flow.active && !flow.interactable).map((flow) => flow.sourceId));
-    for (let index = 0; index < m.level.positions; index += 1) { const point = this.innerSlotPoint(0, 0, wheelR, index, m.level.positions, layout.innerSlots.angleOffset, visualSet); const innerIndex = index; const queue = m.level.variant === "loader" ? m.queueStates[innerIndex] : undefined; const rawValue = m.level.variant === "persistent" ? m.level.innerValues[innerIndex] : queue?.current ?? null; const consumed = typeof rawValue === "string" && m.state.consumedSpecialOperatorIndexes.includes(innerIndex); const exhausted = queue?.exhausted ?? false; const value = consumed || exhausted ? null : rawValue; const sphereRadius = outerR * layout.innerSlots.sphereRadius; const blocked = blockedSources.has(innerIndex); const deactivated = blocked || consumed || exhausted; const specialIcon = deactivated ? undefined : this.gearSpecialIcon(value); const gem = specialIcon ? this.add.image(gearX + point.x, gearY + point.y, specialIcon.texture, specialIcon.frame).setDisplaySize(sphereRadius * 2.18, sphereRadius * 2.18).setDepth(4) : this.gem(gearX + point.x, gearY + point.y, sphereRadius, index, visualSet, deactivated, typeof rawValue === "string").setDepth(4); gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, innerIndex, "gear")); const text = this.sphereLabel(gearX + point.x, gearY + point.y, specialIcon ? "" : consumed || exhausted ? "" : formatOperator(value), sphereRadius, deactivated ? 0xd8d8d8 : 0xffffff, outerR * numeralConfig.innerFontSizeRatio, numeralConfig.reservedWidthRatio).setDepth(5); const badge = queue ? this.queueBadge(gearX + point.x + sphereRadius * .72, gearY + point.y + sphereRadius * .72, queue.remainingCount, exhausted) : undefined; this.innerSlots.push({ sphere: gem, text, badge, localX: point.x, localY: point.y }); }
+    for (let index = 0; index < m.level.positions; index += 1) { const point = this.innerSlotPoint(0, 0, wheelR, index, m.level.positions, layout.innerSlots.angleOffset, visualSet); const innerIndex = index; const queue = m.level.variant === "loader" ? m.queueStates[innerIndex] : undefined; const rawValue = m.level.variant === "persistent" ? m.level.innerValues[innerIndex] : queue?.current ?? null; const consumed = typeof rawValue === "string" && m.state.consumedSpecialOperatorIndexes.includes(innerIndex); const exhausted = queue?.exhausted ?? false; const value = consumed || exhausted ? null : rawValue; const elementalAffinity = typeof value === "number" ? this.gearOperatorElement(m.level, m.state, innerIndex) : null; const sphereRadius = outerR * layout.innerSlots.sphereRadius; const blocked = blockedSources.has(innerIndex); const deactivated = blocked || consumed || exhausted; const specialIcon = deactivated ? undefined : this.gearSpecialIcon(value); const gem = specialIcon ? this.add.image(gearX + point.x, gearY + point.y, specialIcon.texture, specialIcon.frame).setDisplaySize(sphereRadius * 2.18, sphereRadius * 2.18).setDepth(4) : this.gem(gearX + point.x, gearY + point.y, sphereRadius, index, visualSet, deactivated, typeof rawValue === "string", elementalAffinity).setDepth(4); gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, innerIndex, "gear")); const text = this.sphereLabel(gearX + point.x, gearY + point.y, specialIcon ? "" : consumed || exhausted ? "" : formatOperator(value), sphereRadius, deactivated ? 0xd8d8d8 : 0xffffff, outerR * numeralConfig.innerFontSizeRatio, numeralConfig.reservedWidthRatio).setDepth(5); const badge = queue ? this.queueBadge(gearX + point.x + sphereRadius * .72, gearY + point.y + sphereRadius * .72, queue.remainingCount, exhausted) : undefined; this.innerSlots.push({ sphere: gem, text, badge, localX: point.x, localY: point.y }); }
     const impulse = this.add.circle(gearX, gearY, wheelR * layout.impulse.radius, 0x2b6240).setStrokeStyle(5, 0xd6b75d).setDepth(2).setInteractive();
     impulse.on("pointerdown", () => this.fireImpulse(impulse));
     const impulseIcon = this.actionIcon(gearX, gearY, wheelR * layout.impulse.iconSize, "action-holy-star", 3);
@@ -216,7 +223,7 @@ export class RdnPhaserScene extends Phaser.Scene {
         this.operationFloat(target.x, target.y, outerR * layout.outerSlots.sphereRadius, result.operator, operationFloatElapsed);
       }
     }
-    m.actions.forEach((action, index) => this.bonus(cx + (index - (m.actions.length - 1) / 2) * 98, height - RDN_PHASER_VISUAL_CONFIG.actionButtonsBottomOffset, action, () => this.actions.action(index)));
+    if (m.actions.length) this.actionPanel(cx, height, m.actions);
     if (m.playground) this.playgroundOverlay(width, height, m.playground);
     if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m); }
   }
@@ -533,7 +540,8 @@ export class RdnPhaserScene extends Phaser.Scene {
   private innerSlotPoint(cx: number, cy: number, gearRadius: number, index: number, total: number, angleOffset: number, visualSet: number): { x: number; y: number } { return this.calibratedSlotPoint(cx, cy, gearRadius, this.layout.innerSlots.radius, index, total, angleOffset, visualSet, "innerSlots"); }
   private calibratedSlotPoint(cx: number, cy: number, parentRadius: number, baseRadius: number, index: number, total: number, angleOffset: number, visualSet: number, group: "outerSlots" | "innerSlots"): { x: number; y: number } { const offset = getRdnGemSlotOffset(this.layout.positions, visualSet, group, index); return this.point(cx, cy, parentRadius * (baseRadius + offset.radialOffset), index, total, angleOffset + offset.angularOffset); }
   private point(cx: number, cy: number, radius: number, index: number, total: number, angleOffset = 0): { x: number; y: number } { const a = -Math.PI / 2 + angleOffset * Math.PI / 180 + index * Math.PI * 2 / total; return { x: cx + Math.cos(a) * radius, y: cy + Math.sin(a) * radius }; }
-  private gem(x: number, y: number, radius: number, _index: number, visualSet: number, off: boolean, special = false): Phaser.GameObjects.Image { const theme = GEM_THEME_CONFIG[visualSet as 1 | 2 | 3]; const frame = special ? "gem-sphere-purple" : theme.frame; const gem = this.add.image(x, y, "rdn-gems", frame).setDisplaySize(radius * 2.18, radius * 2.18); return off ? gem.setTint(0x858585).setAlpha(.78) : gem.setTint(theme.tint); }
+  private gearOperatorElement(level: LevelDefinition, state: PuzzleState, index: number): ElementalAffinity | null { return level.variant === "persistent" ? level.innerElements?.[index] ?? null : level.queueElements?.[index]?.[state.queueCursors[index]] ?? null; }
+  private gem(x: number, y: number, radius: number, _index: number, visualSet: number, off: boolean, special = false, elementalAffinity: ElementalAffinity | null = null): Phaser.GameObjects.Image { const theme = GEM_THEME_CONFIG[visualSet as 1 | 2 | 3]; const frame = special ? "gem-sphere-purple" : elementalAffinity === "fire" ? "gem-sphere-red" : elementalAffinity === "ice" ? "gem-sphere-blue" : theme.frame; const gem = this.add.image(x, y, "rdn-gems", frame).setDisplaySize(radius * 2.18, radius * 2.18); return off ? gem.setTint(0x858585).setAlpha(.78) : gem.setTint(elementalAffinity ? 0xffffff : theme.tint); }
   private sphere(x: number, y: number, radius: number, value: number, off: boolean, index: number, visualSet: number, fontSize: number, reservedWidthRatio: number): { gem: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text } { const gem = this.gem(x, y, radius, index, visualSet, off).setDepth(6); const text = this.sphereLabel(x, y, off ? "0" : format(value), radius, off ? 0xe6e6e6 : 0xffffff, fontSize, reservedWidthRatio).setDepth(7); return { gem, text }; }
   /** Every gem reserves -99, so signed one- and two-digit values share a stable visual scale. */
   private sphereLabel(x: number, y: number, value: string, radius: number, color: number, fontSize = Math.round(radius * 2.18 * .8), reservedWidthRatio = .8): Phaser.GameObjects.Text { const diameter = radius * 2.18; const text = this.label(x, y, "-99", Math.round(fontSize), color, true); const reservedWidth = text.width; text.setText(value); const scale = Math.min(1, diameter * reservedWidthRatio / reservedWidth); text.setScale(scale); return text; }
@@ -629,7 +637,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     drawCategory("GEMMA", gemEffects, () => () => this.actions.gemInfo(targetIndex));
     drawCategory("LINK", linkEffects, (effect) => () => this.actions.linkInfo(effect.id));
   }
-  private targetEffectHudIcon(x: number, y: number, effect: ResolvedEffect, action: () => void, active = false): void { const color = this.effectColor(effect); const background = this.add.circle(x, y, 13, 0x151917, .96).setStrokeStyle(1, color, 1).setDepth(17).setInteractive({ useHandCursor: true }); const icon = this.add.image(x, y, "rdn-effects", this.effectIconFrame(effect)).setDisplaySize(21, 21).setTint(color).setDepth(18); background.on("pointerdown", action); icon.setInteractive({ useHandCursor: true }).on("pointerdown", action); if (active) this.tweens.add({ targets: [background, icon], scale: EFFECT_PHASER_VISUAL.hudActiveEffectPulseScale, duration: EFFECT_PHASER_VISUAL.hudActiveEffectPulseDurationMs, ease: "Sine.InOut", yoyo: true, repeat: -1 }); }
+  private targetEffectHudIcon(x: number, y: number, effect: ResolvedEffect, action: () => void, active = false): void { const color = this.effectColor(effect); const background = this.add.circle(x, y, 13, 0x151917, .96).setStrokeStyle(1, color, 1).setDepth(17).setInteractive({ useHandCursor: true }); const icon = this.add.image(x, y, this.effectIconTexture(effect), this.effectIconFrame(effect)).setDisplaySize(21, 21).setTint(color).setDepth(18); background.on("pointerdown", action); icon.setInteractive({ useHandCursor: true }).on("pointerdown", action); if (active) this.tweens.add({ targets: [background, icon], scale: EFFECT_PHASER_VISUAL.hudActiveEffectPulseScale, duration: EFFECT_PHASER_VISUAL.hudActiveEffectPulseDurationMs, ease: "Sine.InOut", yoyo: true, repeat: -1 }); }
   private gemInfoDialog(cx: number, cy: number, model: RdnSceneModel, index: number): void {
     const depth = 20; const effects = this.effectsForGem(model, index);
     if (this.infoScrollForGem !== index) { this.infoScrollForGem = index; this.infoScrollOffset = 0; }
@@ -648,7 +656,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (!effects.length) content.add(this.label(cx, contentTop + 22, "Nessun effetto attivo", 13, 0xe6dfc3).setDepth(depth + 1));
     effects.forEach((effect, effectIndex) => {
       const y = contentTop + 30 + effectIndex * 168;
-      const color = this.effectColor(effect); const iconBackground = this.add.circle(cx - 119, y, 25, 0x101c18, .95).setStrokeStyle(2, color, .95); const icon = this.add.image(cx - 119, y, "rdn-effects", this.effectIconFrame(effect)).setDisplaySize(41, 41).setTint(color);
+      const color = this.effectColor(effect); const iconBackground = this.add.circle(cx - 119, y, 25, 0x101c18, .95).setStrokeStyle(2, color, .95); const icon = this.add.image(cx - 119, y, this.effectIconTexture(effect), this.effectIconFrame(effect)).setDisplaySize(41, 41).setTint(color);
       const title = this.label(cx - 80, y, this.effectLabel(effect, model), 15, color).setOrigin(0, .5);
       const [nature, behavior, solution] = this.effectDetails(effect, model);
       const details = this.wrappedLabel(cx - 80, y + 24, `${nature}\n${behavior}\n${solution}`, 194, 13, 0xe6dfc3, depth + 1); content.add([iconBackground, icon, title, details]);
@@ -663,28 +671,31 @@ export class RdnPhaserScene extends Phaser.Scene {
     const consumed = typeof queued === "string" && model.state.consumedSpecialOperatorIndexes.includes(index);
     const operator = consumed ? null : queued;
     const special = typeof operator === "string";
-    const presentation = this.gearOperatorPresentation(operator);
+    const elementalAffinity = typeof operator === "number" ? this.gearOperatorElement(model.level, model.state, index) : null;
+    const presentation = this.gearOperatorPresentation(operator, elementalAffinity);
     const specialIcon = this.gearSpecialIcon(operator);
     this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(342, 330).setDepth(depth).setInteractive();
     this.label(cx, cy - 126, "OPERATORE INGRANAGGIO", 16, 0x9cf5ff).setDepth(depth + 2);
     if (specialIcon) this.add.image(cx - 112, cy - 76, specialIcon.texture, specialIcon.frame).setDisplaySize(54, 54).setTint(presentation.color).setDepth(depth + 2);
     else {
-      const gem = this.gem(cx - 112, cy - 76, 27, index, this.visualSet(model), operator === null, special).setDepth(depth + 2);
+      const gem = this.gem(cx - 112, cy - 76, 27, index, this.visualSet(model), operator === null, special, elementalAffinity).setDepth(depth + 2);
       this.sphereLabel(cx - 112, cy - 76, formatOperator(operator), 27, special ? 0xffffff : 0xe6dfc3, 31, .76).setDepth(depth + 3);
       gem.setDepth(depth + 2);
     }
     this.label(cx - 72, cy - 88, presentation.title, 17, presentation.color).setOrigin(0, .5).setDepth(depth + 2);
-    this.label(cx - 72, cy - 62, operator === null ? "ESAURITO" : special ? "OPERATORE SPECIALE" : "OPERATORE NUMERICO", 11, operator === null ? 0xd8d8d8 : special ? 0xdca8ff : 0x9df3a8).setOrigin(0, .5).setDepth(depth + 2);
+    this.label(cx - 72, cy - 62, operator === null ? "ESAURITO" : special ? "OPERATORE SPECIALE" : elementalAffinity ? `OPERATORE ELEMENTALE · ${elementalAffinity.toUpperCase()}` : "OPERATORE NUMERICO", 11, operator === null ? 0xd8d8d8 : special ? 0xdca8ff : presentation.color).setOrigin(0, .5).setDepth(depth + 2);
     this.wrappedLabel(cx - 130, cy - 25, presentation.description, 260, 14, 0xe6dfc3, depth + 2);
     this.button(cx + 145, cy - 137, "x", () => this.actions.closeInfo(), depth + 3);
   }
-  private gearOperatorPresentation(operator: PuzzleOperator | null): { title: string; description: string; color: number } {
+  private gearOperatorPresentation(operator: PuzzleOperator | null, elementalAffinity: ElementalAffinity | null = null): { title: string; description: string; color: number } {
     if (operator === "divide2") return { title: "DIVIDI PER 2", description: "Divide per 2 il valore del bersaglio allineato. Si attiva solo sui numeri pari diversi da zero e si consuma dopo l'uso.", color: 0xdca8ff };
     if (operator === "divide3") return { title: "DIVIDI PER 3", description: "Divide per 3 il valore del bersaglio allineato. Si attiva solo sui multipli di 3 diversi da zero e si consuma dopo l'uso.", color: 0xdca8ff };
     if (operator === "zero") return { title: "AZZERAMENTO", description: "Porta a zero il bersaglio allineato. È un operatore speciale monouso.", color: 0xffcf75 };
     if (operator === "invert") return { title: "INVERTITORE", description: "Inverte il segno del valore del bersaglio allineato. È un operatore speciale monouso.", color: 0xc890ff };
     if (operator === "skip") return { title: "SALTA FLUSSO", description: "Non modifica il bersaglio allineato e consuma questo operatore speciale.", color: 0x9cf5ff };
     if (operator === null) return { title: "NESSUN OPERATORE", description: "Questo slot dell'ingranaggio è stato consumato oppure non contiene più un operatore disponibile.", color: 0xd8d8d8 };
+    if (elementalAffinity === "fire") return { title: `OPERATORE FUOCO ${formatOperator(operator)}`, description: `Applica ${formatOperator(operator)} al bersaglio. Attraversa i muri di ghiaccio senza consumarli, ma viene fermato dai muri di fuoco.`, color: 0xff6558 };
+    if (elementalAffinity === "ice") return { title: `OPERATORE GHIACCIO ${formatOperator(operator)}`, description: `Applica ${formatOperator(operator)} al bersaglio. Attraversa i muri di fuoco senza consumarli, ma viene fermato dai muri di ghiaccio.`, color: 0x8cecff };
     return { title: `OPERATORE ${formatOperator(operator)}`, description: `Applica ${formatOperator(operator)} al valore del bersaglio allineato durante l'impulso.`, color: 0x9df3a8 };
   }
   private linkInfoDialog(cx: number, cy: number, model: RdnSceneModel, effectId: string): void {
@@ -696,9 +707,9 @@ export class RdnPhaserScene extends Phaser.Scene {
     const color = this.effectColor(effect);
     this.add.rectangle(cx, cy, 350, 382, 0x101c18, .98).setStrokeStyle(2, color).setDepth(depth).setInteractive();
     this.label(cx, cy - 156, "COLLEGAMENTO EFFETTO", 17, 0x9cf5ff).setDepth(depth + 1);
-    this.effectLegendIcon(cx - 119, cy - 116, this.effectIconFrame(effect), color, depth + 1);
+    this.effectLegendIcon(cx - 119, cy - 116, this.effectIconFrame(effect), color, depth + 1, this.effectIconTexture(effect));
     this.label(cx - 97, cy - 116, this.effectLabel(effect, model), 15, color).setOrigin(0, .5).setDepth(depth + 1);
-    const forwardOnly = effect.config.scope === EffectScope.LINK && effect.config.direction === "FORWARD";
+    const forwardOnly = effect.config.scope === EffectScope.LINK && (effect.config.type === LinkEffectType.CHAIN || effect.config.direction === "FORWARD");
     const reverseOnly = effect.config.scope === EffectScope.LINK && effect.config.direction === "REVERSE";
     this.label(cx, cy - 77, `Direzione: ${forwardOnly ? "origine → destinazione" : reverseOnly ? "destinazione → origine" : "bidirezionale"}`, 12, 0xe6dfc3).setDepth(depth + 1);
     this.label(cx, cy - 47, `Gemma ${fromIndex + 1}: ${format(model.state.outerValues[fromIndex])}   ·   Gemma ${toIndex + 1}: ${format(model.state.outerValues[toIndex])}`, 14, 0xffffff).setDepth(depth + 1);
@@ -712,19 +723,21 @@ export class RdnPhaserScene extends Phaser.Scene {
   }
   private isEffectActive(effect: ResolvedEffect, values: readonly number[], runtime?: PuzzleState["effectRuntime"]): boolean { return isEffectVisuallyActive(effect, values, runtime); }
   private effectIconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
-  private effectColor(effect: ResolvedEffect): number { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff; return 0xff9378; }
+  private effectIconTexture(effect: ResolvedEffect): string { return effectAssetTexture(effect); }
+  private effectColor(effect: ResolvedEffect): number { if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.FIRE ? 0xff6558 : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff; if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : effect.config.type === LinkEffectType.CHAIN ? 0xff6c67 : 0xc890ff; return 0xff9378; }
   private areaRangeLabel(effect: ResolvedEffect): string {
     if (effect.config.scope !== EffectScope.AREA) return "";
     const range = effect.config.range ?? (effect.config.radius === 2 ? AreaEffectRange.TWO_ADJACENT : AreaEffectRange.ADJACENT);
     return range === AreaEffectRange.ALL ? "tutte le altre gemme" : range === AreaEffectRange.TWO_ADJACENT ? "2 gemme per lato" : "1 gemma per lato";
   }
   private areaValue(effect: ResolvedEffect): number { return effect.config.scope === EffectScope.AREA ? effect.config.value ?? -(effect.config.strength ?? 1) : 0; }
-  private effectLabel(effect: ResolvedEffect, model: RdnSceneModel): string { if (effect.config.scope === EffectScope.GEM) { const config = effect.config; const detail = config.type === GemEffectType.WALL ? model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.ICE ? model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.TIMER ? model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? config.turns : config.type === GemEffectType.AMPLIFIER ? `x${config.multiplier}` : config.type === GemEffectType.SHIELD ? config.strength : undefined; return `${config.type}${detail === undefined ? "" : ` ${detail}`}`; } if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) return `${effect.config.type}${effect.config.multiplier ? ` x${effect.config.multiplier}` : ""} ${effect.target.fromGem.index + 1} -> ${effect.target.toGem.index + 1}`; if (effect.config.scope === EffectScope.AREA) { const detail = effect.config.type === AreaEffectType.BOMB ? ` ${format(this.areaValue(effect))}` : effect.config.type === AreaEffectType.ICE ? ` gelo ${effect.config.strength ?? 1}` : ""; return `${effect.config.type}${detail} · ${this.areaRangeLabel(effect)}`; } return effect.config.type; }
+  private effectLabel(effect: ResolvedEffect, model: RdnSceneModel): string { if (effect.config.scope === EffectScope.GEM) { const config = effect.config; const detail = config.type === GemEffectType.WALL ? model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.ICE ? model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.FIRE ? model.state.effectRuntime?.fireRemainingStrength[effect.id] ?? config.strength : config.type === GemEffectType.TIMER ? model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? config.turns : config.type === GemEffectType.AMPLIFIER ? `x${config.multiplier}` : config.type === GemEffectType.SHIELD ? config.strength : undefined; return `${config.type}${detail === undefined ? "" : ` ${detail}`}`; } if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) return `${effect.config.type}${effect.config.multiplier ? ` x${effect.config.multiplier}` : ""} ${effect.target.fromGem.index + 1} -> ${effect.target.toGem.index + 1}`; if (effect.config.scope === EffectScope.AREA) { const detail = effect.config.type === AreaEffectType.BOMB ? ` ${format(this.areaValue(effect))}` : effect.config.type === AreaEffectType.ICE ? ` gelo ${effect.config.strength ?? 1}` : ""; return `${effect.config.type}${detail} · ${this.areaRangeLabel(effect)}`; } return effect.config.type; }
   private effectDetails(effect: ResolvedEffect, model: RdnSceneModel): readonly [string, string, string] {
     if (effect.config.scope === EffectScope.GEM) {
       if (effect.config.type === GemEffectType.SHIELD) { const strength = effect.config.strength ?? 1; return ["Natura: barriera difensiva.", `Fa: assorbe fino a ${strength} punti da ogni flusso in arrivo.`, "Soluzione: supera l'assorbimento con un impulso più forte."]; }
       if (effect.config.type === GemEffectType.WALL) { const remaining = model.state.effectRuntime?.wallRemainingStrength[effect.id] ?? effect.config.strength ?? 1; return ["Natura: ostacolo consumabile.", `Fa: annulla un flusso; resistenza rimasta: ${remaining} colpi.`, "Soluzione: colpiscila fino a romperla, poi applica il valore."]; }
-      if (effect.config.type === GemEffectType.ICE) { const remaining = model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? effect.config.strength; return ["Natura: barriera di ghiaccio.", `Fa: annulla un flusso; gelo rimasto: ${remaining} colpi.`, "Soluzione: scongelala con gli impatti, poi applica il valore."]; }
+      if (effect.config.type === GemEffectType.ICE) { const remaining = model.state.effectRuntime?.iceRemainingStrength[effect.id] ?? effect.config.strength; return ["Natura: barriera elementale di ghiaccio.", `Fuoco attraversa il muro senza consumarlo; ghiaccio viene bloccato. Restano ${remaining} colpi contro gli altri operatori.`, "Soluzione: usa fuoco per passare subito oppure operatori non elementali per consumarlo."]; }
+      if (effect.config.type === GemEffectType.FIRE) { const remaining = model.state.effectRuntime?.fireRemainingStrength[effect.id] ?? effect.config.strength; return ["Natura: barriera di fuoco.", `Fa: annulla un flusso; fiamme rimaste: ${remaining} colpi.`, "Soluzione: un operatore ghiaccio la attraversa senza consumarla; uno fuoco viene fermato."]; }
       if (effect.config.type === GemEffectType.AMPLIFIER) return ["Natura: amplificatore locale.", `Fa: moltiplica ogni contributo in arrivo per ${effect.config.multiplier}.`, "Soluzione: usa impulsi piccoli e calcola il valore amplificato."];
       if (effect.config.type === GemEffectType.INVERTER) return ["Natura: invertitore locale.", "Fa: dopo l'operazione inverte il valore ottenuto dalla gemma.", "Soluzione: pianifica prima il valore intermedio e poi il suo segno."];
       if (effect.config.type === GemEffectType.TIMER) { const remaining = model.state.effectRuntime?.timerRemainingTurns[effect.id] ?? effect.config.turns; const unit = timerUnitOf(effect); const measure = unit === "SECONDS" ? "secondi" : "impulsi diretti"; const state = remaining <= TIMER_PRESENTATION.criticalAt ? "critico" : remaining <= TIMER_PRESENTATION.attentionAt ? "attenzione" : "normale"; return [`Natura: timer in ${measure}, stato ${state}.`, `Obiettivo: porta questa gemma a zero. Restano ${remaining} ${measure}; il contatore cala ${TIMER_PRESENTATION.decrementMoment}.`, `Alla scadenza ${TIMER_PRESENTATION.expiryConsequence}. Risolvila entro l'ultimo impulso.`]; }
@@ -734,6 +747,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (effect.config.scope === EffectScope.LINK) {
       if (effect.config.type === LinkEffectType.ECHO) return ["Natura: collegamento di propagazione.", "Fa: trasferisce lo stesso valore all'altra gemma.", "Soluzione: pianifica l'effetto su entrambe le gemme collegate."];
       if (effect.config.type === LinkEffectType.AMPLIFY) return ["Natura: collegamento amplificatore.", `Fa: trasferisce il valore moltiplicato per ${effect.config.multiplier ?? 1}.`, "Soluzione: usa valori piccoli e controlla il risultato sulla gemma collegata."];
+      if (effect.config.type === LinkEffectType.CHAIN) return ["Natura: catena di blocco.", "La gemma di destinazione non può ricevere impulsi finché la gemma di origine non è risolta.", "Soluzione: porta prima a zero la gemma all'origine della freccia, poi risolvi quella incatenata."];
       return ["Natura: collegamento invertitore.", "Fa: trasferisce il valore cambiandone il segno.", "Soluzione: scegli un impulso opposto al risultato che vuoi ottenere in arrivo."];
     }
     const range = this.areaRangeLabel(effect);
@@ -741,14 +755,14 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (effect.config.type === AreaEffectType.ICE) return ["Natura: gelo ad area.", `Fa: quando questa gemma arriva a zero, applica gelo di forza ${effect.config.strength ?? 1} a ${range}.`, "Soluzione: attivala quando puoi rimandare gli impulsi sulle gemme coinvolte."];
     return ["Natura: inversione ad area.", `Fa: quando questa gemma arriva a zero, inverte il segno di ${range}.`, "Soluzione: attivala quando il cambio di segno favorisce tutte le gemme coinvolte."];
   }
-  private effectLegendIcon(x: number, y: number, frame: string, color: number, depth: number): void { const background = this.add.circle(x, y, 14, 0x101c18, .95).setStrokeStyle(1, color, .95).setDepth(depth); this.add.image(x, y, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color).setDepth(depth + 1); background.setDepth(depth); }
+  private effectLegendIcon(x: number, y: number, frame: string, color: number, depth: number, texture = "rdn-effects"): void { const background = this.add.circle(x, y, 14, 0x101c18, .95).setStrokeStyle(1, color, .95).setDepth(depth); this.add.image(x, y, texture, frame).setDisplaySize(23, 23).setTint(color).setDepth(depth + 1); background.setDepth(depth); }
   private tutorialDialog(cx: number, cy: number, tutorial: EffectTutorialDefinition): void {
     const depth = 40;
     const color = Number.parseInt(tutorial.color.slice(1), 16);
     this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(360, 410).setDepth(depth).setInteractive();
     this.add.rectangle(cx, cy, 360, 410, 0x101c18, 0).setStrokeStyle(3, color).setDepth(depth + 1);
     this.label(cx, cy - 166, "NUOVO EFFETTO", 15, 0xf8dc8b).setDepth(depth + 1);
-    this.effectLegendIcon(cx - 112, cy - 120, tutorial.iconFrame, color, depth + 1);
+    this.effectLegendIcon(cx - 112, cy - 120, tutorial.iconFrame, color, depth + 1, tutorial.iconTexture);
     this.label(cx - 88, cy - 120, tutorial.title.toUpperCase(), 20, color).setOrigin(0, .5).setDepth(depth + 1);
     this.wrappedLabel(cx - 144, cy - 80, tutorial.summary, 288, 15, 0xffffff, depth + 1);
     this.label(cx - 144, cy - 28, "COSA FA", 12, 0xf8dc8b).setOrigin(0, 0).setDepth(depth + 1);
@@ -758,13 +772,62 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.button(cx, cy + 157, "OK", () => this.actions.dismissTutorial(tutorial.id), depth + 2);
   }
   private wrappedLabel(x: number, y: number, value: string, width: number, size: number, color: number, depth: number): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold", stroke: "#111814", strokeThickness: 1, lineSpacing: 3, wordWrap: { width } }).setOrigin(0, 0).setDepth(depth); }
-  private operationFeedback(reason: AlignmentPreview["rejectedReason"]): string { return reason === "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" ? "DIV2 richiede un valore pari diverso da zero" : reason === "DIVIDE_BY_TWO_CONSUMED" ? "DIV2 gia usato" : reason === "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" ? "DIV3 richiede un multiplo di 3 diverso da zero" : reason === "DIVIDE_BY_THREE_CONSUMED" ? "DIV3 gia usato" : reason === "SPECIAL_OPERATOR_CONSUMED" ? "Operatore speciale gia usato" : reason === "RESULT_OUT_OF_RANGE" ? "Mossa fuori intervallo" : "Mossa non disponibile"; }
+  private operationFeedback(reason: AlignmentPreview["rejectedReason"]): string { return reason === "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" ? "DIV2 richiede un valore pari diverso da zero" : reason === "DIVIDE_BY_TWO_CONSUMED" ? "DIV2 gia usato" : reason === "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" ? "DIV3 richiede un multiplo di 3 diverso da zero" : reason === "DIVIDE_BY_THREE_CONSUMED" ? "DIV3 gia usato" : reason === "SPECIAL_OPERATOR_CONSUMED" ? "Operatore speciale gia usato" : reason === "RESULT_OUT_OF_RANGE" ? "Mossa fuori intervallo" : reason === "CHAIN_LOCKED" ? "Gemma incatenata: risolvi prima l'origine" : "Mossa non disponibile"; }
   private freeInfoDialog(cx: number, cy: number, settings: NonNullable<RdnSceneModel["freeSettings"]>): void { const depth = 20; this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(330, 262).setDepth(depth).setInteractive(); this.label(cx, cy - 96, "INFO FREE", 18, 0xf8dc8b).setDepth(depth + 1); this.label(cx, cy - 55, `Difficolta: ${settings.difficulty}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy - 26, `Gemme operative: ${settings.slotCount}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy + 3, `Effetti: ${settings.effectsEnabled ? "ATTIVI" : "DISATTIVI"}`, 14, settings.effectsEnabled ? 0x9df3a8 : 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 33, "Partite illimitate", 13, 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 58, "Nessuna vita o penalita", 13, 0xe6dfc3).setDepth(depth + 1); this.button(cx + 140, cy - 103, "x", () => this.actions.closeInfo(), depth + 3); }
   private label(x: number, y: number, value: string, size: number, color: number, digital = false): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: digital ? "Arial, Helvetica, sans-serif" : "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold", stroke: "#111814", strokeThickness: Math.max(2, Math.round(size * .14)) }).setOrigin(.5); }
   private button(x: number, y: number, value: string, action: () => void, depth = 0): void { const button = this.add.circle(x, y, 24, 0x3b2b19).setDepth(depth).setInteractive(); button.on("pointerdown", action); const frame = UI_ICON_BY_BUTTON_LABEL[value]; if (frame) this.add.image(x, y, "rdn-ui-icons", frame).setDisplaySize(48, 48).setDepth(depth + 1); else this.label(x, y, value, 24, 0xffe3a0).setDepth(depth + 1); }
   private actionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-actions", frame).setDisplaySize(size, size).setDepth(depth); }
   private effectActionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-effect-actions", frame).setDisplaySize(size, size).setDepth(depth); }
-  private bonus(x: number, y: number, action: RdnHudAction, activate: () => void): void { this.add.image(x, y, "rdn-info-panel").setDisplaySize(94, 94).setDepth(1); const button = this.add.circle(x, y, 31, action.disabled ? 0x4d4d4d : 0x245438).setDepth(2).setInteractive(); button.on("pointerdown", () => { if (!action.disabled) activate(); }); this.effectActionIcon(x, y, 82, action.icon, 3); this.add.circle(x + 23, y + 23, 12, 0x241b12).setStrokeStyle(1, 0xb18b48).setDepth(4); this.label(x + 23, y + 23, String(action.charges), 12, 0xffffff).setDepth(5); }
+  /** A single expandable tray keeps all player actions together without covering the board when collapsed. */
+  private actionPanel(cx: number, height: number, actions: readonly RdnHudAction[]): void {
+    const depth = 15; const primaryY = height - 67; const extraY = height + 50;
+    const contentStartOffset = this.actionPanelTransitionFrom ?? (this.actionPanelOpen ? -117 : 0);
+    const contentTargetOffset = this.actionPanelOpen ? -117 : 0;
+    this.actionPanelTransitionFrom = undefined;
+    const startPanelY = contentStartOffset === 0 ? height - 66 : height - 130;
+    const startPanelHeight = contentStartOffset === 0 ? 132 : 260;
+    const targetPanelY = this.actionPanelOpen ? height - 130 : height - 66;
+    const targetPanelHeight = this.actionPanelOpen ? 260 : 132;
+    const startHandleY = startPanelY - startPanelHeight / 2 + 13;
+    const targetHandleY = targetPanelY - targetPanelHeight / 2 + 13;
+    const panel = this.add.image(cx, startPanelY, "rdn-info-panel").setDisplaySize(410, startPanelHeight).setAlpha(.98).setDepth(depth);
+    const content = this.add.container(0, contentStartOffset).setDepth(depth + 2);
+    actions.slice(0, 8).forEach((action, index) => {
+      const actionIndex = index; const column = actionIndex % 4; const x = cx + (column - 1.5) * 96; const y = actionIndex < 4 ? primaryY : extraY; const alpha = action.disabled ? .34 : 1;
+      const button = this.add.circle(x, y, 31, action.disabled ? 0x4c4c4c : 0x245438, .98).setStrokeStyle(1, action.disabled ? 0x777777 : 0xd6af58, .9).setAlpha(alpha).setInteractive({ useHandCursor: !action.disabled });
+      button.on("pointerdown", () => { if (action.disabled) return; this.actionHoldTriggered = false; this.actionHoldTimer = this.time.delayedCall(420, () => { if (!this.input.activePointer.isDown) return; this.actionHoldTriggered = true; this.showActionInfo(cx, height, action); }); });
+      button.on("pointerup", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; if (this.actionHoldTriggered) { this.render(); return; } if (!action.disabled) this.actions.action(actionIndex); });
+      button.on("pointerout", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; });
+      const icon = this.effectActionIcon(x, y, 82, action.icon).setAlpha(alpha);
+      const chargeBackground = this.add.circle(x + 23, y + 23, 12, 0x241b12, .96).setStrokeStyle(1, 0xb18b48, .9).setAlpha(alpha);
+      const charge = this.label(x + 23, y + 23, String(action.charges), 12, 0xffffff).setAlpha(alpha);
+      content.add([button, icon, chargeBackground, charge]);
+    });
+    const handle = this.add.rectangle(cx, startHandleY, 108, 20, 0x15231d, .98).setStrokeStyle(1, 0xd6af58, .9).setDepth(depth + 4).setInteractive({ useHandCursor: true });
+    const handleLabel = this.label(cx, startHandleY - 1, this.actionPanelOpen ? "▼  AZIONI  ▼" : "▲  AZIONI  ▲", 10, 0xf8dc8b).setDepth(depth + 5);
+    handle.on("pointerdown", (pointer: Phaser.Input.Pointer) => { this.actionPanelHandleStartY = pointer.y; });
+    handle.on("pointerup", (pointer: Phaser.Input.Pointer) => {
+      const startY = this.actionPanelHandleStartY ?? pointer.y; const delta = pointer.y - startY;
+      const nextOpen = Math.abs(delta) < 10 ? !this.actionPanelOpen : delta < 0;
+      if (nextOpen !== this.actionPanelOpen) this.actionPanelTransitionFrom = this.actionPanelOpen ? -117 : 0;
+      this.actionPanelOpen = nextOpen; this.actionPanelHandleStartY = null; this.render();
+    });
+    if (contentStartOffset !== contentTargetOffset) {
+      this.tweens.add({ targets: content, y: contentTargetOffset, duration: 260, ease: "Cubic.Out" });
+      this.tweens.add({ targets: panel, y: targetPanelY, displayHeight: targetPanelHeight, duration: 260, ease: "Cubic.Out" });
+      this.tweens.add({ targets: [handle, handleLabel], y: targetHandleY, duration: 260, ease: "Cubic.Out" });
+    }
+  }
+  /** Long press action help: same panel asset and visual language used by game information dialogs. */
+  private showActionInfo(cx: number, cy: number, action: RdnHudAction): void {
+    const depth = 30;
+    this.add.rectangle(cx, cy / 2, this.scale.width, this.scale.height, 0x020907, .46).setDepth(depth).setInteractive();
+    this.add.image(cx, cy / 2, "rdn-info-panel").setDisplaySize(330, 220).setDepth(depth + 1).setInteractive();
+    this.effectActionIcon(cx, cy / 2 - 55, 48, action.icon, depth + 2);
+    this.label(cx, cy / 2 - 17, action.label.toUpperCase(), 16, 0xf8dc8b).setDepth(depth + 2);
+    this.label(cx, cy / 2 + 22, action.description, 12, 0xe6dfc3).setWordWrapWidth(270).setDepth(depth + 2);
+    this.label(cx, cy / 2 + 72, `CARICHE: ${action.charges}`, 12, action.disabled ? 0x9b9b9b : 0xffdf70).setDepth(depth + 2);
+  }
   private infoDialog(cx: number, cy: number, model: RdnSceneModel): void {
     const depth = 20;
     const panelHeight = model.level.variant === "persistent" ? 340 : 238;

@@ -75,7 +75,7 @@ describe("LevelEffectConfigResolver", () => {
     const valid = resolver.resolve({ enabled: true, effects: [{ preset: "AMPLIFIER_X2", target: { type: EffectScope.GEM, gemIndex: 0 } }, { preset: "TIMER_3", target: { type: EffectScope.GEM, gemIndex: 1 } }, { preset: "CORRUPTION_1", target: { type: EffectScope.GEM, gemIndex: 2 } }] }, 4);
     expect(valid.issues).toEqual([]);
     const invalid = resolver.resolve({ enabled: true, effects: [{ preset: "WALL_2", target: { type: EffectScope.GEM, gemIndex: 0 } }, { preset: "ICE_1", target: { type: EffectScope.GEM, gemIndex: 0 } }] }, 4);
-    expect(invalid.issues).toContain("Gem 0 cannot contain both WALL and ICE.");
+    expect(invalid.issues).toContain("Gem 0 cannot contain more than one barrier.");
   });
 
   it("resolves every isolated demo fixture without modifying the production level catalogue", () => {

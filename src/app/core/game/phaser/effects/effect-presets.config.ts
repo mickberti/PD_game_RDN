@@ -1,4 +1,4 @@
-import { AreaEffectRange, AreaEffectType, EffectConfig, EffectScope, GemEffectType, LinkEffectType, TimerUnit } from "./effects.models";
+import { AreaEffectRange, AreaEffectType, EffectConfig, EffectScope, GemEffectType, LinkDirection, LinkEffectType, TimerUnit } from "./effects.models";
 
 /** Central catalogue: levels only reference these stable names. */
 export const EFFECT_PRESETS = {
@@ -16,6 +16,9 @@ export const EFFECT_PRESETS = {
   ICE_1: { scope: EffectScope.GEM, type: GemEffectType.ICE, strength: 1 },
   ICE_2: { scope: EffectScope.GEM, type: GemEffectType.ICE, strength: 2 },
   ICE_3: { scope: EffectScope.GEM, type: GemEffectType.ICE, strength: 3 },
+  FIRE_1: { scope: EffectScope.GEM, type: GemEffectType.FIRE, strength: 1 },
+  FIRE_2: { scope: EffectScope.GEM, type: GemEffectType.FIRE, strength: 2 },
+  FIRE_3: { scope: EffectScope.GEM, type: GemEffectType.FIRE, strength: 3 },
   TIMER_3: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 3, unit: TimerUnit.IMPULSES },
   TIMER_5: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 5, unit: TimerUnit.IMPULSES },
   TIMER_7: { scope: EffectScope.GEM, type: GemEffectType.TIMER, turns: 7, unit: TimerUnit.IMPULSES },
@@ -25,6 +28,7 @@ export const EFFECT_PRESETS = {
   ECHO_LINK: { scope: EffectScope.LINK, type: LinkEffectType.ECHO },
   DOUBLE_LINK: { scope: EffectScope.LINK, type: LinkEffectType.AMPLIFY, multiplier: 2 },
   INVERT_LINK: { scope: EffectScope.LINK, type: LinkEffectType.INVERT },
+  CHAIN_LINK: { scope: EffectScope.LINK, type: LinkEffectType.CHAIN, direction: LinkDirection.FORWARD },
   BOMB_1: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, strength: 1, radius: 1 },
   BOMB_2: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, strength: 2, radius: 1 },
   AREA_BOMB_MINUS_2: { scope: EffectScope.AREA, type: AreaEffectType.BOMB, value: -2, range: AreaEffectRange.ADJACENT },

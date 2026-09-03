@@ -17,15 +17,15 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, readonly effect: ResolvedEffect, geometry: LinkEffectGeometry, onInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void) {
     super(scene); this.geometry = geometry; scene.add.existing(this); this.setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     const config = effect.config; if (config.scope !== EffectScope.LINK) return;
-    const color = config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : config.type === LinkEffectType.INVERT ? 0xc890ff : 0x7edbff; this.linkColor = color;
+    const color = config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : config.type === LinkEffectType.INVERT ? 0xc890ff : config.type === LinkEffectType.CHAIN ? 0xff6c67 : 0x7edbff; this.linkColor = color;
     const visual = EFFECT_PHASER_VISUAL.links;
     const graphic = scene.add.graphics(); this.baseGraphic = graphic; graphic.lineStyle(visual.width + visual.outerGlowWidthExtra, color, visual.outerGlowAlpha); this.drawCurve(graphic); graphic.lineStyle(visual.width + visual.middleGlowWidthExtra, color, visual.middleGlowAlpha); this.drawCurve(graphic); graphic.lineStyle(visual.width, color, visual.coreAlpha); this.drawCurve(graphic);
-    const direction = config.direction ?? LinkDirection.BIDIRECTIONAL; this.direction = direction;
+    const direction = config.type === LinkEffectType.CHAIN ? LinkDirection.FORWARD : config.direction ?? LinkDirection.BIDIRECTIONAL; this.direction = direction;
     if (direction !== LinkDirection.REVERSE) this.drawArrow(graphic, this.pointAt(.93), this.tangentAt(.93), color);
     if (direction !== LinkDirection.FORWARD) this.drawArrow(graphic, this.pointAt(.07), this.tangentAt(.07).negate(), color);
-    const iconPosition = this.pointAt(geometry.iconProgress); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : "effect-mirror-link";
+    const iconPosition = this.pointAt(geometry.iconProgress); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : config.type === LinkEffectType.CHAIN ? "break-chain" : "effect-mirror-link"; const texture = config.type === LinkEffectType.CHAIN ? "rdn-effect-actions" : "rdn-effects";
     const background = scene.add.circle(iconPosition.x, iconPosition.y, 17, 0x101c18, .94).setStrokeStyle(2, color, 1).setInteractive({ useHandCursor: true });
-    const icon = scene.add.image(iconPosition.x, iconPosition.y - 2, "rdn-effects", frame).setDisplaySize(23, 23).setTint(color).setInteractive({ useHandCursor: true });
+    const icon = scene.add.image(iconPosition.x, iconPosition.y - 2, texture, frame).setDisplaySize(23, 23).setTint(color).setInteractive({ useHandCursor: true });
     if (onInfo) { background.on("pointerup", (pointer: Phaser.Input.Pointer) => onInfo(effect.id, pointer)); icon.on("pointerup", (pointer: Phaser.Input.Pointer) => onInfo(effect.id, pointer)); }
     this.add([graphic, background, icon]);
     if (direction !== LinkDirection.REVERSE) this.animateDirection(scene, color, true, 0);

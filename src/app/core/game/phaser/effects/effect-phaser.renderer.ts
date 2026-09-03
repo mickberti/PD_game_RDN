@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { AreaEffectType, EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects.models";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
-import { effectAssetFrame, isEffectVisuallyActive } from "./effect-presentation.config";
+import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive } from "./effect-presentation.config";
 
 export interface EffectGemPosition { x: number; y: number; radius: number; }
 
@@ -48,6 +48,7 @@ export class EffectPhaserRenderer {
       case "FLOW_PROPAGATED": this.animateFlow(event); break;
       case "FLOW_ARRIVED": this.pulseGem(event.gemId, 0x9cf5ff, 1.25, event.generation * EFFECT_PHASER_VISUAL.links.propagationStageDelayMs); break;
       case "FLOW_MERGED": this.pulseGem(event.gemId, 0xffdf70, 1.55); break;
+      case "CHAIN_BLOCKED": this.flashGem(event.gemId, 0xff6c67); break;
       case "SHIELD_ABSORBED": this.flashGem(event.gemId, 0x72dfff); break;
       case "SHIELD_DEPLETED": this.breakWall(event.gemId, 0x72dfff); break;
       case "WALL_HIT": this.flashGem(event.gemId, 0xbca477); break;
@@ -57,6 +58,10 @@ export class EffectPhaserRenderer {
       case "GEM_INVERTER_APPLIED": this.flashGem(event.gemId, 0xc890ff); break;
       case "ICE_HIT": this.flashGem(event.gemId, 0x9cf5ff); break;
       case "ICE_BROKEN": this.breakWall(event.gemId, 0x9cf5ff); break;
+      case "FIRE_HIT": this.flashGem(event.gemId, 0xff6558); break;
+      case "FIRE_BROKEN": this.breakWall(event.gemId, 0xff6558); break;
+      case "ELEMENTAL_BYPASSED": this.pulseGem(event.gemId, event.elementalAffinity === "ice" ? 0x8cecff : 0xff6558, 1.6); break;
+      case "ELEMENTAL_BLOCKED": this.flashGem(event.gemId, event.elementalAffinity === "ice" ? 0x8cecff : 0xff6558); break;
       case "TIMER_TICK": this.pulseGem(event.gemId, event.remainingTurns !== undefined && event.remainingTurns <= 2 ? 0xff8d76 : 0xffdf70, 1.18); break;
       case "TIMER_EXPIRED": this.flashGem(event.gemId, 0xff675d); break;
       case "CORRUPTION_APPLIED": this.pulseGem(event.gemId, 0xb35cff, 1.48); break;
@@ -112,22 +117,23 @@ export class EffectPhaserRenderer {
     const value = effect.config.type === GemEffectType.SHIELD ? (effect.config.consumable ? runtime?.shieldRemainingStrength[effect.id] ?? effect.config.strength : effect.config.strength)
       : effect.config.type === GemEffectType.WALL ? runtime?.wallRemainingStrength[effect.id] ?? effect.config.strength
         : effect.config.type === GemEffectType.ICE ? runtime?.iceRemainingStrength[effect.id] ?? effect.config.strength
+          : effect.config.type === GemEffectType.FIRE ? runtime?.fireRemainingStrength[effect.id] ?? effect.config.strength
           : effect.config.type === GemEffectType.TIMER ? runtime?.timerRemainingTurns[effect.id] ?? effect.config.turns
             : effect.config.type === GemEffectType.AMPLIFIER ? `×${effect.config.multiplier}`
               : effect.config.type === GemEffectType.CORRUPTION ? `+${effect.config.amount}` : "";
     if (typeof value === "number" && value <= 0) return;
     if (effect.config.type === GemEffectType.CORRUPTION && values[effect.target.gem.index] === 0) return;
-    this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value));
+    this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value), "top-right", effectAssetTexture(effect));
   }
   private drawAreaEffect(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA || effect.config.scope !== EffectScope.AREA) return; const value = effect.config.type === AreaEffectType.BOMB && effect.config.value !== undefined ? `${effect.config.value > 0 ? "+" : ""}${effect.config.value}` : ""; this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect), value, "bottom-right"); }
   private iconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
   private iconColor(effect: ResolvedEffect): number {
-    if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff;
-    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff;
+    if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.FIRE ? 0xff6558 : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff;
+    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : effect.config.type === LinkEffectType.CHAIN ? 0xff6c67 : 0xc890ff;
     return effect.config.type === AreaEffectType.ICE ? 0x8cecff : effect.config.type === AreaEffectType.INVERTER ? 0xc890ff : 0xff9378;
   }
   /** Gem effects sit top-right; area effects reserve the bottom-right corner. */
-  private drawEffectMarker(gemId: string, frame: string, color: number, value = "", placement: "top-right" | "bottom-right" = "top-right"): void {
+  private drawEffectMarker(gemId: string, frame: string, color: number, value = "", placement: "top-right" | "bottom-right" = "top-right", texture = "rdn-effects"): void {
     const gem = this.gems.get(gemId); if (!gem) return;
     const markerKey = `${gemId}:${placement}`;
     const count = this.markerCounts.get(markerKey) ?? 0; this.markerCounts.set(markerKey, count + 1);
@@ -136,7 +142,7 @@ export class EffectPhaserRenderer {
     const size = Math.max(13, gem.radius * .72) + 5;
     const x = gem.x + gem.radius * offsetX; const y = gem.y + gem.radius * offsetY;
     const background = this.scene.add.circle(x, y, size * .56, 0x101c18, .92).setStrokeStyle(Math.max(1, size * .08), color, .95);
-    const icon = this.scene.add.image(x, y, "rdn-effects", frame).setDisplaySize(size, size).setTint(color);
+    const icon = this.scene.add.image(x, y, texture, frame).setDisplaySize(size, size).setTint(color);
     const children: Phaser.GameObjects.GameObject[] = [background, icon];
     if (value) children.push(this.badge(x + size * .44, y - size * .44, value).setScale(.82));
     this.markerLayer.add(children);

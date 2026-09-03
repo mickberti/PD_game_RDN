@@ -35,7 +35,7 @@ export class LevelEffectConfigResolver {
     for (const effect of effects) if (effect.target.type === EffectScope.GEM && effect.config.scope === EffectScope.GEM) {
       const types = gemTypesByIndex.get(effect.target.gem.index) ?? new Set<string>(); types.add(effect.config.type); gemTypesByIndex.set(effect.target.gem.index, types);
     }
-    for (const [index, types] of gemTypesByIndex) if (types.has("WALL") && types.has("ICE")) issues.push(`Gem ${index} cannot contain both WALL and ICE.`);
+    for (const [index, types] of gemTypesByIndex) if (["WALL", "ICE", "FIRE"].filter((type) => types.has(type)).length > 1) issues.push(`Gem ${index} cannot contain more than one barrier.`);
     return { effects, issues, flowRules: this.resolveFlowRules(configuration.flowRules, issues) };
   }
 

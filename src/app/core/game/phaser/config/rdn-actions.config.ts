@@ -1,22 +1,24 @@
 import { GameplaySessionVariant } from "../../../models/gameplay-session.model";
 
-/** The four gameplay actions always shown in the bottom HUD. */
-export const RDN_ACTION_IDS = ["zero", "invert", "double", "skip"] as const;
+/** Fixed action set shown in the expandable gameplay panel. */
+export const RDN_ACTION_IDS = ["zero", "destroy-fire-walls", "destroy-ice-walls", "destroy-stone-walls", "skip", "cleanse-corruption", "invert", "break-chains"] as const;
 export type RdnActionId = typeof RDN_ACTION_IDS[number];
 export interface RdnActionDefinition { id: RdnActionId; label: string; description: string; icon: string; charges: number; cooldownMs: number; modes: readonly GameplaySessionVariant[]; targeting: "active-flow" | "board" | "timer"; }
-export interface RdnActionLoadout { version: 1; actionIds: [RdnActionId, RdnActionId, RdnActionId, RdnActionId]; }
+/** Retained only to safely read progress saved by older releases. */
+export interface RdnActionLoadout { version: 1; actionIds: readonly RdnActionId[]; }
 export interface RdnActionInstance { id: RdnActionId; charges: number; cooldownUntil: number; }
 
+const ALL_MODES = ["adventure", "time-attack", "free"] as const;
 export const RDN_ACTION_CATALOG: Readonly<Record<RdnActionId, RdnActionDefinition>> = {
-  zero: { id: "zero", label: "Azzeramento", description: "Azzera la gemma del flusso attivo.", icon: "reset-zero", charges: 1, cooldownMs: 0, modes: ["adventure", "time-attack", "free"], targeting: "active-flow" },
-  invert: { id: "invert", label: "Cambia segno", description: "Inverte il segno della gemma del flusso attivo.", icon: "wind", charges: 1, cooldownMs: 0, modes: ["adventure", "time-attack", "free"], targeting: "active-flow" },
-  double: { id: "double", label: "Moltiplica ×2", description: "Raddoppia il valore della gemma del flusso attivo.", icon: "add-impulse", charges: 1, cooldownMs: 0, modes: ["adventure", "time-attack", "free"], targeting: "active-flow" },
-  skip: { id: "skip", label: "Salta flusso", description: "Salta il flusso operativo corrente.", icon: "skip-flow", charges: 1, cooldownMs: 0, modes: ["adventure", "time-attack", "free"], targeting: "active-flow" },
+  zero: { id: "zero", label: "Azzeramento gemma", description: "Porta a zero la gemma del flusso attivo.", icon: "reset-zero", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "active-flow" },
+  "destroy-fire-walls": { id: "destroy-fire-walls", label: "Distruggi muri fuoco", description: "Rimuove tutti i muri di fuoco dal tabellone.", icon: "destroy-fire-wall", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "board" },
+  "destroy-ice-walls": { id: "destroy-ice-walls", label: "Distruggi muri ghiaccio", description: "Rimuove tutti i muri di ghiaccio dal tabellone.", icon: "destroy-ice-wall", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "board" },
+  "destroy-stone-walls": { id: "destroy-stone-walls", label: "Distruggi muri pietra", description: "Rimuove tutti i muri di pietra dal tabellone.", icon: "destroy-wall", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "board" },
+  skip: { id: "skip", label: "Skip impulso", description: "Salta il flusso operativo corrente.", icon: "skip-flow", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "active-flow" },
+  "cleanse-corruption": { id: "cleanse-corruption", label: "Annulla corruzione", description: "Rimuove tutti gli effetti corruzione dal tabellone.", icon: "cleanse-corruption", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "board" },
+  invert: { id: "invert", label: "Inverti segno", description: "Inverte il segno della gemma del flusso attivo.", icon: "wind", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "active-flow" },
+  "break-chains": { id: "break-chains", label: "Rompi catene", description: "Rimuove tutte le catene dal tabellone.", icon: "break-chain", charges: 1, cooldownMs: 0, modes: ALL_MODES, targeting: "board" },
 };
 
-export const DEFAULT_RDN_ACTION_LOADOUT: RdnActionLoadout = { version: 1, actionIds: ["zero", "invert", "double", "skip"] };
-export const validateRdnActionLoadout = (value: unknown): RdnActionLoadout => {
-  const ids = (value as Partial<RdnActionLoadout> | null)?.actionIds;
-  if (!Array.isArray(ids) || ids.length !== 4 || ids.some((id) => !RDN_ACTION_IDS.includes(id as RdnActionId)) || new Set(ids).size !== 4) return DEFAULT_RDN_ACTION_LOADOUT;
-  return { version: 1, actionIds: [ids[0] as RdnActionId, ids[1] as RdnActionId, ids[2] as RdnActionId, ids[3] as RdnActionId] };
-};
+export const DEFAULT_RDN_ACTION_LOADOUT: RdnActionLoadout = { version: 1, actionIds: RDN_ACTION_IDS };
+export const validateRdnActionLoadout = (_value: unknown): RdnActionLoadout => DEFAULT_RDN_ACTION_LOADOUT;

@@ -1,5 +1,6 @@
 import { EffectFlowEngine } from "./effect-flow.engine";
 import { AreaEffectRange, AreaEffectType, EffectScope, GemEffectType, LinkDirection, LinkEffectType, ResolvedEffect } from "./effects.models";
+import type { EffectFlowInput } from "./effect-flow.engine";
 
 const gem = (id: string, index: number, type: GemEffectType, strength?: number): ResolvedEffect => ({ id, config: { scope: EffectScope.GEM, type, strength } as unknown as ResolvedEffect["config"], target: { type: EffectScope.GEM, gem: { id: `target-${index}`, index } } });
 const gemConfig = (id: string, index: number, config: ResolvedEffect["config"]): ResolvedEffect => ({ id, config, target: { type: EffectScope.GEM, gem: { id: `target-${index}`, index } } });
@@ -8,7 +9,7 @@ const bomb = (id: string, index: number, strength = 2, radius = 1): ResolvedEffe
 
 describe("EffectFlowEngine", () => {
   const engine = new EffectFlowEngine();
-  const resolve = (values: number[], effects: ResolvedEffect[], inputs: Array<{ gemId: string; value: number }>, runtime = engine.createRuntime(effects), rules?: { maxDepth?: number }) => engine.resolve(values, effects, runtime, inputs, rules);
+  const resolve = (values: number[], effects: ResolvedEffect[], inputs: EffectFlowInput[], runtime = engine.createRuntime(effects), rules?: { maxDepth?: number }) => engine.resolve(values, effects, runtime, inputs, rules);
 
   it("keeps the direct contribution behaviour when no effects exist", () => expect(resolve([5, 2, 1, 1], [], [{ gemId: "target-0", value: -3 }]).values).toEqual([2, 2, 1, 1]));
 
@@ -39,11 +40,36 @@ describe("EffectFlowEngine", () => {
     expect(second.events.some((event) => event.type === "WALL_BROKEN")).toBeTrue();
   });
 
+  it("applies fire and ice elemental barriers without consuming their resistance on matching or opposite operators", () => {
+    const ice = gem("ice", 0, GemEffectType.ICE, 2);
+    const fire = gem("fire", 0, GemEffectType.FIRE, 2);
+    const iceByFire = resolve([7], [ice], [{ gemId: "target-0", value: -3, elementalAffinity: "fire" }]);
+    const iceByIce = resolve([7], [ice], [{ gemId: "target-0", value: -3, elementalAffinity: "ice" }]);
+    const iceByPlain = resolve([7], [ice], [{ gemId: "target-0", value: -3 }]);
+    const fireByIce = resolve([7], [fire], [{ gemId: "target-0", value: -3, elementalAffinity: "ice" }]);
+    const fireByFire = resolve([7], [fire], [{ gemId: "target-0", value: -3, elementalAffinity: "fire" }]);
+    expect([iceByFire.values[0], iceByIce.values[0], iceByPlain.values[0]]).toEqual([4, 7, 7]);
+    expect([iceByFire.runtime.iceRemainingStrength.ice, iceByIce.runtime.iceRemainingStrength.ice, iceByPlain.runtime.iceRemainingStrength.ice]).toEqual([2, 2, 1]);
+    expect([fireByIce.values[0], fireByFire.values[0]]).toEqual([4, 7]);
+    expect([fireByIce.runtime.fireRemainingStrength.fire, fireByFire.runtime.fireRemainingStrength.fire]).toEqual([2, 2]);
+    expect(iceByFire.events.some((event) => event.type === "ELEMENTAL_BYPASSED")).toBeTrue();
+    expect(iceByIce.events.some((event) => event.type === "ELEMENTAL_BLOCKED")).toBeTrue();
+  });
+
   it("mirrors contributions and supports echo, amplify and invert links", () => {
     expect(resolve([0, 0, 0, 0], [gem("mirror", 0, GemEffectType.MIRROR)], [{ gemId: "target-0", value: -4 }]).values[0]).toBe(4);
     expect(resolve([0, 0, 0, 0], [link("echo", 0, 1, LinkEffectType.ECHO, undefined, LinkDirection.FORWARD)], [{ gemId: "target-0", value: -3 }]).values.slice(0, 2)).toEqual([-3, -3]);
     expect(resolve([0, 0, 0, 0], [link("amp", 0, 1, LinkEffectType.AMPLIFY, 2, LinkDirection.FORWARD)], [{ gemId: "target-0", value: -3 }]).values.slice(0, 2)).toEqual([-3, -6]);
     expect(resolve([0, 0, 0, 0], [link("invert", 0, 1, LinkEffectType.INVERT, undefined, LinkDirection.FORWARD)], [{ gemId: "target-0", value: -3 }]).values.slice(0, 2)).toEqual([-3, 3]);
+  });
+
+  it("blocks every contribution to a chained gem until its origin is resolved", () => {
+    const chain = link("chain", 0, 1, LinkEffectType.CHAIN, undefined, LinkDirection.FORWARD);
+    const locked = resolve([4, 5], [chain], [{ gemId: "target-1", value: -2 }]);
+    const unlocked = resolve([0, 5], [chain], [{ gemId: "target-1", value: -2 }]);
+    expect(locked.values).toEqual([4, 5]);
+    expect(locked.events.some((event) => event.type === "CHAIN_BLOCKED" && event.linkId === "chain")).toBeTrue();
+    expect(unlocked.values).toEqual([0, 3]);
   });
 
   it("honours forward and bidirectional link direction", () => {

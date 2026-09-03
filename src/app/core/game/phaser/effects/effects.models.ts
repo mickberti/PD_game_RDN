@@ -12,6 +12,7 @@ export enum GemEffectType {
   AMPLIFIER = "AMPLIFIER",
   INVERTER = "INVERTER",
   ICE = "ICE",
+  FIRE = "FIRE",
   TIMER = "TIMER",
   CORRUPTION = "CORRUPTION",
 }
@@ -26,6 +27,7 @@ export enum LinkEffectType {
   ECHO = "ECHO",
   AMPLIFY = "AMPLIFY",
   INVERT = "INVERT",
+  CHAIN = "CHAIN",
 }
 
 export enum AreaEffectType {
@@ -59,7 +61,7 @@ export interface ShieldEffectConfig extends BaseEffectConfig {
   strength: number;
   consumable?: boolean;
 }
-export interface BarrierEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.WALL | GemEffectType.ICE; strength: number; }
+export interface BarrierEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.WALL | GemEffectType.ICE | GemEffectType.FIRE; strength: number; }
 export interface MirrorEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.MIRROR; }
 export interface AmplifierGemEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.AMPLIFIER; multiplier: number; }
 export interface InverterGemEffectConfig extends BaseEffectConfig { scope: EffectScope.GEM; type: GemEffectType.INVERTER; }
@@ -139,6 +141,9 @@ export const DEFAULT_FLOW_RULES: FlowRules = {
   combineStrategy: FlowCombineStrategy.SUM,
 };
 
+/** Optional affinity carried by a numeric gear operator through its whole flow. */
+export type ElementalAffinity = "fire" | "ice";
+
 export type FlowSourceType = "DIRECT" | "PROPAGATED" | "AREA";
 
 export interface FlowEvent {
@@ -147,6 +152,7 @@ export interface FlowEvent {
   originGemId: string;
   currentGemId: string;
   value: number;
+  elementalAffinity?: ElementalAffinity;
   generation: number;
   sourceType: FlowSourceType;
   visitedLinks: ReadonlySet<string>;
@@ -155,6 +161,7 @@ export interface FlowEvent {
 export interface EffectRuntimeState {
   wallRemainingStrength: Readonly<Record<string, number>>;
   iceRemainingStrength: Readonly<Record<string, number>>;
+  fireRemainingStrength: Readonly<Record<string, number>>;
   /** Temporary ice applied by an area effect, keyed by target gem id. */
   areaIceRemainingStrength: Readonly<Record<string, number>>;
   shieldRemainingStrength: Readonly<Record<string, number>>;
@@ -164,7 +171,7 @@ export interface EffectRuntimeState {
   turn: number;
 }
 
-export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "SHIELD_ABSORBED" | "SHIELD_DEPLETED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "GEM_AMPLIFIER_APPLIED" | "GEM_INVERTER_APPLIED" | "ICE_HIT" | "ICE_BROKEN" | "TIMER_TICK" | "TIMER_EXPIRED" | "TIMER_COMPLETED" | "CORRUPTION_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "AREA_ICE_TRIGGERED" | "AREA_ICE_APPLIED" | "AREA_INVERTER_TRIGGERED" | "AREA_INVERTER_APPLIED" | "GEM_VALUE_CHANGED";
+export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "CHAIN_BLOCKED" | "SHIELD_ABSORBED" | "SHIELD_DEPLETED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "GEM_AMPLIFIER_APPLIED" | "GEM_INVERTER_APPLIED" | "ICE_HIT" | "ICE_BROKEN" | "FIRE_HIT" | "FIRE_BROKEN" | "ELEMENTAL_BYPASSED" | "ELEMENTAL_BLOCKED" | "TIMER_TICK" | "TIMER_EXPIRED" | "TIMER_COMPLETED" | "CORRUPTION_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "AREA_ICE_TRIGGERED" | "AREA_ICE_APPLIED" | "AREA_INVERTER_TRIGGERED" | "AREA_INVERTER_APPLIED" | "GEM_VALUE_CHANGED";
 export interface EffectEngineEvent {
   type: EffectEngineEventType;
   flowId?: string;
@@ -186,5 +193,6 @@ export interface EffectEngineEvent {
   previousValue?: number;
   newValue?: number;
   amount?: number;
+  elementalAffinity?: ElementalAffinity;
   turn?: number;
 }

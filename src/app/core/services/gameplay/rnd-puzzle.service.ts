@@ -4,6 +4,8 @@ import { activeRdnCatalogueRuntime } from "../../game/phaser/catalogues/catalogu
 import { FreeEffectSelections } from "../../game/phaser/effects/effect-progression.config";
 import { DEFAULT_PUZZLE_NUMBER_RANGE, ImpulseResolutionPlan, PersistentLevelDefinition, PuzzleAction, PuzzleDifficulty, PuzzleOperator, PuzzleState } from "../../game/phaser/puzzle.types";
 import { RdnCatalogueService } from "./rdn-catalogue.service";
+import { EFFECT_PRESETS } from "../../game/phaser/effects/effect-presets.config";
+import { EffectScope, GemEffectType, LinkEffectType } from "../../game/phaser/effects/effects.models";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
 interface AdventureRunSave {
@@ -144,7 +146,28 @@ export class RdnPuzzleService {
     return value >= DEFAULT_PUZZLE_NUMBER_RANGE.min && value <= DEFAULT_PUZZLE_NUMBER_RANGE.max;
   }
   canSkipCurrentFlow(): boolean { const level = this.level(); return level.slotPhases.length > 1 && this.engine.flows(level, this.state()).some((flow) => flow.active); }
+  destroyFireWalls(): boolean { return this.removeBoardEffects(EffectScope.GEM, GemEffectType.FIRE); }
+  destroyIceWalls(): boolean { return this.removeBoardEffects(EffectScope.GEM, GemEffectType.ICE); }
+  destroyStoneWalls(): boolean { return this.removeBoardEffects(EffectScope.GEM, GemEffectType.WALL); }
+  cleanseCorruption(): boolean { return this.removeBoardEffects(EffectScope.GEM, GemEffectType.CORRUPTION); }
+  breakChains(): boolean { return this.removeBoardEffects(EffectScope.LINK, LinkEffectType.CHAIN); }
+  canDestroyFireWalls(): boolean { return this.hasBoardEffect(EffectScope.GEM, GemEffectType.FIRE); }
+  canDestroyIceWalls(): boolean { return this.hasBoardEffect(EffectScope.GEM, GemEffectType.ICE); }
+  canDestroyStoneWalls(): boolean { return this.hasBoardEffect(EffectScope.GEM, GemEffectType.WALL); }
+  canCleanseCorruption(): boolean { return this.hasBoardEffect(EffectScope.GEM, GemEffectType.CORRUPTION); }
+  canBreakChains(): boolean { return this.hasBoardEffect(EffectScope.LINK, LinkEffectType.CHAIN); }
   private activeTargetIndex(): number | undefined { return this.engine.flows(this.level(), this.state()).find((flow) => flow.interactable)?.targetId; }
+  /** Board actions remove declarative assignments; the active state is otherwise preserved. */
+  private removeBoardEffects(scope: EffectScope, type: GemEffectType | LinkEffectType): boolean {
+    const level = this.level(); const configuration = level.effectConfiguration; const effects = configuration?.effects ?? [];
+    const remaining = effects.filter((assignment) => { const preset = EFFECT_PRESETS[assignment.preset]; return !preset || preset.scope !== scope || preset.type !== type; });
+    if (remaining.length === effects.length) return false;
+    this.level.set({ ...level, effectConfiguration: { ...configuration!, effects: remaining } });
+    return true;
+  }
+  private hasBoardEffect(scope: EffectScope, type: GemEffectType | LinkEffectType): boolean {
+    return (this.level().effectConfiguration?.effects ?? []).some((assignment) => { const preset = EFFECT_PRESETS[assignment.preset]; return !!preset && preset.scope === scope && preset.type === type; });
+  }
   private transformActiveTarget(transform: (value: number) => number): boolean {
     const state = this.state(); const target = this.activeTargetIndex(); if (target === undefined) return false;
     const value = transform(state.outerValues[target]);

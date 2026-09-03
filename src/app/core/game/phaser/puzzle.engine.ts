@@ -2,9 +2,10 @@ import { AlignmentPreview, DEFAULT_PUZZLE_NUMBER_RANGE, FlowState, GameplayEvent
 import { EffectFlowEngine } from "./effects/effect-flow.engine";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
 import { logEffectDebug } from "./effects/effect-debug";
+import { EffectScope, LinkEffectType } from "./effects/effects.models";
 
 const modulo = (value: number, length: number): number => ((value % length) + length) % length;
-const cloneRuntime = (runtime: NonNullable<PuzzleState["effectRuntime"]>) => ({ wallRemainingStrength: { ...(runtime.wallRemainingStrength ?? {}) }, iceRemainingStrength: { ...(runtime.iceRemainingStrength ?? {}) }, areaIceRemainingStrength: { ...(runtime.areaIceRemainingStrength ?? {}) }, shieldRemainingStrength: { ...(runtime.shieldRemainingStrength ?? {}) }, timerRemainingTurns: { ...(runtime.timerRemainingTurns ?? {}) }, completedTimerIds: [...(runtime.completedTimerIds ?? [])], expiredTimerIds: [...(runtime.expiredTimerIds ?? [])], turn: runtime.turn ?? 0 });
+const cloneRuntime = (runtime: NonNullable<PuzzleState["effectRuntime"]>) => ({ wallRemainingStrength: { ...(runtime.wallRemainingStrength ?? {}) }, iceRemainingStrength: { ...(runtime.iceRemainingStrength ?? {}) }, fireRemainingStrength: { ...(runtime.fireRemainingStrength ?? {}) }, areaIceRemainingStrength: { ...(runtime.areaIceRemainingStrength ?? {}) }, shieldRemainingStrength: { ...(runtime.shieldRemainingStrength ?? {}) }, timerRemainingTurns: { ...(runtime.timerRemainingTurns ?? {}) }, completedTimerIds: [...(runtime.completedTimerIds ?? [])], expiredTimerIds: [...(runtime.expiredTimerIds ?? [])], turn: runtime.turn ?? 0 });
 const snapshot = (state: PuzzleState): PuzzleSnapshot => ({ rotation: state.rotation, rotationTurns: state.rotationTurns, outerValues: [...state.outerValues], targetVisualStates: [...state.targetVisualStates], modifierStates: state.modifierStates.map((item) => ({ ...item })), queueCursors: [...state.queueCursors], consumedSpecialOperatorIndexes: [...state.consumedSpecialOperatorIndexes], impulses: state.impulses, phaseCursor: state.phaseCursor, rotationSteps: state.rotationSteps, lastImpulseResults: [...state.lastImpulseResults], lastOperationResults: [...state.lastOperationResults], lastGameplayEvents: [...state.lastGameplayEvents], effectRuntime: state.effectRuntime ? cloneRuntime(state.effectRuntime) : undefined, lastEffectEvents: state.lastEffectEvents ? [...state.lastEffectEvents] : undefined, won: state.won });
 const restore = (level: LevelDefinition, value: PuzzleSnapshot, history: PuzzleSnapshot[]): PuzzleState => ({ levelId: level.id, ...value, phaseCursor: value.phaseCursor ?? value.impulses, outerValues: [...value.outerValues], targetVisualStates: [...(value.targetVisualStates ?? value.outerValues.map((item) => item === 0 ? "OFF" : "ACTIVE"))], modifierStates: value.modifierStates?.map((item) => ({ ...item })) ?? level.outerValues.map(() => ({ shield: 0, lives: 0 })), queueCursors: [...value.queueCursors], consumedSpecialOperatorIndexes: [...(value.consumedSpecialOperatorIndexes ?? [])], lastImpulseResults: [...(value.lastImpulseResults ?? [])], lastOperationResults: [...(value.lastOperationResults ?? [])], lastGameplayEvents: [...(value.lastGameplayEvents ?? [])], effectRuntime: value.effectRuntime ? cloneRuntime(value.effectRuntime) : undefined, lastEffectEvents: value.lastEffectEvents ? [...value.lastEffectEvents] : undefined, history });
 
@@ -16,6 +17,7 @@ export class PuzzleEngine {
   getInnerIndex(level: LevelDefinition, outerIndex: number, rotation: number): number { return modulo(outerIndex - rotation, level.positions); }
   isColorCompatible(level: LevelDefinition, outerIndex: number, innerIndex: number): boolean { return !level.targetColors || !level.operatorColors || level.targetColors[outerIndex] === level.operatorColors[innerIndex]; }
   getInnerValue(level: LevelDefinition, state: PuzzleState, innerIndex: number): PuzzleOperator | null { const operator = level.variant === "persistent" ? level.innerValues[innerIndex] : level.queues[innerIndex][state.queueCursors[innerIndex]] ?? null; return typeof operator === "string" && state.consumedSpecialOperatorIndexes.includes(innerIndex) ? null : operator; }
+  getInnerElement(level: LevelDefinition, state: PuzzleState, innerIndex: number): import("./effects/effects.models").ElementalAffinity | null { return level.variant === "persistent" ? level.innerElements?.[innerIndex] ?? null : level.queueElements?.[innerIndex]?.[state.queueCursors[innerIndex]] ?? null; }
   queueStates(level: LevelDefinition, state: PuzzleState, previewCount = 2): readonly QueueState[] {
     if (level.variant !== "loader") return [];
     return level.queues.map((elements, innerIndex) => {
@@ -37,7 +39,7 @@ export class PuzzleEngine {
   private relevantPhaseIndex(level: LevelDefinition, state: PuzzleState, phaseOffset: number): number { let index = this.phaseIndex(level, state.phaseCursor); let remaining = phaseOffset; for (let inspected = 0; inspected < level.slotPhases.length; inspected += 1) { const phase = level.slotPhases[index]; if (phase.some((slot) => state.outerValues[slot.outerIndex] !== 0)) { if (remaining === 0) return index; remaining -= 1; } index = modulo(index + 1, level.slotPhases.length); } return index; }
   flows(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): FlowState[] {
     const maxFlows = Math.min(4, level.positions, Math.max(1, level.activeFlowCount ?? level.generation?.branchingFactor ?? 1));
-    return level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)].filter((slot) => state.outerValues[slot.outerIndex] !== 0).slice(0, maxFlows).map((slot) => { const sourceId = this.getInnerIndex(level, slot.outerIndex, state.rotation); const operator = this.getInnerValue(level, state, sourceId); const attempt = this.attemptOperation(level, slot.outerIndex, state.outerValues[slot.outerIndex], operator, state.consumedSpecialOperatorIndexes.includes(sourceId)); const colorOk = this.isColorCompatible(level, slot.outerIndex, sourceId); return { sourceId, targetId: slot.outerIndex, active: true, interactable: attempt.valid && colorOk, blockedReason: colorOk ? attempt.rejectedReason : "COLOR_MISMATCH" }; });
+    return level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)].filter((slot) => state.outerValues[slot.outerIndex] !== 0).slice(0, maxFlows).map((slot) => { const sourceId = this.getInnerIndex(level, slot.outerIndex, state.rotation); const operator = this.getInnerValue(level, state, sourceId); const attempt = this.attemptOperation(level, slot.outerIndex, state.outerValues[slot.outerIndex], operator, state.consumedSpecialOperatorIndexes.includes(sourceId)); const colorOk = this.isColorCompatible(level, slot.outerIndex, sourceId); const chainLocked = this.isChainLocked(level, state, slot.outerIndex); return { sourceId, targetId: slot.outerIndex, active: true, interactable: attempt.valid && colorOk && !chainLocked, blockedReason: !colorOk ? "COLOR_MISMATCH" : chainLocked ? "CHAIN_LOCKED" : attempt.rejectedReason }; });
   }
   previews(level: LevelDefinition, state: PuzzleState, phaseOffset = 0): AlignmentPreview[] {
     const phase = level.slotPhases[this.relevantPhaseIndex(level, state, phaseOffset)].filter((slot) => state.outerValues[slot.outerIndex] !== 0);
@@ -45,14 +47,14 @@ export class PuzzleEngine {
       const innerIndex = this.getInnerIndex(level, slot.outerIndex, state.rotation);
       const innerValue = this.getInnerValue(level, state, innerIndex);
       const outerValue = state.outerValues[slot.outerIndex];
-      const attempt = this.attemptOperation(level, slot.outerIndex, outerValue, innerValue, state.consumedSpecialOperatorIndexes.includes(innerIndex));
+      const attempt = this.attemptOperation(level, slot.outerIndex, outerValue, innerValue, state.consumedSpecialOperatorIndexes.includes(innerIndex)); const chainLocked = this.isChainLocked(level, state, slot.outerIndex);
       const result = attempt.nextValue;
-      return { slot, innerIndex, innerValue, outerValue, result, active: attempt.valid, rejectedReason: attempt.rejectedReason, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" } satisfies AlignmentPreview;
+      return { slot, innerIndex, innerValue, innerElement: typeof innerValue === "number" ? this.getInnerElement(level, state, innerIndex) : null, outerValue, result, active: attempt.valid && !chainLocked, rejectedReason: chainLocked ? "CHAIN_LOCKED" : attempt.rejectedReason, trend: result === 0 ? "zero" : Math.abs(result) < Math.abs(outerValue) ? "closer" : Math.abs(result) === Math.abs(outerValue) ? "same" : "farther" } satisfies AlignmentPreview;
     });
     if (!state.effectRuntime) return rawPreviews;
 
     const resolution = this.effectResolver.resolve(level.effectConfiguration, level.positions);
-    const inputs = rawPreviews.filter((preview) => preview.active).map((preview) => ({ gemId: `target-${preview.slot.outerIndex}`, value: preview.result - preview.outerValue }));
+    const inputs = rawPreviews.filter((preview) => preview.active).map((preview) => ({ gemId: `target-${preview.slot.outerIndex}`, value: preview.result - preview.outerValue, elementalAffinity: preview.innerElement ?? undefined }));
     if (!resolution.effects.length || !inputs.length) return rawPreviews;
 
     // It is the same pipeline used by the next impulse, but resolve() clones the runtime.
@@ -69,7 +71,7 @@ export class PuzzleEngine {
     if (!state.effectRuntime) return [];
     const previews = this.previews(level, state);
     const rawResults = previews.map((preview) => this.attemptOperation(level, preview.slot.outerIndex, preview.outerValue, preview.innerValue, state.consumedSpecialOperatorIndexes.includes(preview.innerIndex)));
-    const inputs = rawResults.filter((result) => result.valid).map((result) => ({ gemId: `target-${result.outerIndex}`, value: result.nextValue - result.previousValue }));
+    const inputs = rawResults.flatMap((result, index) => result.valid ? [{ gemId: `target-${result.outerIndex}`, value: result.nextValue - result.previousValue, elementalAffinity: previews[index].innerElement ?? undefined }] : []);
     if (!inputs.length) return [];
     const resolution = this.effectResolver.resolve(level.effectConfiguration, level.positions);
     const resolvedGemIds = state.targetVisualStates.flatMap((visual, index) => visual === "OFF" ? [`target-${index}`] : []);
@@ -111,7 +113,7 @@ export class PuzzleEngine {
   private applyWithEffects(level: LevelDefinition, state: PuzzleState): PuzzleState {
     const phaseCursor = this.relevantPhaseIndex(level, state, 0); const previews = this.previews(level, state);
     const rawResults = previews.map((preview) => this.attemptOperation(level, preview.slot.outerIndex, preview.outerValue, preview.innerValue, state.consumedSpecialOperatorIndexes.includes(preview.innerIndex)));
-    const inputs = rawResults.filter((result) => result.valid).map((result) => ({ gemId: `target-${result.outerIndex}`, value: result.nextValue - result.previousValue }));
+    const inputs = rawResults.flatMap((result, index) => result.valid ? [{ gemId: `target-${result.outerIndex}`, value: result.nextValue - result.previousValue, elementalAffinity: previews[index].innerElement ?? undefined }] : []);
     const resolution = this.effectResolver.resolve(level.effectConfiguration, level.positions);
     const resolvedGemIds = state.targetVisualStates.flatMap((visual, index) => visual === "OFF" ? [`target-${index}`] : []);
     const flow = this.effectFlow.resolve(state.outerValues, resolution.effects, state.effectRuntime!, inputs, resolution.flowRules, state.impulses + 1, resolvedGemIds);
@@ -129,5 +131,6 @@ export class PuzzleEngine {
   }
   serialize(state: PuzzleState): string { return JSON.stringify({ version: 2, ...snapshot(state) }); }
   deserialize(level: LevelDefinition, raw: string): PuzzleState { const parsed = JSON.parse(raw) as { version: number } & PuzzleSnapshot; if (parsed.version !== 1 && parsed.version !== 2) throw new Error("Unsupported puzzle save version"); return restore(level, parsed, []); }
+  private isChainLocked(level: LevelDefinition, state: PuzzleState, targetIndex: number): boolean { return this.effectResolver.resolve(level.effectConfiguration, level.positions).effects.some((effect) => effect.config.scope === EffectScope.LINK && effect.config.type === LinkEffectType.CHAIN && effect.target.type === EffectScope.LINK && effect.target.toGem.index === targetIndex && state.outerValues[effect.target.fromGem.index] !== 0); }
   private assertLevel(level: LevelDefinition): void { const range = DEFAULT_PUZZLE_NUMBER_RANGE; if (level.positions < 4 || level.outerValues.length !== level.positions || level.outerValues.some((value) => !Number.isInteger(value) || value === 0 || value < range.min || value > range.max) || level.slotPhases.length === 0 || level.slotPhases.some((phase) => phase.some((slot) => slot.outerIndex < 0 || slot.outerIndex >= level.positions)) || (level.variant === "persistent" ? level.innerValues.length !== level.positions : level.queues.length !== level.positions || level.queues.some((queue) => queue.some((operator) => operator === 0)))) throw new Error(`Invalid RDN level ${level.id}`); }
 }

@@ -20,7 +20,7 @@ import { RdnPhaserScene } from "../../core/game/phaser/rnd-phaser.scene";
 import { RDN_MAX_LEVEL } from "../../core/game/phaser/config/levels.config";
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { getPuzzleStars, hasPuzzleFailed } from "../../core/game/phaser/puzzle-score.policy";
-import { RDN_ACTION_CATALOG, RdnActionId, RdnActionInstance, validateRdnActionLoadout } from "../../core/game/phaser/config/rdn-actions.config";
+import { RDN_ACTION_CATALOG, RDN_ACTION_IDS, RdnActionId, RdnActionInstance } from "../../core/game/phaser/config/rdn-actions.config";
 import { ImpulseResolutionPlan } from "../../core/game/phaser/puzzle.types";
 import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
@@ -153,7 +153,7 @@ export class GameplayPageComponent implements AfterViewInit {
           flows: this.puzzle.flows(),
           effectPreviewEvents: this.puzzle.effectPreviewEvents(),
           queueStates: this.puzzle.queueStates(),
-          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, charges: instance.charges, disabled: instance.charges <= 0 || !RDN_ACTION_CATALOG[instance.id].modes.includes(this.session.variant as "adventure" | "time-attack" | "free") || !this.canUseAction(instance.id) })),
+          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, label: RDN_ACTION_CATALOG[instance.id].label, description: RDN_ACTION_CATALOG[instance.id].description, charges: instance.charges, disabled: instance.charges <= 0 })),
           modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
           freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4, effectsEnabled: this.gameplaySession.getLaunchOverrides()?.freeEffectsEnabled ?? false, theme: this.gameplaySession.getLaunchOverrides()?.freeTheme ?? 3 } : undefined,
           playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
@@ -286,8 +286,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.outcome.set(outcome);
   }
   private resetActionInstances(): void {
-    const loadout = validateRdnActionLoadout(this.state.progress().rdnActionLoadout);
-    this.actionInstances.set(loadout.actionIds.map((id) => ({ id, charges: RDN_ACTION_CATALOG[id].charges, cooldownUntil: 0 })));
+    this.actionInstances.set(RDN_ACTION_IDS.map((id) => ({ id, charges: RDN_ACTION_CATALOG[id].charges, cooldownUntil: 0 })));
   }
   private useAction(slot: number): void {
     if (this.session.variant === "effect-playground") return;
@@ -298,12 +297,25 @@ export class GameplayPageComponent implements AfterViewInit {
     let applied = false;
     if (instance.id === "zero") applied = this.puzzle.zeroActiveTarget();
     if (instance.id === "invert") applied = this.puzzle.invertActiveTarget();
-    if (instance.id === "double") applied = this.puzzle.doubleActiveTarget();
     if (instance.id === "skip") applied = this.puzzle.skipCurrentFlow();
+    if (instance.id === "destroy-fire-walls") applied = this.puzzle.destroyFireWalls();
+    if (instance.id === "destroy-ice-walls") applied = this.puzzle.destroyIceWalls();
+    if (instance.id === "destroy-stone-walls") applied = this.puzzle.destroyStoneWalls();
+    if (instance.id === "cleanse-corruption") applied = this.puzzle.cleanseCorruption();
+    if (instance.id === "break-chains") applied = this.puzzle.breakChains();
     if (!applied) return;
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
   }
-  private canUseAction(id: RdnActionId): boolean { return id === "zero" ? this.puzzle.canZeroActiveTarget() : id === "invert" ? this.puzzle.canInvertActiveTarget() : id === "double" ? this.puzzle.canDoubleActiveTarget() : this.puzzle.canSkipCurrentFlow(); }
+  private canUseAction(id: RdnActionId): boolean {
+    if (id === "zero") return this.puzzle.canZeroActiveTarget();
+    if (id === "invert") return this.puzzle.canInvertActiveTarget();
+    if (id === "skip") return this.puzzle.canSkipCurrentFlow();
+    if (id === "destroy-fire-walls") return this.puzzle.canDestroyFireWalls();
+    if (id === "destroy-ice-walls") return this.puzzle.canDestroyIceWalls();
+    if (id === "destroy-stone-walls") return this.puzzle.canDestroyStoneWalls();
+    if (id === "cleanse-corruption") return this.puzzle.canCleanseCorruption();
+    return this.puzzle.canBreakChains();
+  }
   private loadSessionPuzzle(session: GameplaySession): void {
     if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();

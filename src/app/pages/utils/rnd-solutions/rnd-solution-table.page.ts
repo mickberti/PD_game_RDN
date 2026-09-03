@@ -213,7 +213,9 @@ export class RdnSolutionTablePage implements OnInit {
   effectExplanation(effect: ResolvedEffect): string {
     const config = effect.config;
     if (config.type === "SHIELD") return `Prima dell'operazione assorbe fino a ${config.strength} punti del flusso in arrivo.`;
-    if (config.type === "WALL" || config.type === "ICE") return `I primi ${config.strength} impulsi in arrivo vengono bloccati; solo dopo il valore può cambiare.`;
+    if (config.type === "ICE") return `Fuoco attraversa la barriera senza consumarla, ghiaccio viene bloccato; gli altri impatti consumano i ${config.strength} colpi.`;
+    if (config.type === "FIRE") return `Ghiaccio attraversa la barriera senza consumarla, fuoco viene bloccato; gli altri impatti consumano i ${config.strength} colpi.`;
+    if (config.type === "WALL") return `I primi ${config.strength} impulsi in arrivo vengono bloccati; solo dopo il valore può cambiare.`;
     if (config.type === "MIRROR") return "Prima dell'operazione inverte il segno del flusso ricevuto dalla gemma.";
     if (config.type === "AMPLIFIER") return `Prima dell'operazione moltiplica il flusso ricevuto per ${config.multiplier}.`;
     if (config.type === "INVERTER") return "Dopo l'operazione inverte il segno del valore ottenuto dalla gemma.";
@@ -221,6 +223,7 @@ export class RdnSolutionTablePage implements OnInit {
     if (config.type === "CORRUPTION") return `Alla fine dell'impulso aumenta il valore assoluto della gemma di ${config.amount}.`;
     if (config.type === "ECHO") return "Dopo l'arrivo del flusso lo propaga anche alla gemma collegata.";
     if (config.type === "AMPLIFY") return `Dopo l'arrivo del flusso lo propaga al link moltiplicato per ${config.multiplier ?? 1}.`;
+    if (config.type === "CHAIN") return "La gemma di destinazione non riceve impulsi finché la gemma di origine del link non è risolta.";
     if (config.type === "INVERT") return "Dopo l'arrivo del flusso lo propaga al link con segno invertito.";
     const strength = config.scope === EffectScope.AREA ? config.strength ?? 1 : 1;
     return `Quando ${this.effectTarget(effect)} arriva a zero, colpisce le gemme vicine con forza ${strength}.`;
