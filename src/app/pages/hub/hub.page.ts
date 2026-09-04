@@ -101,7 +101,7 @@ interface LevelPickerItem {
               <section class="free-picker__section" aria-labelledby="free-spheres-label">
                 <div class="free-picker__heading"><span id="free-spheres-label">SFERE OPERATIVE</span><strong>{{ freeSlotCount() }}</strong></div>
                 <div class="free-picker__tick-labels" aria-hidden="true">@for (count of freeSlotCounts; track count) { <span [class.free-picker__tick-label--selected]="freeSlotCount() === count">{{ count }}</span> }</div>
-                <ion-range class="free-picker__range" [min]="4" [max]="8" [step]="1" [snaps]="true" [ticks]="true" [value]="freeSlotCount()" (ionChange)="onFreeSlotCountChange($event)" aria-label="Numero di sfere operative"></ion-range>
+                <ion-range class="free-picker__range" [min]="4" [max]="9" [step]="1" [snaps]="true" [ticks]="true" [value]="freeSlotCount()" (ionChange)="onFreeSlotCountChange($event)" aria-label="Numero di sfere operative"></ion-range>
               </section>
 
 
@@ -175,7 +175,7 @@ interface LevelPickerItem {
     .free-picker__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #f4d47b; font-size: .75rem; font-weight: 900; letter-spacing: .11em; }
     .free-picker__heading strong { color: #fff0ad; font-size: 1rem; letter-spacing: .04em; }
     .free-picker__tick-labels, .free-picker__difficulty-labels, .free-picker__theme-labels { display: grid; align-items: end; margin: 10px 8px -5px; color: #b5c8c7; font-size: .74rem; font-weight: 900; text-align: center; }
-    .free-picker__tick-labels { grid-template-columns: repeat(5, 1fr); }
+    .free-picker__tick-labels { grid-template-columns: repeat(6, 1fr); }
     .free-picker__difficulty-labels { grid-template-columns: repeat(4, 1fr); font-size: .62rem; letter-spacing: .02em; }
     .free-picker__theme-labels { grid-template-columns: repeat(3, 1fr); font-size: .68rem; letter-spacing: .04em; }
     .free-picker__tick-label--selected, .free-picker__difficulty-label--selected { color: #ffea91; text-shadow: 0 0 10px rgba(255, 204, 84, .72); }
@@ -204,7 +204,7 @@ export class HubPage {
   readonly levelPickerMode = signal<ModeItem | null>(null);
   readonly freeMode = signal<ModeItem | null>(null);
   readonly freeDifficulties: readonly PuzzleDifficulty[] = ["EASY", "NORMAL", "HARD", "EXPERT"];
-  readonly freeSlotCounts = [4, 5, 6, 7, 8] as const;
+  readonly freeSlotCounts = [4, 5, 6, 7, 8, 9] as const;
   readonly freeSlotCount = signal<number>(4);
   readonly freeDifficulty = signal<PuzzleDifficulty>("EASY");
   readonly freeThemes = [1, 2, 3] as const;

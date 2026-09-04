@@ -3,6 +3,7 @@ import { Component, computed, inject, OnInit, signal } from "@angular/core";
 import { ActivatedRoute } from "@angular/router";
 import { IonContent, IonFooter, IonSelect, IonSelectOption, IonToolbar } from "@ionic/angular/standalone";
 import { EffectScope, ResolvedEffect } from "../../../core/game/phaser/effects/effects.models";
+import { PuzzleOperator } from "../../../core/game/phaser/puzzle.types";
 import { effectAssetFrame } from "../../../core/game/phaser/effects/effect-presentation.config";
 import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
 import { RdnCatalogueService } from "../../../core/services/gameplay/rdn-catalogue.service";
@@ -46,7 +47,7 @@ type SummaryVariant = "adventure" | "time-attack";
                 <tr>
                   <th scope="row">{{ row.level }}</th>
                   <td>{{ row.slots.length }}</td>
-                  <td>{{ specialOperatorsText(row.level) }}</td>
+                  <td><span class="effect-icons">@for (special of specialOperators(row.level); track special) { <ui-sprite [frame]="specialOperatorFrame(special)" [atlasSource]="specialOperatorAtlas(special)" [showScale]="false" [title]="specialOperatorTitle(special)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of gemEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of linkEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
                   <td><span class="effect-icons">@for (effect of areaEffects(row.effects); track effect.id) { <ui-sprite [frame]="effectFrame(effect)" atlasSource="effects" [showScale]="false" [title]="effectTooltip(effect)" /> } @empty { <span class="empty">—</span> }</span></td>
@@ -95,7 +96,10 @@ export class RdnEffectsSummaryPage implements OnInit {
   ngOnInit(): void { void this.catalogue.versions().then((catalogues) => { const versions = catalogues.map((catalogue) => catalogue.version); this.versions.set(versions); if (versions[0]) this.selectVersion(versions[0]); }); }
   selectVersion(version: string): void { if (!version || version === this.selectedVersion()) return; this.selectedVersion.set(version); void Promise.all([this.catalogue.audit(this.variant, version), this.catalogue.levels(version)]).then(([rows, levels]) => { this.rows.set(rows); this.levels.set(levels); }); }
   generationStats(level: number) { return this.levels().find((item) => item.number === level && item.variant === (this.variant === "adventure" ? "persistent" : "loader"))?.generation?.generationStats; }
-  specialOperatorsText(level: number): string { const item = this.levels().find((candidate) => candidate.number === level && candidate.variant === (this.variant === "adventure" ? "persistent" : "loader")); if (!item) return "-"; const specials = item.generation?.specialOperators ?? [...new Set((item.solutionMoves ?? []).map((move) => move.operator).filter((operator): operator is Exclude<typeof operator, number> => typeof operator !== "number"))]; if (!specials.length) return "0 · -"; const label: Record<Exclude<typeof specials[number], number>, string> = { divide2: "÷2", divide3: "÷3", zero: "0", invert: "±", skip: "≫" }; return `${specials.length} · ${specials.map((operator) => label[operator]).join(" ")}`; }
+  specialOperators(level: number): readonly Exclude<PuzzleOperator, number>[] { const item = this.levels().find((candidate) => candidate.number === level && candidate.variant === (this.variant === "adventure" ? "persistent" : "loader")); if (!item) return []; return item.generation?.specialOperators ?? [...new Set((item.solutionMoves ?? []).map((move) => move.operator).filter((operator): operator is Exclude<PuzzleOperator, number> => typeof operator !== "number"))]; }
+  specialOperatorFrame(operator: Exclude<PuzzleOperator, number>): { name: string; effect: "none" } { return { name: operator === "divide2" ? "divide-2" : operator === "divide3" ? "divide-3" : operator === "zero" ? "reset-zero" : operator === "skip" ? "skip-flow" : "effect-inverter", effect: "none" }; }
+  specialOperatorAtlas(operator: Exclude<PuzzleOperator, number>): "effects" | "effect-actions" { return operator === "invert" ? "effects" : "effect-actions"; }
+  specialOperatorTitle(operator: Exclude<PuzzleOperator, number>): string { return operator === "divide2" ? "Divisione per 2" : operator === "divide3" ? "Divisione per 3" : operator === "zero" ? "Azzeramento" : operator === "skip" ? "Salta flusso" : "Inverti segno"; }
   attemptsText(level: number): string { const stats = this.generationStats(level); if (!stats) return "—"; const solutionAttempts = stats.solutionAttempts ?? stats.calibrationAttempts; return `strutt. ${stats.structureAttempts} (lim. ${stats.structureAttemptsBeforeScaling ?? "—"}/stadio) · sol. ${solutionAttempts} (lim. ${stats.solutionAttemptsBeforeScaling ?? "—"}/candidato)`; }
   officialSolutionImpulses(level: number): number | undefined { const item = this.levels().find((candidate) => candidate.number === level && candidate.variant === (this.variant === "adventure" ? "persistent" : "loader")); return item?.generation?.officialSolutionImpulses ?? item?.starCost?.impulses ?? item?.optimalCost?.impulses; }
   failureText(level: number): string { const reasons = this.generationStats(level)?.failureReasons ?? []; return reasons.length ? reasons.join(", ") : "OK"; }

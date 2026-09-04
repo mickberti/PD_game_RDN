@@ -6,7 +6,7 @@ import { atlasData as effectAtlas } from "../../../../assets/game/fantasy_bg/atl
 import { atlasData as effectActionAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-effect-set2";
 import { atlasData as gemAtlas } from "../../../../assets/game/fantasy_bg/atlas/atlas-gem-set1";
 import { atlasData as uiIconAtlas } from "../../../../assets/ui/fantasy_bg/atlas/atlas-icons-set1";
-import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, getRdnGemSlotOffset, getRdnThemeDecorationCalibration, rdnGearTextureKey, rdnRingTextureKey } from "./rnd-board-layout.config";
+import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUAL_CONFIG, RdnBoardLayout, getRdnBoardLayout, getRdnGemSlotOffset, getRdnThemeDecorationCalibration, rdnGearTextureKey, rdnRingTextureKey } from "./config/board-layout.config";
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
 import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, ElementalAffinity, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
@@ -778,27 +778,47 @@ export class RdnPhaserScene extends Phaser.Scene {
   private button(x: number, y: number, value: string, action: () => void, depth = 0): void { const button = this.add.circle(x, y, 24, 0x3b2b19).setDepth(depth).setInteractive(); button.on("pointerdown", action); const frame = UI_ICON_BY_BUTTON_LABEL[value]; if (frame) this.add.image(x, y, "rdn-ui-icons", frame).setDisplaySize(48, 48).setDepth(depth + 1); else this.label(x, y, value, 24, 0xffe3a0).setDepth(depth + 1); }
   private actionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-actions", frame).setDisplaySize(size, size).setDepth(depth); }
   private effectActionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-effect-actions", frame).setDisplaySize(size, size).setDepth(depth); }
+  private userActionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return frame === "effect-mirror-sign" ? this.add.image(x, y, "rdn-effects", frame).setDisplaySize(size, size).setDepth(depth) : this.effectActionIcon(x, y, size, frame, depth); }
   /** A single expandable tray keeps all player actions together without covering the board when collapsed. */
   private actionPanel(cx: number, height: number, actions: readonly RdnHudAction[]): void {
     const depth = 15; const primaryY = height - 67; const extraY = height + 50;
     const contentStartOffset = this.actionPanelTransitionFrom ?? (this.actionPanelOpen ? -117 : 0);
     const contentTargetOffset = this.actionPanelOpen ? -117 : 0;
     this.actionPanelTransitionFrom = undefined;
-    const startPanelY = contentStartOffset === 0 ? height - 66 : height - 130;
+    // The artwork is part of the tray transition: it moves with the panel while
+    // the mask controls how much of the tray is visible.
+    const closedPanelY = height - 16;
+    const openPanelY = height - 130;
+    const startPanelY = contentStartOffset === 0 ? closedPanelY : openPanelY;
     const startPanelHeight = contentStartOffset === 0 ? 132 : 260;
-    const targetPanelY = this.actionPanelOpen ? height - 130 : height - 66;
+    const targetPanelY = this.actionPanelOpen ? openPanelY : closedPanelY;
     const targetPanelHeight = this.actionPanelOpen ? 260 : 132;
-    const startHandleY = startPanelY - startPanelHeight / 2 + 13;
-    const targetHandleY = targetPanelY - targetPanelHeight / 2 + 13;
-    const panel = this.add.image(cx, startPanelY, "rdn-info-panel").setDisplaySize(410, startPanelHeight).setAlpha(.98).setDepth(depth);
+    const startHandleY = height - startPanelHeight + 3;
+    const targetHandleY = height - targetPanelHeight + 13;
+    const panelWidth = 430;
+    // Keep the artwork at a fixed height: only its width is scaled. The visible
+    // viewport changes while opening/closing, so the background is never
+    // vertically stretched by the tray animation.
+    const panel = this.add.image(cx, startPanelY, "rdn-info-panel").setDisplaySize(panelWidth, 260).setAlpha(.98).setDepth(depth);
     const content = this.add.container(0, contentStartOffset).setDepth(depth + 2);
+    const maskShape = this.make.graphics({ x: 0, y: 0 });
+    maskShape.fillStyle(0xffffff);
+    const drawPanelMask = (panelY: number, viewportHeight: number): void => {
+      maskShape.clear();
+      maskShape.fillStyle(0xffffff);
+      maskShape.fillRect(cx - panelWidth / 2, panelY - viewportHeight / 2, panelWidth, viewportHeight);
+    };
+    drawPanelMask(startPanelY, startPanelHeight);
+    const panelMask = maskShape.createGeometryMask();
+    panel.setMask(panelMask);
+    content.setMask(panelMask);
     actions.slice(0, 8).forEach((action, index) => {
       const actionIndex = index; const column = actionIndex % 4; const x = cx + (column - 1.5) * 96; const y = actionIndex < 4 ? primaryY : extraY; const alpha = action.disabled ? .34 : 1;
       const button = this.add.circle(x, y, 31, action.disabled ? 0x4c4c4c : 0x245438, .98).setStrokeStyle(1, action.disabled ? 0x777777 : 0xd6af58, .9).setAlpha(alpha).setInteractive({ useHandCursor: !action.disabled });
       button.on("pointerdown", () => { if (action.disabled) return; this.actionHoldTriggered = false; this.actionHoldTimer = this.time.delayedCall(420, () => { if (!this.input.activePointer.isDown) return; this.actionHoldTriggered = true; this.showActionInfo(cx, height, action); }); });
       button.on("pointerup", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; if (this.actionHoldTriggered) { this.render(); return; } if (!action.disabled) this.actions.action(actionIndex); });
       button.on("pointerout", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; });
-      const icon = this.effectActionIcon(x, y, 82, action.icon).setAlpha(alpha);
+      const icon = this.userActionIcon(x, y, 82, action.icon).setAlpha(alpha);
       const chargeBackground = this.add.circle(x + 23, y + 23, 12, 0x241b12, .96).setStrokeStyle(1, 0xb18b48, .9).setAlpha(alpha);
       const charge = this.label(x + 23, y + 23, String(action.charges), 12, 0xffffff).setAlpha(alpha);
       content.add([button, icon, chargeBackground, charge]);
@@ -814,7 +834,9 @@ export class RdnPhaserScene extends Phaser.Scene {
     });
     if (contentStartOffset !== contentTargetOffset) {
       this.tweens.add({ targets: content, y: contentTargetOffset, duration: 260, ease: "Cubic.Out" });
-      this.tweens.add({ targets: panel, y: targetPanelY, displayHeight: targetPanelHeight, duration: 260, ease: "Cubic.Out" });
+      const viewport = { height: startPanelHeight };
+      this.tweens.add({ targets: panel, y: targetPanelY, duration: 260, ease: "Cubic.Out", onUpdate: () => drawPanelMask(panel.y, viewport.height) });
+      this.tweens.add({ targets: viewport, height: targetPanelHeight, duration: 260, ease: "Cubic.Out", onUpdate: () => drawPanelMask(panel.y, viewport.height) });
       this.tweens.add({ targets: [handle, handleLabel], y: targetHandleY, duration: 260, ease: "Cubic.Out" });
     }
   }
@@ -823,7 +845,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const depth = 30;
     this.add.rectangle(cx, cy / 2, this.scale.width, this.scale.height, 0x020907, .46).setDepth(depth).setInteractive();
     this.add.image(cx, cy / 2, "rdn-info-panel").setDisplaySize(330, 220).setDepth(depth + 1).setInteractive();
-    this.effectActionIcon(cx, cy / 2 - 55, 48, action.icon, depth + 2);
+    this.userActionIcon(cx, cy / 2 - 55, 48, action.icon, depth + 2);
     this.label(cx, cy / 2 - 17, action.label.toUpperCase(), 16, 0xf8dc8b).setDepth(depth + 2);
     this.label(cx, cy / 2 + 22, action.description, 12, 0xe6dfc3).setWordWrapWidth(270).setDepth(depth + 2);
     this.label(cx, cy / 2 + 72, `CARICHE: ${action.charges}`, 12, action.disabled ? 0x9b9b9b : 0xffdf70).setDepth(depth + 2);

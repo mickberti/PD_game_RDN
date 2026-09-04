@@ -3,7 +3,7 @@
  * relative to `boardRadius`, the radius used for the outer value orbit.
  */
 export interface RdnBoardLayout {
-  positions: 4 | 5 | 6 | 7 | 8;
+  positions: 4 | 5 | 6 | 7 | 8 | 9 | 10;
   ring: {
     diameter: number;
     /** Independent texture scaling: tune these when a ring asset appears oval. */
@@ -74,6 +74,11 @@ export interface RdnThemeDecorationCalibration {
  * Every slot is explicit: angularOffset is in degrees, radialOffset is a parent-radius ratio.
  * Zero preserves the base geometry exactly.
  */
+const zeroGemPlacementCalibration = (positions: number): RdnGemPlacementCalibration => ({
+  outerSlots: Array.from({ length: positions }, () => ({ angularOffset: 0, radialOffset: 0 })),
+  innerSlots: Array.from({ length: positions }, () => ({ angularOffset: 0, radialOffset: 0 })),
+});
+
 export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"], Record<RdnVisualSet, RdnGemPlacementCalibration>> = {
   4: {
     1: {
@@ -123,10 +128,10 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
     1: {
       outerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 2.8, radialOffset: 0.01 }, // Gemma 2
-        { angularOffset: -2, radialOffset: 0.03 }, // Gemma 3
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 4
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
       ],
       innerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
@@ -139,33 +144,33 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
     2: {
       outerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 3, radialOffset: 0.03 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 3
-        { angularOffset: 2, radialOffset: 0.03 }, // Gemma 4
-        { angularOffset: -1, radialOffset: 0.03 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
       ],
       innerSlots: [
-        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 1
-        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 2
-        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 3
-        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 4
-        { angularOffset: 0, radialOffset: -0.03 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
       ],
     },
     3: {
       outerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 3
-        { angularOffset: 4, radialOffset: 0.03 }, // Gemma 4
-        { angularOffset: -1, radialOffset: 0.03 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
       ],
       innerSlots: [
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 1
-        { angularOffset: 0, radialOffset: 0.01 }, // Gemma 2
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 3
-        { angularOffset: 2, radialOffset: 0.03 }, // Gemma 4
-        { angularOffset: 0, radialOffset: 0.03 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
       ],
     }
   },
@@ -228,22 +233,22 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
   7: {
     1: {
       outerSlots: [
-        { angularOffset: 0, radialOffset: -0.05 }, // Gemma 1
-        { angularOffset: 6, radialOffset: -0.02 }, // Gemma 2
-        { angularOffset: 9, radialOffset: -0.05 }, // Gemma 3
-        { angularOffset: 4, radialOffset: -0.02 }, // Gemma 4
-        { angularOffset: -2, radialOffset: -0.01 }, // Gemma 5
-        { angularOffset: -7, radialOffset: -0.02 }, // Gemma 6
-        { angularOffset: -5, radialOffset: -0.01 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 1
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
       ],
       innerSlots: [
         { angularOffset: 0, radialOffset: 0 }, // Gemma 1
-        { angularOffset: 3, radialOffset: 0 }, // Gemma 2
-        { angularOffset: 8, radialOffset: 0 }, // Gemma 3
-        { angularOffset: 4, radialOffset: 0 }, // Gemma 4
-        { angularOffset: -2, radialOffset: 0 }, // Gemma 5
-        { angularOffset: -4, radialOffset: 0 }, // Gemma 6
-        { angularOffset: -3, radialOffset: 0 }, // Gemma 7
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 2
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 3
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 4
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 5
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 6
+        { angularOffset: 0, radialOffset: 0 }, // Gemma 7
       ],
     },
     2: {
@@ -354,7 +359,9 @@ export const RDN_GEM_PLACEMENT_CALIBRATIONS: Record<RdnBoardLayout["positions"],
         { angularOffset: 0, radialOffset: 0 }, // Gemma 8
       ],
     }
-  }
+  },
+  9: { 1: zeroGemPlacementCalibration(9), 2: zeroGemPlacementCalibration(9), 3: zeroGemPlacementCalibration(9) },
+  10: { 1: zeroGemPlacementCalibration(10), 2: zeroGemPlacementCalibration(10), 3: zeroGemPlacementCalibration(10) },
 };
 
 /**
@@ -386,7 +393,17 @@ export const RDN_THEME_DECORATION_CALIBRATIONS: Record<RdnBoardLayout["positions
     1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
     2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } },
     3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }
-  }
+  },
+  9: { 
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }, 
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }, 
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } } 
+  },
+  10: { 
+    1: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }, 
+    2: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } }, 
+    3: { ring: { diameterOffset: 0, widthScaleMultiplier: 1, heightScaleMultiplier: 1, offsetX: 0, offsetY: 0, angleOffset: 0 }, gear: { diameterOffset: 0, offsetX: 0, offsetY: 0, angleOffset: 0 } } 
+  },
 };
 
 export const getRdnThemeDecorationCalibration = (positions: number, visualSet: number): RdnThemeDecorationCalibration =>
@@ -425,16 +442,16 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   5: {
     positions: 5,
-    ring: { diameter: 2.2, widthScale: 1, heightScale: 0.95, offsetX: 0, offsetY: -0.03, angle: 0 },
-    gear: { diameter: 1.44, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.2, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
+    gear: { diameter: 1.5, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
-      radius: 0.91,
+      radius: 0.95,
       angleOffset: 0,
       sphereRadius: 0.12,
       badgeOffsetX: -0.105,
       badgeOffsetY: 0.125,
     },
-    innerSlots: { radius: 0.64, angleOffset: 0, sphereRadius: 0.11 },
+    innerSlots: { radius: 0.68, angleOffset: 0, sphereRadius: 0.11 },
     impulse: { radius: 0.28, iconSize: 0.6 },
     trail: {
       startRadius: 0.22,
@@ -471,7 +488,7 @@ export const RDN_BOARD_LAYOUTS: Record<
   },
   7: {
     positions: 7,
-    ring: { diameter: 2.05, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.15, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
     gear: { diameter: 1.45, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
       radius: 0.91,
@@ -515,6 +532,24 @@ export const RDN_BOARD_LAYOUTS: Record<
       coreWidth: 0.016,
     },
   },
+  9: {
+    positions: 9,
+    ring: { diameter: 2.13, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
+    gear: { diameter: 1.47, offsetX: 0, offsetY: 0, angle: 0 },
+    outerSlots: { radius: 0.94, angleOffset: 0, sphereRadius: 0.095, badgeOffsetX: -0.085, badgeOffsetY: 0.1 },
+    innerSlots: { radius: 0.69, angleOffset: 0, sphereRadius: 0.09 },
+    impulse: { radius: 0.265, iconSize: 0.6 },
+    trail: { startRadius: 0.22, controlRadius: 0.6, bend: 0.075, sphereRadius: 0.145, glowWidth: 0.08, middleWidth: 0.047, coreWidth: 0.015 },
+  },
+  10: {
+    positions: 10,
+    ring: { diameter: 2.22, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
+    gear: { diameter: 1.48, offsetX: 0, offsetY: 0, angle: 0 },
+    outerSlots: { radius: 0.96, angleOffset: 0, sphereRadius: 0.09, badgeOffsetX: -0.08, badgeOffsetY: 0.095 },
+    innerSlots: { radius: 0.7, angleOffset: 0, sphereRadius: 0.085 },
+    impulse: { radius: 0.26, iconSize: 0.6 },
+    trail: { startRadius: 0.22, controlRadius: 0.6, bend: 0.07, sphereRadius: 0.14, glowWidth: 0.075, middleWidth: 0.045, coreWidth: 0.014 },
+  },
 };
 
 /**
@@ -555,6 +590,8 @@ export const RDN_GEM_NUMERAL_CONFIG: Record<
     innerFontSizeRatio: 0.19,
     reservedWidthRatio: 0.87,
   },
+  9: { outerFontSizeRatio: 0.19, innerFontSizeRatio: 0.18, reservedWidthRatio: 0.86 },
+  10: { outerFontSizeRatio: 0.18, innerFontSizeRatio: 0.17, reservedWidthRatio: 0.85 },
 };
 
 /** Global presentation tuning, intentionally kept outside the scene for fast visual iteration. */

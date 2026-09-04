@@ -24,6 +24,10 @@ export class EffectTutorialService {
 
   tutorialForLevel(level: LevelDefinition): EffectTutorialDefinition | null {
     const seen = this.seenIds();
+    if (level.number === 1) {
+      const basicTutorial = EFFECT_TUTORIALS.find((tutorial) => tutorial.id.startsWith("BASIC:") && !seen.includes(tutorial.id));
+      if (basicTutorial) return basicTutorial;
+    }
     const effects = this.resolver.resolve(level.effectConfiguration, level.positions).effects;
     for (const effect of effects) {
       const tutorial = getEffectTutorial(effect.config);

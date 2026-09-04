@@ -52,7 +52,7 @@ export interface AtlasConfigOption {
   label: string;
   data: AtlasDataSet;
 }
-export type AtlasSource = 'effects' | 'actions';
+export type AtlasSource = 'effects' | 'actions' | 'effect-actions';
 /** Legacy UI names mapped to the refreshed generic icon atlas. */
 const ICON_SET1_FRAME_ALIASES: Readonly<Record<string, string>> = {
   'icon-profile-s2': 'icon-user', 'icon-settings-s2': 'icon-settings',
@@ -118,6 +118,7 @@ export class AtlasService {
   private readonly namedAtlasDataSets: Readonly<Record<AtlasSource, AtlasDataSet>> = {
     effects: atlasFantasyBgEffectsDataSet1,
     actions: atlasGameActionsDataSet1,
+    'effect-actions': atlasFantasyBgEffectsDataSet2,
   };
 
   readonly configuredAtlasOptions: AtlasConfigOption[] = [
