@@ -91,8 +91,9 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.load.atlas("rdn-effect-actions", "assets/game/fantasy_bg/effect-set2.png", effectActionAtlas);
     this.load.atlas("rdn-gems", "assets/game/fantasy_bg/gem-set1.png", gemAtlas);
     this.load.atlas("rdn-ui-icons", "assets/ui/fantasy_bg/icon-set1.png", uiIconAtlas);
-    this.load.image("rdn-info-panel", "assets/ui/fantasy_bg/panel/panel2-set1.png");
+
     for (let set = 1; set <= VISUAL_SET_COUNT; set += 1) {
+      this.load.image(`rdn-info-panel-set${set}`, `assets/ui/fantasy_bg/panel/panel2-set${set}.png`);
       this.load.image(`rdn-bg-${set}`, `assets/game/bg/bg-set${set}.png`);
     }
     for (let set = 1; set <= VISUAL_SET_COUNT; set += 1) for (const layout of Object.values(RDN_BOARD_LAYOUTS)) { this.load.image(rdnRingTextureKey(layout, set), `assets/game/ring/ring-${layout.positions}-set${set}.png`); this.load.image(rdnGearTextureKey(layout, set), `assets/game/gear/gear-${layout.positions}-set${set}.png`); }
@@ -532,6 +533,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   }
   /** Fixed visual identity: Adventure = set 1, Time Attack = set 2, Free = set 3. */
   private visualSet(model: RdnSceneModel): 1 | 2 | 3 { return model.freeSettings?.theme ?? (model.level.variant === "loader" ? 2 : 1); }
+  private infoPanelTexture(model: RdnSceneModel | undefined = this.model): string { return `rdn-info-panel-set${model ? this.visualSet(model) : 1}`; }
   private addBackground(x: number, y: number, width: number, height: number, key: string): void { const background = this.add.image(x, y, key); const scale = RDN_PHASER_VISUAL_CONFIG.backgroundScalePercent / 100; background.setDisplaySize(width * scale, height * scale).setDepth(-4); }
   private addDecor(x: number, y: number, diameter: number, key: string, angle: number, widthScale = 1, heightScale = 1): void { const ring = this.add.image(x, y, key); const baseScale = diameter / Math.max(ring.width, ring.height); ring.setScale(baseScale * widthScale, baseScale * heightScale).setAngle(angle); }
   private addGear(diameter: number, key: string): Phaser.GameObjects.Image { const gear = this.add.image(0, 0, key); return gear.setScale(diameter / Math.max(gear.width, gear.height)); }
@@ -613,7 +615,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const linkEffects = effects.filter((effect) => effect.config.scope === EffectScope.LINK && activeLinkIds.has(effect.id) && this.isEffectActive(effect, model.state.outerValues, model.state.effectRuntime));
     const categoryCount = Number(gemEffects.length > 0) + Number(linkEffects.length > 0);
     const x = width - 100; const y = 144; const cardWidth = 184; const cardHeight = 64 + categoryCount * 37;
-    this.add.image(x, y, "rdn-info-panel").setDisplaySize(cardWidth, cardHeight).setDepth(16);
+    this.add.image(x, y, this.infoPanelTexture(model)).setDisplaySize(cardWidth, cardHeight).setDepth(16);
     this.label(x, y - cardHeight / 2 + 13, `BERSAGLIO ${targetIndex + 1}`, 10, 0xf8dc8b).setDepth(17);
     const previewY = y - cardHeight / 2 + 31;
     const previewColor = preview.trend === "zero" ? 0x287a47 : preview.trend === "closer" ? 0x176b79 : preview.trend === "farther" ? 0x882f3b : 0x82652a;
@@ -644,7 +646,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const height = Math.min(Math.max(300, this.scale.height - 36), 610);
     const contentTop = cy - height / 2 + 112; const contentBottom = cy + height / 2 - 62; const viewportHeight = contentBottom - contentTop;
     const contentHeight = Math.max(44, effects.length * 168); this.infoScrollMax = Math.max(0, contentHeight - viewportHeight); this.infoScrollOffset = Math.min(this.infoScrollOffset, this.infoScrollMax);
-    this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(342, height).setDepth(depth).setInteractive();
+    this.add.image(cx, cy, this.infoPanelTexture(model)).setDisplaySize(342, height).setDepth(depth).setInteractive();
     const headerY = cy - height / 2 + 57; const off = model.state.targetVisualStates[index] === "OFF";
     const headerSphere = this.sphere(cx - 112, headerY, 27, model.state.outerValues[index], off, index, this.visualSet(model), 44, .8);
     headerSphere.gem.setDepth(depth + 2); headerSphere.text.setDepth(depth + 3);
@@ -674,7 +676,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const elementalAffinity = typeof operator === "number" ? this.gearOperatorElement(model.level, model.state, index) : null;
     const presentation = this.gearOperatorPresentation(operator, elementalAffinity);
     const specialIcon = this.gearSpecialIcon(operator);
-    this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(342, 330).setDepth(depth).setInteractive();
+    this.add.image(cx, cy, this.infoPanelTexture(model)).setDisplaySize(342, 330).setDepth(depth).setInteractive();
     this.label(cx, cy - 126, "OPERATORE INGRANAGGIO", 16, 0x9cf5ff).setDepth(depth + 2);
     if (specialIcon) this.add.image(cx - 112, cy - 76, specialIcon.texture, specialIcon.frame).setDisplaySize(54, 54).setTint(presentation.color).setDepth(depth + 2);
     else {
@@ -759,7 +761,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   private tutorialDialog(cx: number, cy: number, tutorial: EffectTutorialDefinition): void {
     const depth = 40;
     const color = Number.parseInt(tutorial.color.slice(1), 16);
-    this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(360, 410).setDepth(depth).setInteractive();
+    this.add.image(cx, cy, this.infoPanelTexture()).setDisplaySize(360, 410).setDepth(depth).setInteractive();
     this.add.rectangle(cx, cy, 360, 410, 0x101c18, 0).setStrokeStyle(3, color).setDepth(depth + 1);
     this.label(cx, cy - 166, "NUOVO EFFETTO", 15, 0xf8dc8b).setDepth(depth + 1);
     this.effectLegendIcon(cx - 112, cy - 120, tutorial.iconFrame, color, depth + 1, tutorial.iconTexture);
@@ -773,11 +775,12 @@ export class RdnPhaserScene extends Phaser.Scene {
   }
   private wrappedLabel(x: number, y: number, value: string, width: number, size: number, color: number, depth: number): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold", stroke: "#111814", strokeThickness: 1, lineSpacing: 3, wordWrap: { width } }).setOrigin(0, 0).setDepth(depth); }
   private operationFeedback(reason: AlignmentPreview["rejectedReason"]): string { return reason === "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER" ? "DIV2 richiede un valore pari diverso da zero" : reason === "DIVIDE_BY_TWO_CONSUMED" ? "DIV2 gia usato" : reason === "DIVIDE_BY_THREE_REQUIRES_NON_ZERO_MULTIPLE_OF_THREE" ? "DIV3 richiede un multiplo di 3 diverso da zero" : reason === "DIVIDE_BY_THREE_CONSUMED" ? "DIV3 gia usato" : reason === "SPECIAL_OPERATOR_CONSUMED" ? "Operatore speciale gia usato" : reason === "RESULT_OUT_OF_RANGE" ? "Mossa fuori intervallo" : reason === "CHAIN_LOCKED" ? "Gemma incatenata: risolvi prima l'origine" : "Mossa non disponibile"; }
-  private freeInfoDialog(cx: number, cy: number, settings: NonNullable<RdnSceneModel["freeSettings"]>): void { const depth = 20; this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(330, 262).setDepth(depth).setInteractive(); this.label(cx, cy - 96, "INFO FREE", 18, 0xf8dc8b).setDepth(depth + 1); this.label(cx, cy - 55, `Difficolta: ${settings.difficulty}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy - 26, `Gemme operative: ${settings.slotCount}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy + 3, `Effetti: ${settings.effectsEnabled ? "ATTIVI" : "DISATTIVI"}`, 14, settings.effectsEnabled ? 0x9df3a8 : 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 33, "Partite illimitate", 13, 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 58, "Nessuna vita o penalita", 13, 0xe6dfc3).setDepth(depth + 1); this.button(cx + 140, cy - 103, "x", () => this.actions.closeInfo(), depth + 3); }
+  private freeInfoDialog(cx: number, cy: number, settings: NonNullable<RdnSceneModel["freeSettings"]>): void { const depth = 20; this.add.image(cx, cy, `rdn-info-panel-set${settings.theme}`).setDisplaySize(330, 262).setDepth(depth).setInteractive(); this.label(cx, cy - 96, "INFO FREE", 18, 0xf8dc8b).setDepth(depth + 1); this.label(cx, cy - 55, `Difficolta: ${settings.difficulty}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy - 26, `Gemme operative: ${settings.slotCount}`, 15, 0xffdf70).setDepth(depth + 1); this.label(cx, cy + 3, `Effetti: ${settings.effectsEnabled ? "ATTIVI" : "DISATTIVATI"}`, 14, settings.effectsEnabled ? 0x9df3a8 : 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 33, "Partite illimitate", 13, 0xe6dfc3).setDepth(depth + 1); this.label(cx, cy + 58, "Nessuna vita o penalita", 13, 0xe6dfc3).setDepth(depth + 1); this.button(cx + 140, cy - 103, "x", () => this.actions.closeInfo(), depth + 3); }
   private label(x: number, y: number, value: string, size: number, color: number, digital = false): Phaser.GameObjects.Text { return this.add.text(x, y, value, { fontFamily: digital ? "Arial, Helvetica, sans-serif" : "Arial", fontSize: `${size}px`, color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold", stroke: "#111814", strokeThickness: Math.max(2, Math.round(size * .14)) }).setOrigin(.5); }
   private button(x: number, y: number, value: string, action: () => void, depth = 0): void { const button = this.add.circle(x, y, 24, 0x3b2b19).setDepth(depth).setInteractive(); button.on("pointerdown", action); const frame = UI_ICON_BY_BUTTON_LABEL[value]; if (frame) this.add.image(x, y, "rdn-ui-icons", frame).setDisplaySize(48, 48).setDepth(depth + 1); else this.label(x, y, value, 24, 0xffe3a0).setDepth(depth + 1); }
   private actionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-actions", frame).setDisplaySize(size, size).setDepth(depth); }
   private effectActionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return this.add.image(x, y, "rdn-effect-actions", frame).setDisplaySize(size, size).setDepth(depth); }
+  /** Some player actions reuse an effect icon from the primary effect atlas. */
   private userActionIcon(x: number, y: number, size: number, frame: string, depth = 0): Phaser.GameObjects.Image { return frame === "effect-mirror-sign" ? this.add.image(x, y, "rdn-effects", frame).setDisplaySize(size, size).setDepth(depth) : this.effectActionIcon(x, y, size, frame, depth); }
   /** A single expandable tray keeps all player actions together without covering the board when collapsed. */
   private actionPanel(cx: number, height: number, actions: readonly RdnHudAction[]): void {
@@ -799,7 +802,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     // Keep the artwork at a fixed height: only its width is scaled. The visible
     // viewport changes while opening/closing, so the background is never
     // vertically stretched by the tray animation.
-    const panel = this.add.image(cx, startPanelY, "rdn-info-panel").setDisplaySize(panelWidth, 260).setAlpha(.98).setDepth(depth);
+    const panel = this.add.image(cx, startPanelY, this.infoPanelTexture()).setDisplaySize(panelWidth, 260).setAlpha(.98).setDepth(depth);
     const content = this.add.container(0, contentStartOffset).setDepth(depth + 2);
     const maskShape = this.make.graphics({ x: 0, y: 0 });
     maskShape.fillStyle(0xffffff);
@@ -844,7 +847,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   private showActionInfo(cx: number, cy: number, action: RdnHudAction): void {
     const depth = 30;
     this.add.rectangle(cx, cy / 2, this.scale.width, this.scale.height, 0x020907, .46).setDepth(depth).setInteractive();
-    this.add.image(cx, cy / 2, "rdn-info-panel").setDisplaySize(330, 220).setDepth(depth + 1).setInteractive();
+    this.add.image(cx, cy / 2, this.infoPanelTexture()).setDisplaySize(330, 220).setDepth(depth + 1).setInteractive();
     this.userActionIcon(cx, cy / 2 - 55, 48, action.icon, depth + 2);
     this.label(cx, cy / 2 - 17, action.label.toUpperCase(), 16, 0xf8dc8b).setDepth(depth + 2);
     this.label(cx, cy / 2 + 22, action.description, 12, 0xe6dfc3).setWordWrapWidth(270).setDepth(depth + 2);
@@ -853,7 +856,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   private infoDialog(cx: number, cy: number, model: RdnSceneModel): void {
     const depth = 20;
     const panelHeight = model.level.variant === "persistent" ? 340 : 238;
-    this.add.image(cx, cy, "rdn-info-panel").setDisplaySize(330, panelHeight).setDepth(depth).setInteractive();
+    this.add.image(cx, cy, this.infoPanelTexture(model)).setDisplaySize(330, panelHeight).setDepth(depth).setInteractive();
     if (model.level.variant === "persistent") {
       const config = model.level.adventure;
       const div2 = config?.specialInventory.divide2 ?? 0;

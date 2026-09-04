@@ -30,7 +30,17 @@ import { EffectTutorialService } from "../../core/services/gameplay/effect-tutor
   standalone: true,
   imports: [IonContent],
   template: `<ion-content [fullscreen]="true" [scrollY]="false"
-    ><div #gameHost class="rnd-phaser-host"></div
+    ><div #gameHost class="rnd-phaser-host" [class.game-blocked]="resumePrompt()"></div>
+    @if (resumePrompt()) {
+      <div class="saved-run-backdrop" (pointerdown)="$event.stopPropagation()" (pointerup)="$event.stopPropagation()" (click)="$event.stopPropagation()">
+        <section class="saved-run-panel" role="dialog" aria-modal="true" aria-labelledby="saved-run-title" (pointerdown)="$event.stopPropagation()" (pointerup)="$event.stopPropagation()">
+          <span class="saved-run-eyebrow">PARTITA SALVATA</span>
+          <h2 id="saved-run-title">Riprendere il livello?</h2>
+          <p>È stata trovata una partita non completata per questo livello.</p>
+          <div class="saved-run-actions"><button type="button" (pointerdown)="$event.stopPropagation()" (click)="continueSavedRun()">CONTINUA</button><button type="button" class="saved-run-secondary" (pointerdown)="$event.stopPropagation()" (click)="restartSavedRun()">RICOMINCIA</button></div>
+        </section>
+      </div>
+    }
   ></ion-content>`,
   styles: [
     `
@@ -54,6 +64,15 @@ import { EffectTutorialService } from "../../core/services/gameplay/effect-tutor
         touch-action: none;
         pointer-events: auto;
       }
+      .rnd-phaser-host.game-blocked { pointer-events: none; }
+      .saved-run-backdrop { position: fixed; z-index: 10000; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(3, 5, 10, .76); pointer-events: auto; touch-action: none; }
+      .saved-run-panel { width: min(430px, 100%); padding: 42px 38px 34px; color: #f7e9c7; text-align: center; background: url('/assets/ui/fantasy_bg/panel/panel2-set2.png') center / 100% 100% no-repeat; filter: drop-shadow(0 20px 30px rgba(0,0,0,.58)); }
+      .saved-run-eyebrow { color: #e0b959; font-size: .72rem; font-weight: 900; letter-spacing: .12em; }
+      .saved-run-panel h2 { margin: 8px 0 10px; color: #fff0ad; font-size: 1.45rem; }
+      .saved-run-panel p { margin: 0 auto 24px; max-width: 290px; color: #d6e2d9; line-height: 1.4; }
+      .saved-run-actions { display: grid; gap: 10px; }
+      .saved-run-actions button { min-height: 44px; border: 1px solid #ffdf72; border-radius: 11px; color: #fff4bd; background: linear-gradient(180deg, #a76d1e, #623b12); font-weight: 900; letter-spacing: .08em; }
+      .saved-run-actions .saved-run-secondary { border-color: rgba(255,212,105,.55); color: #d9d0b9; background: rgba(4,18,27,.72); }
     `,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -85,6 +104,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly selectedGemIndex = signal<number | null>(null);
   private readonly selectedGearGemIndex = signal<number | null>(null);
   private readonly selectedLinkEffectId = signal<string | null>(null);
+  readonly resumePrompt = signal(false);
   private readonly actionInstances = signal<RdnActionInstance[]>([]);
   constructor() {
     this.loadSessionPuzzle(this.session);
@@ -113,7 +133,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.scene = new RdnPhaserScene({
       rotate: (direction, steps) =>
         this.dispatch({ type: "ROTATE", direction, steps }),
-      impulse: () => this.impulse(),
+      impulse: () => this.resumePrompt() ? null : this.impulse(),
       action: (slot) => this.useAction(slot),
       restart: () => this.restart(),
       undo: () => this.dispatch({ type: "UNDO" }),
@@ -195,6 +215,7 @@ export class GameplayPageComponent implements AfterViewInit {
   ): void {
     this.puzzle.dispatch(action);
     this.puzzle.saveAdventureRun();
+    this.saveCurrentRun();
     this.outcome.set(null);
     this.showInfo.set(false);
     this.selectedGemIndex.set(null);
@@ -207,12 +228,14 @@ export class GameplayPageComponent implements AfterViewInit {
     const plan = this.puzzle.planImpulse();
     this.puzzle.dispatch({ type: "IMPULSE" });
     this.puzzle.saveAdventureRun();
+    this.saveCurrentRun();
     const failed = hasPuzzleFailed(this.puzzle.level(), this.puzzle.state());
     const won = this.puzzle.state().won && !failed;
     const queuesExhausted = this.session.variant === "time-attack" && this.puzzle.queueStates().every((queue) => queue.exhausted);
     if (won) {
       if (this.session.variant !== "free" && this.session.variant !== "effect-playground") this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state()));
       this.stopTimeAttackTimer();
+      this.puzzle.clearSavedRun(this.session.variant as "adventure" | "time-attack" | "free");
     }
     if (won) this.outcome.set("win");
     else if (failed || queuesExhausted) this.finishTimeAttack("lose");
@@ -222,6 +245,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private restart(): void {
     this.puzzle.dispatch({ type: "RESTART" });
     this.puzzle.saveAdventureRun();
+    this.saveCurrentRun();
     this.outcome.set(null);
     this.showInfo.set(false);
     this.selectedGemIndex.set(null);
@@ -305,6 +329,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (instance.id === "break-chains") applied = this.puzzle.breakChains();
     if (!applied) return;
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
+    this.saveCurrentRun();
   }
   private canUseAction(id: RdnActionId): boolean {
     if (id === "zero") return this.puzzle.canZeroActiveTarget();
@@ -316,11 +341,16 @@ export class GameplayPageComponent implements AfterViewInit {
     if (id === "cleanse-corruption") return this.puzzle.canCleanseCorruption();
     return this.puzzle.canBreakChains();
   }
-  private loadSessionPuzzle(session: GameplaySession): void {
+  private async loadSessionPuzzle(session: GameplaySession): Promise<void> {
     if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();
-    this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false);
+    await this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false);
+    const levelId = this.puzzle.level().id;
+    if (this.puzzle.hasSavedRun(session.variant, levelId)) this.resumePrompt.set(true);
   }
+  async continueSavedRun(): Promise<void> { this.resumePrompt.set(false); const overrides = this.gameplaySession.getLaunchOverrides(); await this.puzzle.restoreSavedRun(this.session.variant as "adventure" | "time-attack" | "free", this.session.matchLevel, overrides?.freeSeed, overrides?.freeSlotCount); this.resetTimeAttackTimer(); }
+  restartSavedRun(): void { this.resumePrompt.set(false); this.puzzle.clearSavedRun(this.session.variant as "adventure" | "time-attack" | "free"); this.puzzle.dispatch({ type: "RESTART" }); }
+  private saveCurrentRun(): void { if (this.session.variant === "effect-playground") return; const overrides = this.gameplaySession.getLaunchOverrides(); this.puzzle.saveCurrentRun(this.session.variant as "adventure" | "time-attack" | "free", overrides?.freeSeed, overrides?.freeSlotCount); }
   private changePlaygroundScenario(direction: -1 | 1): void {
     if (this.session.variant !== "effect-playground") return;
     if (direction > 0) this.playground.next(); else this.playground.previous();
@@ -328,8 +358,6 @@ export class GameplayPageComponent implements AfterViewInit {
     this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null);
   }
   private exitGameplay(): void {
-    // Leaving through the game UI always starts a fresh board on the next launch.
-    this.puzzle.clearAdventureRun();
     void this.nav.go("/hub");
   }
   private sameSession(a: GameplaySession, b: GameplaySession): boolean {

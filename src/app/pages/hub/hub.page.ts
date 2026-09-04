@@ -168,7 +168,7 @@ interface LevelPickerItem {
     .level-picker__level span { min-height: 16px; color: #ffdc5f; font-size: .76rem; letter-spacing: -1px; }
     .level-picker__level--locked { border-color: rgba(255,255,255,.12); color: rgba(255,255,255,.35); background: rgba(0,0,0,.25); }
     .level-picker__level--locked span { color: rgba(255,255,255,.32); letter-spacing: 0; }
-    .free-picker { --bar-background: rgba(8, 29, 38, .86); --bar-background-active: #f4bf4c; --bar-height: 8px; --knob-background: #fff0ab; --knob-size: 22px; position: relative; border: 0; border-radius: 0; padding: 42px 46px 38px; background: url('/assets/ui/fantasy_bg/panel/panel2-set1.png') center / 100% 100% no-repeat; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .58)); }
+    .free-picker { --bar-background: rgba(8, 29, 38, .86); --bar-background-active: #f4bf4c; --bar-height: 8px; --knob-background: #fff0ab; --knob-size: 22px; position: relative; border: 0; border-radius: 0; padding: 42px 46px 38px; background: url('/assets/ui/fantasy_bg/panel/panel2-set2.png') center / 100% 100% no-repeat; filter: drop-shadow(0 20px 30px rgba(0, 0, 0, .58)); }
     .free-picker > * { position: relative; z-index: 1; }
     .free-picker .level-picker__header { margin-bottom: 12px; }
     .free-picker__section { margin-top: 16px; padding: 12px 14px 10px; border: 1px solid rgba(255, 212, 105, .33); border-radius: 12px; background: rgba(5, 20, 29, .5); box-shadow: inset 0 1px rgba(255, 246, 195, .12); }

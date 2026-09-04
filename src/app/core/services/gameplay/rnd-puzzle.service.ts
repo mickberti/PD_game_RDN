@@ -6,6 +6,7 @@ import { DEFAULT_PUZZLE_NUMBER_RANGE, ImpulseResolutionPlan, PersistentLevelDefi
 import { RdnCatalogueService } from "./rdn-catalogue.service";
 import { EFFECT_PRESETS } from "../../game/phaser/effects/effect-presets.config";
 import { EffectScope, GemEffectType, LinkEffectType } from "../../game/phaser/effects/effects.models";
+import { ACTIVE_RDN_CATALOGUE_VERSION } from "../../game/phaser/catalogues/active-catalogue.config";
 
 const ADVENTURE_RUN_STORAGE_KEY = "rdnAdventureRun";
 interface AdventureRunSave {
@@ -16,6 +17,7 @@ interface AdventureRunSave {
   seed: number;
   state: string;
 }
+interface SavedLevelRun { schemaVersion: 1; catalogueVersion: string; variant: "adventure" | "time-attack" | "free"; levelNumber: number; levelId: string; seed?: number; freeSlotCount?: number; freeDifficulty?: PuzzleDifficulty; state: string; savedAt: number; }
 
 @Injectable({ providedIn: "root" })
 export class RdnPuzzleService {
@@ -94,6 +96,22 @@ export class RdnPuzzleService {
   }
 
   clearAdventureRun(): void { localStorage.removeItem(ADVENTURE_RUN_STORAGE_KEY); }
+
+  saveCurrentRun(variant: "adventure" | "time-attack" | "free", seed?: number, slotCount?: number): void {
+    const level = this.level();
+    if (typeof localStorage === "undefined") return;
+    const save: SavedLevelRun = { schemaVersion: 1, catalogueVersion: ACTIVE_RDN_CATALOGUE_VERSION, variant, levelNumber: level.number, levelId: level.id, seed, freeSlotCount: slotCount, freeDifficulty: this.freeDifficulty, state: this.engine.serialize(this.state()), savedAt: Date.now() };
+    localStorage.setItem(`rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${level.id}`, JSON.stringify(save));
+  }
+  hasSavedRun(variant: "adventure" | "time-attack" | "free", levelId: string): boolean { return typeof localStorage !== "undefined" && localStorage.getItem(`rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${levelId}`) !== null; }
+  clearSavedRun(variant: "adventure" | "time-attack" | "free", levelId = this.level().id): void { if (typeof localStorage !== "undefined") localStorage.removeItem(`rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${levelId}`); }
+  async restoreSavedRun(variant: "adventure" | "time-attack" | "free", number: number, seed?: number, slotCount?: number): Promise<boolean> {
+    const candidate = variant === "free" ? activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", this.freeDifficulty, seed ?? 0, slotCount) : await this.catalogue.getLevel(variant, number);
+    const key = `rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${candidate.id}`;
+    const raw = typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
+    if (!raw) return false;
+    try { const save = JSON.parse(raw) as SavedLevelRun; if (save.schemaVersion !== 1 || save.catalogueVersion !== ACTIVE_RDN_CATALOGUE_VERSION || save.variant !== variant || save.levelId !== candidate.id || (variant === "free" && save.seed !== seed)) return false; this.level.set(candidate); this.state.set(this.engine.deserialize(candidate, save.state)); return true; } catch { localStorage.removeItem(key); return false; }
+  }
 
   /** Free mode recycles every successfully used gear gem into a different operator. */
   private replaceUsedFreeOperators(level: PersistentLevelDefinition, previous: PuzzleState, next: PuzzleState): void {
