@@ -200,6 +200,12 @@ export const routes: Routes = [
     redirectTo: "shop",
   },
   {
+    path: "award",
+    canActivate: [AuthGuard],
+    loadComponent: () => import("./pages/award/award.page").then((m) => m.AwardPage),
+  },
+  { path: "reward", pathMatch: "full", redirectTo: "award" },
+  {
   	path: 'admin',
 	canActivate: [AdminGuard],
   	component: AdminShellPage,

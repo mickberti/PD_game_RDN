@@ -337,7 +337,17 @@ export class GameplayPageComponent implements AfterViewInit {
     if (instance.id === "cleanse-corruption") applied = this.puzzle.cleanseCorruption();
     if (instance.id === "break-chains") applied = this.puzzle.breakChains();
     if (!applied) return;
-    if (instance.id === "destroy-fire-walls" || instance.id === "destroy-ice-walls" || instance.id === "destroy-stone-walls") this.incrementStatistics({ wallsDestroyed: 1, effectsResolved: 1 });
+    const actionStatistics: Partial<Record<StatisticType, number>> = { actionsUsed: 1 };
+    if (instance.id === "zero") actionStatistics.gemsReset = 1;
+    if (instance.id === "invert") actionStatistics.signsInverted = 1;
+    if (instance.id === "skip") actionStatistics.impulsesSkipped = 1;
+    if (instance.id === "cleanse-corruption") actionStatistics.corruptionsCleansed = 1;
+    if (instance.id === "break-chains") actionStatistics.chainsBroken = 1;
+    if (instance.id === "destroy-fire-walls" || instance.id === "destroy-ice-walls" || instance.id === "destroy-stone-walls") {
+      actionStatistics.wallsDestroyed = 1;
+      actionStatistics.effectsResolved = 1;
+    }
+    this.incrementStatistics(actionStatistics);
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
     this.state.mutateProgress((progress) => ({ ...progress, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [instance.id]: Math.max(0, (progress.inventory.actions[instance.id] ?? 0) - 1) }, }, lastUpdatedAt: new Date().toISOString() }));
     void this.state.persistProgressNow().catch(() => undefined);
@@ -368,6 +378,9 @@ export class GameplayPageComponent implements AfterViewInit {
       effectsResolved: count("SHIELD_DEPLETED", "WALL_BROKEN", "ICE_BROKEN", "FIRE_BROKEN", "TIMER_COMPLETED", "MIRROR_APPLIED", "GEM_AMPLIFIER_APPLIED", "GEM_INVERTER_APPLIED", "AREA_TRIGGERED", "AREA_ICE_TRIGGERED", "AREA_INVERTER_TRIGGERED"),
       wallsDestroyed: count("WALL_BROKEN", "ICE_BROKEN", "FIRE_BROKEN"), shieldsResolved: count("SHIELD_DEPLETED"),
       linksActivated: count("FLOW_PROPAGATED"), areasTriggered: count("AREA_TRIGGERED", "AREA_ICE_TRIGGERED", "AREA_INVERTER_TRIGGERED"), specialOperatorsUsed: specials,
+      timersCompleted: count("TIMER_COMPLETED"), mirrorsApplied: count("MIRROR_APPLIED"),
+      amplifiersApplied: count("GEM_AMPLIFIER_APPLIED"), invertersApplied: count("GEM_INVERTER_APPLIED", "AREA_INVERTER_APPLIED"),
+      elementalBypasses: count("ELEMENTAL_BYPASSED"),
     });
   }
   private claimDoubleReward(): void {
@@ -423,7 +436,11 @@ export class GameplayPageComponent implements AfterViewInit {
     this.state.mutateProgress((progress) => ({
       ...progress,
       coins: progress.coins + coins,
-      statistics: { ...progress.statistics, highestLevelReached: Math.max(progress.statistics.highestLevelReached ?? 0, completedLevel) },
+      statistics: {
+        ...progress.statistics,
+        levelsCompleted: (progress.statistics.levelsCompleted ?? 0) + 1,
+        highestLevelReached: Math.max(progress.statistics.highestLevelReached ?? 0, completedLevel),
+      },
       gameModeLevels: {
         ...(progress.gameModeLevels ?? {}),
         [modeId]: Math.max(0, Math.min(RDN_MAX_LEVEL, Math.max(progress.gameModeLevels?.[modeId] ?? 0, completedLevel))),

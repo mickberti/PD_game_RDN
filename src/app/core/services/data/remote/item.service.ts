@@ -22,10 +22,16 @@ export class ItemService {
   private catalogPromise: Promise<GameCatalog> | null = null;
 
   async getCatalog(forceRefresh = false): Promise<GameCatalog> {
-    // RDN no longer consumes remote item catalogues. Keep this compatibility
-    // service inert while legacy administration screens are removed.
-    void forceRefresh;
-    return EMPTY_GAME_CATALOG;
+    if (!forceRefresh && this.catalogCache) return this.catalogCache;
+    try {
+      const awards = await this.loadCollection<AwardItem>(CATALOG_COLLECTIONS.awards);
+      const catalog = { ...EMPTY_GAME_CATALOG, awards };
+      this.catalogCache = catalog;
+      return catalog;
+    } catch (error) {
+      this.logger.logWarning("[ItemService] catalogAwards non disponibile", error);
+      return EMPTY_GAME_CATALOG;
+    }
     /*
     if (this.catalogCache && !forceRefresh) {
       this.logger.logDebug('[ItemService]: returning cached catalog');

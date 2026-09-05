@@ -6,6 +6,9 @@ import { AvailabilityWindow } from './event.model';
 export const STATISTIC_TYPES = [
   'gamesPlayed', 'impulsesPlayed', 'rotationsPerformed', 'effectsResolved', 'wallsDestroyed',
   'shieldsResolved', 'linksActivated', 'areasTriggered', 'specialOperatorsUsed', 'highestLevelReached',
+  'levelsCompleted', 'actionsUsed', 'gemsReset', 'signsInverted', 'impulsesSkipped',
+  'corruptionsCleansed', 'chainsBroken', 'timersCompleted', 'mirrorsApplied',
+  'amplifiersApplied', 'invertersApplied', 'elementalBypasses',
 ] as const;
 
 export type StatisticType = typeof STATISTIC_TYPES[number];
@@ -89,6 +92,9 @@ export const DEFAULT_SHOP: PlayerShop = {
 export const DEFAULT_PLAYER_STATISTICS: Record<StatisticType, number> = {
   gamesPlayed: 0, impulsesPlayed: 0, rotationsPerformed: 0, effectsResolved: 0, wallsDestroyed: 0,
   shieldsResolved: 0, linksActivated: 0, areasTriggered: 0, specialOperatorsUsed: 0, highestLevelReached: 0,
+  levelsCompleted: 0, actionsUsed: 0, gemsReset: 0, signsInverted: 0, impulsesSkipped: 0,
+  corruptionsCleansed: 0, chainsBroken: 0, timersCompleted: 0, mirrorsApplied: 0,
+  amplifiersApplied: 0, invertersApplied: 0, elementalBypasses: 0,
 };
 
 export const DEFAULT_GAME_PROGRESS: GameProgress = {

@@ -25,7 +25,7 @@ export const fantasyBottomNav: BottomNavItem[] = [{
 	id: "reward",
 	title: "Reward",
 	description: "View reward and progress",
-	route: "/reward",
+	route: "/award",
 	active: "active",
 	frame: {name: "icon-trophy", effect: "none" },
 }, {

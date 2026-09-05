@@ -22,6 +22,7 @@ import { LoggerService } from '../../infrastructure/logging/logger.service';
 import { mockGameEvents } from "src/app/core/models/mock/fantasy/event-data";
 import { MockCatalogService } from '../mock/mock-catalog.service';
 import { MockSessionService } from '../mock/mock-session.service';
+import { TEMPORARY_RDN_CATALOG_AWARDS } from '../../../models/mock/fantasy/catalog-awards.rdn-temporary';
 
 export interface GameDataProvider {
   loadProgress(uid: string | null): Promise<GameProgress>;
@@ -63,8 +64,9 @@ export class RemoteGameDataProvider implements GameDataProvider {
     return [];
   }
 
-  async loadCatalog(_forceRefresh = false): Promise<GameCatalog> {
-    return { heroes: [], equip: [], boxes: [], resources: [], awards: [] };
+  async loadCatalog(forceRefresh = false): Promise<GameCatalog> {
+    const catalog = await this.itemService.getCatalog(forceRefresh);
+    return catalog.awards.length ? catalog : { ...catalog, awards: [...TEMPORARY_RDN_CATALOG_AWARDS] };
   }
 }
 
@@ -121,6 +123,6 @@ export class MockGameDataProvider implements GameDataProvider {
   }
 
   async loadCatalog(_forceRefresh = false): Promise<GameCatalog> {
-    return { heroes: [], equip: [], boxes: [], resources: [], awards: [] };
+    return { heroes: [], equip: [], boxes: [], resources: [], awards: [...TEMPORARY_RDN_CATALOG_AWARDS] };
   }
 }

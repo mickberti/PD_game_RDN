@@ -225,7 +225,7 @@ export class HubPage {
   contextActions = this.floating.contextActions;
 
   openMode(mode: ModeItem): void {
-    if (mode.id === "ranked") { this.nav.go("/ranking"); return; }
+    if (mode.id === "ranked") { this.nav.go("/award"); return; }
     if (mode.id === "free") { this.freeMode.set(mode); return; }
     const completedLevel = Math.max(0, Math.min(RDN_MAX_LEVEL, this.state.progress().gameModeLevels?.[mode.id] ?? 0));
     this.launchLevel(mode, Math.min(RDN_MAX_LEVEL, completedLevel + 1));
