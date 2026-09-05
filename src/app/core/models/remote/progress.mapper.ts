@@ -1,58 +1,19 @@
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { DEFAULT_GAME_PROGRESS, DEFAULT_PLAYER_STATISTICS, GameInventory, GameProgress } from './progress.models';
-import { validateRdnActionLoadout } from '../../game/phaser/config/rdn-actions.config';
+import { RDN_ACTION_IDS, RdnActionId } from '../../game/phaser/config/rdn-actions.config';
 
-export interface MockGameProgressSeed {
-  resources?: ResourceItem[];
-  boxes?: ChestItem[];
-  equip?: EquipItem[];
-  heroes?: HeroItem[];
-  selectedHeroId?: string;
-}
-
-type LegacyGameInventoryFields = Partial<GameInventory>;
-
-type LegacyGameProgressDocument = Partial<GameProgress> & LegacyGameInventoryFields & {
-  inventory?: Partial<GameInventory> | null;
-};
-
-const cloneArray = <T>(items: T[] | undefined): T[] => items?.map((item) => ({ ...item })) ?? [];
-
-const isArray = <T>(value: unknown): value is T[] => Array.isArray(value);
+export interface MockGameProgressSeed { actions?: Partial<Record<RdnActionId, number>>; resources?: ResourceItem[]; boxes?: ChestItem[]; equip?: EquipItem[]; heroes?: HeroItem[]; selectedHeroId?: string; }
+type LegacyGameProgressDocument = Partial<GameProgress> & { inventory?: Partial<GameInventory> | null; actions?: Partial<Record<RdnActionId, number>>; };
 
 const normalizeInventory = (progress?: LegacyGameProgressDocument | null): GameInventory => {
   const inventory = progress?.inventory;
-  const heroes = isArray<HeroItem>(inventory?.heroes)
-    ? cloneArray(inventory?.heroes)
-    : isArray<HeroItem>(progress?.heroes)
-      ? cloneArray(progress?.heroes)
-      : [];
-
-  const selectedHeroId = typeof inventory?.selectedHeroId === 'string'
-    ? inventory.selectedHeroId
-    : typeof progress?.selectedHeroId === 'string'
-      ? progress.selectedHeroId
-      : heroes[0]?.id;
-
-  return {
-    resources: isArray<ResourceItem>(inventory?.resources)
-      ? cloneArray(inventory?.resources)
-      : isArray<ResourceItem>(progress?.resources)
-        ? cloneArray(progress?.resources)
-        : [],
-    boxes: isArray<ChestItem>(inventory?.boxes)
-      ? cloneArray(inventory?.boxes)
-      : isArray<ChestItem>(progress?.boxes)
-        ? cloneArray(progress?.boxes)
-        : [],
-    equip: isArray<EquipItem>(inventory?.equip)
-      ? cloneArray(inventory?.equip)
-      : isArray<EquipItem>(progress?.equip)
-        ? cloneArray(progress?.equip)
-        : [],
-    heroes,
-    ...(selectedHeroId ? { selectedHeroId } : {}),
-  };
+  const raw = inventory?.actions ?? progress?.actions ?? {};
+  const actions = RDN_ACTION_IDS.reduce<Partial<Record<RdnActionId, number>>>((result, id) => {
+    const quantity = Number(raw[id] ?? 0);
+    if (Number.isFinite(quantity) && quantity > 0) result[id] = Math.floor(quantity);
+    return result;
+  }, {});
+  return { actions, resources: [], boxes: [], equip: [], heroes: [] };
 };
 
 const normalizeGameModeLevelStars = (value: unknown): Record<string, Record<string, number>> => {
@@ -75,14 +36,7 @@ const normalizeGameModeLevelStars = (value: unknown): Record<string, Record<stri
 export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | null): GameProgress => {
   const inventory = normalizeInventory(progress);
 
-  const {
-    resources: _legacyResources,
-    boxes: _legacyChestes,
-    equip: _legacyEquip,
-    heroes: _legacyHeroes,
-    selectedHeroId: _legacySelectedHeroId,
-    ...progressFields
-  } = progress ?? {};
+  const { actions: _legacyActions, ...progressFields } = progress ?? {};
 
   return {
     ...DEFAULT_GAME_PROGRESS,
@@ -99,7 +53,6 @@ export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | nu
       ...(progress?.gameModeLevels ?? {}),
     },
     gameModeLevelStars: normalizeGameModeLevelStars(progress?.gameModeLevelStars),
-    rdnActionLoadout: validateRdnActionLoadout(progress?.rdnActionLoadout),
     activatedEvents: {
       ...(progress?.activatedEvents ?? {}),
     },
@@ -128,24 +81,17 @@ const stripUndefined = <T>(value: T): T => {
   return value;
 };
 
-export const serializeGameProgress = (progress: GameProgress): GameProgress => stripUndefined(normalizeGameProgress(progress));
+export const serializeGameProgress = (progress: GameProgress): GameProgress => {
+  const normalized = normalizeGameProgress(progress);
+  const { resources: _resources, boxes: _boxes, equip: _equip, heroes: _heroes, selectedHeroId: _selectedHeroId, ...inventory } = normalized.inventory;
+  return stripUndefined({ ...normalized, inventory } as GameProgress);
+};
 
 export const createMockGameProgress = (
   seed: MockGameProgressSeed = {},
   overrides: Partial<Omit<GameProgress, keyof MockGameProgressSeed>> = {}
 ): GameProgress => {
-  const resources = cloneArray(seed.resources);
-  const boxes = cloneArray(seed.boxes);
-  const equip = cloneArray(seed.equip);
-  const heroes = cloneArray(seed.heroes);
-  const selectedHeroId = seed.selectedHeroId ?? heroes[0]?.id;
-  const inventory: GameInventory = {
-    resources,
-    boxes,
-    equip,
-    heroes,
-    ...(selectedHeroId ? { selectedHeroId } : {}),
-  };
+  const inventory: GameInventory = { actions: { ...(seed.actions ?? {}) }, resources: seed.resources ?? [], boxes: seed.boxes ?? [], equip: seed.equip ?? [], heroes: seed.heroes ?? [], ...(seed.selectedHeroId ? { selectedHeroId: seed.selectedHeroId } : {}) };
 
   return normalizeGameProgress({
     ...DEFAULT_GAME_PROGRESS,

@@ -35,8 +35,8 @@
     "audit": "assets/rnd/catalogues/v007/audit.json",
     "levelSchemaVersion": 1,
     "generatorVersion": "rdn-generator-v2",
-    "sourceFingerprint": "a22de6d72a90deff",
-    "generatedAt": "2026-09-03T14:46:14.777Z",
+    "sourceFingerprint": "c15adf319d2a7bcc",
+    "generatedAt": "2026-09-04T19:50:14.855Z",
     "validationPassed": true
   }
 ]

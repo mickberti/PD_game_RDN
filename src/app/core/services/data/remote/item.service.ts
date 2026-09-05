@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Firestore, collection, getDocs } from '@angular/fire/firestore';
 
-import { GameCatalog } from '../../../models/game-catalog.model';
+import { EMPTY_GAME_CATALOG, GameCatalog } from '../../../models/game-catalog.model';
 import { AwardItem, ChestItem, EquipItem, HeroItem, InventoryItemType, ResourceItem } from '../../../models/game.models';
 import { LoggerService } from '../../infrastructure/logging/logger.service';
 
@@ -22,6 +22,11 @@ export class ItemService {
   private catalogPromise: Promise<GameCatalog> | null = null;
 
   async getCatalog(forceRefresh = false): Promise<GameCatalog> {
+    // RDN no longer consumes remote item catalogues. Keep this compatibility
+    // service inert while legacy administration screens are removed.
+    void forceRefresh;
+    return EMPTY_GAME_CATALOG;
+    /*
     if (this.catalogCache && !forceRefresh) {
       this.logger.logDebug('[ItemService]: returning cached catalog');
       return this.catalogCache;
@@ -53,7 +58,7 @@ export class ItemService {
       }
     })();
 
-    return this.catalogPromise;
+    return this.catalogPromise; */
   }
 
   clearCache(): void {

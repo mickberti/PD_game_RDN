@@ -124,6 +124,7 @@ export class GameStateService {
   readonly dusts = computed(
     () => this.progress().dust ?? DEFAULT_GAME_PROGRESS.dust,
   );
+  readonly inventoryActions = computed(() => this.progress().inventory.actions ?? {});
   readonly inventoryResources = computed(
     () => this.progress().inventory.resources,
   );

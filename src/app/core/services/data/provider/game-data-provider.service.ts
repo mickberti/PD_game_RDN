@@ -59,14 +59,12 @@ export class RemoteGameDataProvider implements GameDataProvider {
     return this.eventService.getActiveEvents(forceRefresh);
   }
 
-  loadShop(forceRefresh = false): Promise<ShopItem[]> {
-	this.logger.logDebug('[RemoteGameDataProvider] loadShop',forceRefresh);
-    return this.shopService.getShopItems(forceRefresh);
+  async loadShop(_forceRefresh = false): Promise<ShopItem[]> {
+    return [];
   }
 
-  loadCatalog(forceRefresh = false): Promise<GameCatalog> {
-	this.logger.logInfo('[RemoteGameDataProvider] loadCatalog',forceRefresh);
-    return this.itemService.getCatalog(forceRefresh);
+  async loadCatalog(_forceRefresh = false): Promise<GameCatalog> {
+    return { heroes: [], equip: [], boxes: [], resources: [], awards: [] };
   }
 }
 
@@ -118,18 +116,11 @@ export class MockGameDataProvider implements GameDataProvider {
     return this.eventsCache;
   }
 
-  async loadShop(forceRefresh = false): Promise<ShopItem[]> {
-	this.logger.logDebug('[MockGameDataProvider] loadShop',forceRefresh);
-    await this.timeService.sync(forceRefresh);
-
-    return resolveAvailableShopItems(
-      mapMockShopToShopItems(this.mockSession.createFantasySession().shop),
-      this.timeService.nowDate()
-    );
+  async loadShop(_forceRefresh = false): Promise<ShopItem[]> {
+    return [];
   }
 
-  async loadCatalog(forceRefresh = false): Promise<GameCatalog> {
-	this.logger.logDebug('[MockGameDataProvider] loadCatalog',forceRefresh);
-    return this.mockCatalog.createFantasyGameCatalog();
+  async loadCatalog(_forceRefresh = false): Promise<GameCatalog> {
+    return { heroes: [], equip: [], boxes: [], resources: [], awards: [] };
   }
 }

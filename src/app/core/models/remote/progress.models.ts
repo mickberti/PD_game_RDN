@@ -1,7 +1,7 @@
 import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
+import { RdnActionId } from '../../game/phaser/config/rdn-actions.config';
 import { ShopItem } from '../shop.models';
 import { AvailabilityWindow } from './event.model';
-import { RdnActionLoadout } from '../../game/phaser/config/rdn-actions.config';
 
 export const STATISTIC_TYPES = [
   'enemiesKilled',
@@ -45,6 +45,9 @@ export interface StatisticDefinition {
 }
 
 export interface GameInventory {
+  /** Consumable player actions. The local action catalogue defines their presentation. */
+  actions: Partial<Record<RdnActionId, number>>;
+  /** @deprecated Legacy-only fields kept temporarily so obsolete pages can compile. They are no longer persisted. */
   resources: ResourceItem[];
   boxes: ChestItem[];
   equip: EquipItem[];
@@ -85,7 +88,6 @@ export interface GameProgress {
   gameModeLevels: Record<string, number>;
   /** Best star result for each completed RDN level, grouped by game mode. */
   gameModeLevelStars: Record<string, Record<string, number>>;
-  rdnActionLoadout?: RdnActionLoadout;
   claimedStatisticAwardTiers: Partial<Record<StatisticType, number>>;
   purchasedShopItems?: Record<string, PurchasedShopItemProgress>;
   activatedEvents?: Record<string, ActivatedEventProgress>;
@@ -94,10 +96,8 @@ export interface GameProgress {
 }
 
 export const DEFAULT_GAME_INVENTORY: GameInventory = {
-  resources: [],
-  boxes: [],
-  equip: [],
-  heroes: [],
+  actions: {},
+  resources: [], boxes: [], equip: [], heroes: [],
 };
 
 export const DEFAULT_TIME_SHOP: TimeShop = {

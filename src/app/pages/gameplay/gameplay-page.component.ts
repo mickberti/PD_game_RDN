@@ -310,7 +310,8 @@ export class GameplayPageComponent implements AfterViewInit {
     this.outcome.set(outcome);
   }
   private resetActionInstances(): void {
-    this.actionInstances.set(RDN_ACTION_IDS.map((id) => ({ id, charges: RDN_ACTION_CATALOG[id].charges, cooldownUntil: 0 })));
+    const inventory = this.state.inventoryActions();
+    this.actionInstances.set(RDN_ACTION_IDS.map((id) => ({ id, charges: Math.max(0, inventory[id] ?? 0), cooldownUntil: 0 })));
   }
   private useAction(slot: number): void {
     if (this.session.variant === "effect-playground") return;
@@ -329,6 +330,8 @@ export class GameplayPageComponent implements AfterViewInit {
     if (instance.id === "break-chains") applied = this.puzzle.breakChains();
     if (!applied) return;
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
+    this.state.mutateProgress((progress) => ({ ...progress, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [instance.id]: Math.max(0, (progress.inventory.actions[instance.id] ?? 0) - 1) }, }, lastUpdatedAt: new Date().toISOString() }));
+    void this.state.persistProgressNow().catch(() => undefined);
     this.saveCurrentRun();
   }
   private canUseAction(id: RdnActionId): boolean {

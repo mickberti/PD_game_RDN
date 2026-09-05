@@ -143,58 +143,10 @@ export const routes: Routes = [
     data: { variant: "time-attack" },
   },
   {
-    path: "stats-hero",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/hero/hero.page").then(
-        (m) => m.HeroPage,
-      ),
-  },
-  {
-    path: "hero",
-  canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/hero/hero.page").then(
-        (m) => m.HeroPage,
-      ),
-  },
-  {
     path: "game-guide",
     canActivate: [AuthGuard],
     loadComponent: () =>
       import("./pages/game-guide/game-guide.page").then((m) => m.GameGuidePage),
-  },
-  {
-    path: "hero/:view",
-  canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/hero/hero.page").then(
-        (m) => m.HeroPage,
-      ),
-  },
-  {
-    path: "hero/:view/:type",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/hero/hero.page").then(
-        (m) => m.HeroPage,
-      ),
-  },
-  {
-    path: "hero-upgrade",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/hero-upgrade/hero-upgrade.page").then(
-        (m) => m.HeroUpgradePage,
-      ),
-  },
-  {
-    path: "hero-equip/:type",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/hero-equip/hero-equip.page").then(
-        (m) => m.HeroEquipPage,
-      ),
   },
   {
     path: "pause",
@@ -227,25 +179,6 @@ export const routes: Routes = [
       import("./pages/settings/settings.page").then((m) => m.SettingsPage),
   },
   {
-      path: "reward",
-	  canActivate: [AuthGuard],
-      loadComponent: () =>
-        import("./pages/award/award.page").then((m) => m.AwardPage),
-  },
-  {
-    path: "award/event/:category",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/award/award.page").then((m) => m.AwardPage),
-  },
-  {
-    path: "award/:category",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/award/award.page").then((m) => m.AwardPage),
-  },
-
-  {
     path: "inventory",
 	canActivate: [AuthGuard],
     loadComponent: () =>
@@ -263,11 +196,8 @@ export const routes: Routes = [
   },
   {
     path: "shop/:category",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/shop/shop.page").then(
-        (m) => m.ShopPage,
-      ),
+    pathMatch: "full",
+    redirectTo: "shop",
   },
   {
   	path: 'admin',
