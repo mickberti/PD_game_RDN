@@ -20,6 +20,8 @@ export const EFFECT_ASSET_FRAME: Readonly<Record<string, string>> = {
 
 export const effectAssetFrame = (effect: ResolvedEffect): string => EFFECT_ASSET_FRAME[effect.config.type] ?? "missing-effect";
 export const effectAssetTexture = (effect: ResolvedEffect): string => (effect.config.scope === EffectScope.GEM && effect.config.type === GemEffectType.FIRE) || (effect.config.scope === EffectScope.LINK && effect.config.type === "CHAIN") ? "rdn-effect-actions" : "rdn-effects";
+/** Atlas source used by Angular UI surfaces; Phaser uses the texture names above. */
+export const effectAssetAtlasSource = (effect: ResolvedEffect): "effects" | "effect-actions" => effectAssetTexture(effect) === "rdn-effect-actions" ? "effect-actions" : "effects";
 
 export const effectVisualState = (effect: ResolvedEffect, values: readonly number[], runtime?: EffectRuntimeState): EffectVisualState => {
   if (effect.config.enabled === false) return "SUPPRESSED";

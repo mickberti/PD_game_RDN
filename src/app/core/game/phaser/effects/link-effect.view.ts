@@ -17,7 +17,9 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
   constructor(scene: Phaser.Scene, readonly effect: ResolvedEffect, geometry: LinkEffectGeometry, onInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void) {
     super(scene); this.geometry = geometry; scene.add.existing(this); this.setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     const config = effect.config; if (config.scope !== EffectScope.LINK) return;
-    const color = config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : config.type === LinkEffectType.INVERT ? 0xc890ff : config.type === LinkEffectType.CHAIN ? 0xff6c67 : 0x7edbff; this.linkColor = color;
+    // A chain is a normal directional conduit with a prerequisite, not an error.
+    // Keep it blue so its selected-flow treatment is identical to the standard link.
+    const color = config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : config.type === LinkEffectType.INVERT ? 0xc890ff : 0x7edbff; this.linkColor = color;
     const visual = EFFECT_PHASER_VISUAL.links;
     const graphic = scene.add.graphics(); this.baseGraphic = graphic; graphic.lineStyle(visual.width + visual.outerGlowWidthExtra, color, visual.outerGlowAlpha); this.drawCurve(graphic); graphic.lineStyle(visual.width + visual.middleGlowWidthExtra, color, visual.middleGlowAlpha); this.drawCurve(graphic); graphic.lineStyle(visual.width, color, visual.coreAlpha); this.drawCurve(graphic);
     const direction = config.type === LinkEffectType.CHAIN ? LinkDirection.FORWARD : config.direction ?? LinkDirection.BIDIRECTIONAL; this.direction = direction;

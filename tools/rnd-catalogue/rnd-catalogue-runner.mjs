@@ -18,6 +18,10 @@ const implementations = {
     import("../../src/app/core/game/phaser/catalogues/v007/catalog.builder.ts"),
     import("../../src/app/core/game/phaser/catalogues/v007/catalogue.contract.ts"),
   ]),
+  v008: () => Promise.all([
+    import("../../src/app/core/game/phaser/catalogues/v008/catalog.builder.ts"),
+    import("../../src/app/core/game/phaser/catalogues/v008/catalogue.contract.ts"),
+  ]),
 };
 const loadImplementation = implementations[version];
 if (!loadImplementation) throw new Error(`Motore catalogo RDN non disponibile per la versione ${version}.`);

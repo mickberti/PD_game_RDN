@@ -18,9 +18,6 @@ export class InventoryMutationService {
 
   addInventoryResource(item: ResourceItem, stock = 1): boolean {
     const added = this.addStackableInventoryItem("resources", item, stock);
-    if (added) {
-      this.statistics.increment("resourcesCollected", stock);
-    }
     return added;
   }
 
@@ -37,7 +34,6 @@ export class InventoryMutationService {
     this.gameState.updateInventory({
       equip: [...this.gameState.inventoryEquip(), { ...item }],
     });
-    this.statistics.increment("equipmentUnlocked");
     return true;
   }
 
@@ -51,7 +47,6 @@ export class InventoryMutationService {
     this.gameState.updateInventory({
       heroes: [...this.gameState.inventoryHeroes(), hero],
     });
-    this.statistics.increment("heroesUnlocked");
     return true;
   }
 
@@ -201,11 +196,6 @@ export class InventoryMutationService {
       gems: balances.gem,
       dust: balances.dust,
       inventory: { ...currentProgress.inventory, equip, heroes },
-      statistics: {
-        ...currentProgress.statistics,
-        coinsEarned: currentProgress.statistics.coinsEarned + Math.max(balances.coin - currentProgress.coins, 0),
-        itemsSold: currentProgress.statistics.itemsSold + 1,
-      },
       lastUpdatedAt: new Date().toISOString(),
     });
     return true;
@@ -236,11 +226,6 @@ export class InventoryMutationService {
           this.gameState.currentHero()?.id === id
             ? heroes[0]?.id
             : currentProgress.inventory.selectedHeroId,
-      },
-      statistics: {
-        ...currentProgress.statistics,
-        coinsEarned: currentProgress.statistics.coinsEarned + Math.max(balances.coin - currentProgress.coins, 0),
-        itemsSold: currentProgress.statistics.itemsSold + 1,
       },
       lastUpdatedAt: new Date().toISOString(),
     });

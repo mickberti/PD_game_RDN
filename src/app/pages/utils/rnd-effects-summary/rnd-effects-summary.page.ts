@@ -4,7 +4,7 @@ import { ActivatedRoute } from "@angular/router";
 import { IonContent, IonFooter, IonSelect, IonSelectOption, IonToolbar } from "@ionic/angular/standalone";
 import { EffectScope, ResolvedEffect } from "../../../core/game/phaser/effects/effects.models";
 import { PuzzleOperator } from "../../../core/game/phaser/puzzle.types";
-import { effectAssetFrame } from "../../../core/game/phaser/effects/effect-presentation.config";
+import { effectAssetAtlasSource, effectAssetFrame } from "../../../core/game/phaser/effects/effect-presentation.config";
 import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
 import { RdnCatalogueService } from "../../../core/services/gameplay/rdn-catalogue.service";
 import { UiSpriteComponent } from "../../../shared/basic/ui-sprite.component";
@@ -104,6 +104,7 @@ export class RdnEffectsSummaryPage implements OnInit {
   officialSolutionImpulses(level: number): number | undefined { const item = this.levels().find((candidate) => candidate.number === level && candidate.variant === (this.variant === "adventure" ? "persistent" : "loader")); return item?.generation?.officialSolutionImpulses ?? item?.starCost?.impulses ?? item?.optimalCost?.impulses; }
   failureText(level: number): string { const reasons = this.generationStats(level)?.failureReasons ?? []; return reasons.length ? reasons.join(", ") : "OK"; }
   effectFrame(effect: ResolvedEffect) { return { name: effectAssetFrame(effect), effect: "none" as const }; }
+  effectAtlas(effect: ResolvedEffect) { return effectAssetAtlasSource(effect); }
 
   effectTooltip(effect: ResolvedEffect): string {
     const config = effect.config;

@@ -164,7 +164,12 @@ export class AtlasService {
    * nulla usa il frame di fallback `not_found`.
    */
   resolveFrame(frameName: string, source?: AtlasSource): AtlasFrame {
-    const dataSets = source ? [this.namedAtlasDataSets[source]] : this.atlasDataSets;
+    // Some gameplay effects (currently FIRE and CHAIN) intentionally use the
+    // action atlas. `effects` therefore resolves its primary atlas first and
+    // falls back to that companion atlas without changing every UI consumer.
+    const dataSets = source === 'effects'
+      ? [this.namedAtlasDataSets.effects, this.namedAtlasDataSets['effect-actions']]
+      : source ? [this.namedAtlasDataSets[source]] : this.atlasDataSets;
     const resolvedFrameName = source ? frameName : ICON_SET1_FRAME_ALIASES[frameName] ?? frameName;
     for (const atlas of dataSets) {
       const frame = atlas.frames[resolvedFrameName];

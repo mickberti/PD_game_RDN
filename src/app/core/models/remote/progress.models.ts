@@ -4,38 +4,13 @@ import { ShopItem } from '../shop.models';
 import { AvailabilityWindow } from './event.model';
 
 export const STATISTIC_TYPES = [
-  'enemiesKilled',
-  'bossKilled',
-  'attacksPerformed',
-  'specialsPerformed',
-  'criticalHits',
-  'damageDealt',
-  'damageReceived',
-  'blocksPerformed',
-
-  'coinsEarned',
-  'coinsSpent',
-  'resourcesCollected',
-  'itemsPurchased',
-  'itemsSold',
-
-  'heroLevelsGained',
-  'equipmentUpgrades',
-  'masteryPointsEarned',
-  'heroesUnlocked',
-  'equipmentUnlocked',
-
-  'battlesWon',
-  'questsCompleted',
+  'gamesPlayed', 'impulsesPlayed', 'rotationsPerformed', 'effectsResolved', 'wallsDestroyed',
+  'shieldsResolved', 'linksActivated', 'areasTriggered', 'specialOperatorsUsed', 'highestLevelReached',
 ] as const;
 
 export type StatisticType = typeof STATISTIC_TYPES[number];
 
-export type StatisticCategory =
-  | 'combat'
-  | 'economy'
-  | 'progression'
-  | 'activity';
+export type StatisticCategory = 'gameplay' | 'effects' | 'progression';
 
 export interface StatisticDefinition {
   type: StatisticType;
@@ -112,29 +87,8 @@ export const DEFAULT_SHOP: PlayerShop = {
 };
 
 export const DEFAULT_PLAYER_STATISTICS: Record<StatisticType, number> = {
-  enemiesKilled: 0,
-  bossKilled: 0,
-  attacksPerformed: 0,
-  specialsPerformed: 0,
-  criticalHits: 0,
-  damageDealt: 0,
-  damageReceived: 0,
-  blocksPerformed: 0,
-
-  coinsEarned: 0,
-  coinsSpent: 0,
-  resourcesCollected: 0,
-  itemsPurchased: 0,
-  itemsSold: 0,
-
-  heroLevelsGained: 0,
-  equipmentUpgrades: 0,
-  masteryPointsEarned: 0,
-  heroesUnlocked: 0,
-  equipmentUnlocked: 0,
-
-  battlesWon: 0,
-  questsCompleted: 0,
+  gamesPlayed: 0, impulsesPlayed: 0, rotationsPerformed: 0, effectsResolved: 0, wallsDestroyed: 0,
+  shieldsResolved: 0, linksActivated: 0, areasTriggered: 0, specialOperatorsUsed: 0, highestLevelReached: 0,
 };
 
 export const DEFAULT_GAME_PROGRESS: GameProgress = {

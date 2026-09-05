@@ -10,22 +10,32 @@ import * as v006Builder from "./v006/catalog.builder";
 
 import { RDN_CATALOGUE_CONTRACT as v007Contract } from "./v007/catalogue.contract";
 import * as v007Builder from "./v007/catalog.builder";
+
+import { RDN_CATALOGUE_CONTRACT as v008Contract } from "./v008/catalogue.contract";
+import * as v008Builder from "./v008/catalog.builder";
+
 import * as v004Levels from "./v004/levels.config";
 import * as v005Levels from "./v005/levels.config";
 import * as v006Levels from "./v006/levels.config";
 import * as v007Levels from "./v007/levels.config";
+import * as v008Levels from "./v008/levels.config";
 import * as v004Progression from "./v004/progression-rules.config";
 import * as v005Progression from "./v005/progression-rules.config";
 import * as v006Progression from "./v006/progression-rules.config";
 import * as v007Progression from "./v007/progression-rules.config";
+import * as v008Progression from "./v008/progression-rules.config";
 import * as v004Effects from "./v004/effect-progression.config";
 import * as v005Effects from "./v005/effect-progression.config";
 import * as v006Effects from "./v006/effect-progression.config";
 import * as v007Effects from "./v007/effect-progression.config";
+import * as v008Effects from "./v008/effect-progression.config";
 import * as v004Release from "./v004/rdn-release.config";
 import * as v005Release from "./v005/rdn-release.config";
 import * as v006Release from "./v006/rdn-release.config";
 import * as v007Release from "./v007/rdn-release.config";
+import * as v008Release from "./v008/rdn-release.config";
+
+
 
 const catalogueRuntimes = {
   v004: {
@@ -51,6 +61,12 @@ const catalogueRuntimes = {
     generateRdnPuzzle: v007Builder.generateRdnPuzzle,
     prepareRdnCatalogueLevel: v007Builder.prepareRdnCatalogueLevel,
     builder: v007Builder, levels: v007Levels, progression: v007Progression, effects: v007Effects, release: v007Release,
+  },
+  v008: {
+    contract: v008Contract,
+    generateRdnPuzzle: v008Builder.generateRdnPuzzle,
+    prepareRdnCatalogueLevel: v008Builder.prepareRdnCatalogueLevel,
+    builder: v008Builder, levels: v008Levels, progression: v008Progression, effects: v008Effects, release: v008Release,
   },
 } as const;
 

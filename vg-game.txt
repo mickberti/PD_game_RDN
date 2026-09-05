@@ -268,4 +268,15 @@ npm run rdn:catalogue:fork -- --from v004 --to v005
 npm run rdn:catalogue -- --version v005
 npm run rdn:catalogue:activate -- --version v005
 
+
+CREAZIONE DEL NUOVO MOTORE CATALOGO
+npm run rdn:catalogue:fork -- --from v007 --to v008         
+
+CREAZIONE DEL CATALOGO
  & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v003
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes adventure
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes time-attack
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes adventure,time-attack
+ ATTIVAZIONE DEL CATALOGO
+ 
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --activate

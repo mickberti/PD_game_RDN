@@ -15,6 +15,21 @@ const activateOnly = process.argv.includes("--activate");
 const migrateOnly = process.argv.includes("--migrate-legacy");
 const versionArgument = process.argv.indexOf("--version");
 const requestedVersion = versionArgument >= 0 ? process.argv[versionArgument + 1] : undefined;
+const optionValue = (name) => {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? process.argv[index + 1] : undefined;
+};
+const parseLevelBound = (value, option) => {
+  if (value === undefined) return undefined;
+  if (!/^\d+$/.test(value) || Number(value) < 1) throw new Error(`${option} deve essere un intero positivo.`);
+  return Number(value);
+};
+const requestedLevelFrom = parseLevelBound(optionValue("--from-level"), "--from-level");
+const requestedLevelTo = parseLevelBound(optionValue("--to-level"), "--to-level");
+if (requestedLevelFrom !== undefined && requestedLevelTo !== undefined && requestedLevelFrom > requestedLevelTo) throw new Error("--from-level non puÃ² essere maggiore di --to-level.");
+const modesArgument = optionValue("--modes");
+const requestedModes = modesArgument === undefined || modesArgument === "all" ? undefined : [...new Set(modesArgument.split(",").map((mode) => mode.trim()).filter(Boolean))];
+if (requestedModes?.some((mode) => mode !== "adventure" && mode !== "time-attack")) throw new Error("--modes accetta adventure,time-attack oppure all.");
 if (requestedVersion !== undefined && !/^v\d{3,}$/.test(requestedVersion)) throw new Error("Versione catalogo non valida. Usa, ad esempio, v004.");
 
 const legacyVersion = async () => "v004";
@@ -78,6 +93,11 @@ try {
   } else if (migrateOnly) await publish(await loadLegacy());
   else {
     process.env.RDN_CATALOGUE_VERSION = version;
+    if (requestedLevelFrom !== undefined) process.env.RDN_CATALOGUE_LEVEL_FROM = String(requestedLevelFrom);
+    if (requestedLevelTo !== undefined) process.env.RDN_CATALOGUE_LEVEL_TO = String(requestedLevelTo);
+    if (requestedModes !== undefined) process.env.RDN_CATALOGUE_MODES = requestedModes.join(",");
+    const requestedRange = `${requestedLevelFrom ?? 1}-${requestedLevelTo ?? "max"}`;
+    console.info(`[RDN] Richiesta catalogo ${version}: livelli ${requestedRange}; modalitÃ  ${requestedModes?.join(", ") ?? "adventure, time-attack"}.`);
     await build({ entryPoints: [runner], bundle: true, format: "esm", platform: "node", target: "node20", outfile: bundle, logLevel: "info" });
     const { catalogue } = await import(`${pathToFileURL(bundle).href}?generatedAt=${Date.now()}`);
     if (checkOnly) {

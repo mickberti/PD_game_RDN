@@ -1,11 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 
 import { ChestItem } from '../../models/game.models';
-import { StatisticType } from '../../models/remote/progress.models';
 import { GameResult } from '../../models/match-result.model';
 import { GameStateService } from '../state/game-state.service';
 import { InventoryMutationService } from '../inventory/inventory-mutation.service';
-import { StatisticProgressService } from '../progression/statistic-progress.service';
 import { EventActivationService } from '../progression/event-activation.service';
 
 const LAST_MATCH_RESULT_STORAGE_KEY = 'lastMatchResultDetails';
@@ -31,7 +29,6 @@ export interface MatchResultDetails {
 export class MatchResultService {
   private readonly state = inject(GameStateService);
   private readonly inventory = inject(InventoryMutationService);
-  private readonly statistics = inject(StatisticProgressService);
   private readonly eventActivation = inject(EventActivationService);
 
   private lastDetails: MatchResultDetails | null = null;
@@ -58,7 +55,6 @@ export class MatchResultService {
     this.state.runProgressMutationBatch(() => {
       this.applyCurrencies(reward);
       this.applyBoxReward(reward);
-      this.statistics.incrementMany(statisticsIncremented as Partial<Record<StatisticType, number>>);
 	  if (result.status === 'win') {
 	    this.incrementModeLevel(normalizedModeId);
 	  }
@@ -119,17 +115,8 @@ export class MatchResultService {
   }
 
   private buildStatisticIncrements(result: GameResult, reward: MatchRewardBreakdown): Record<string, number> {
-    return {
-      enemiesKilled: result.enemiesKilled ?? 0,
-      attacksPerformed: result.attacksPerformed ?? 0,
-      specialsPerformed: result.specialsPerformed ?? 0,
-      damageDealt: result.damageDealt ?? 0,
-      damageReceived: result.damageReceived ?? 0,
-      blocksPerformed: result.blocksPerformed ?? 0,
-      battlesWon: result.status === 'win' ? 1 : 0,
-      coinsEarned: reward.collectedCoins + reward.bonusCoins,
-      resourcesCollected: reward.boxes,
-    };
+    // Legacy match modes no longer contribute to the RDN-only statistics.
+    return {};
   }
 
   private applyCurrencies(reward: MatchRewardBreakdown): void {

@@ -281,7 +281,6 @@ export class HeroProgressService {
         upgradedHero.id,
         upgradedHero,
       );
-      this.statistics.increment("heroLevelsGained");
       return true;
     });
   }
@@ -309,7 +308,6 @@ export class HeroProgressService {
         });
       }
 
-      this.statistics.increment("equipmentUpgrades");
       return true;
     });
   }
@@ -340,7 +338,6 @@ export class HeroProgressService {
         upgradedHero.id,
         upgradedHero,
       );
-      this.statistics.increment("masteryPointsEarned");
       return true;
     });
   }
@@ -392,7 +389,6 @@ export class HeroProgressService {
         equip: updatedEquip,
       });
       this.selectHero({ ...hero, equip: updatedEquip });
-      this.statistics.increment("equipmentUpgrades");
     });
 
     return upgradedEquip;
@@ -649,10 +645,6 @@ export class HeroProgressService {
       coins: balances.coin,
       gems: balances.gem,
       dust: balances.dust,
-      statistics: {
-        ...currentProgress.statistics,
-        coinsSpent: currentProgress.statistics.coinsSpent + (price.type === "coin" ? price.amount : 0),
-      },
       lastUpdatedAt: new Date().toISOString(),
     });
     return true;

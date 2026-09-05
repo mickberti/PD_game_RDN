@@ -24,6 +24,9 @@ import { RDN_ACTION_CATALOG, RDN_ACTION_IDS, RdnActionId, RdnActionInstance } fr
 import { ImpulseResolutionPlan } from "../../core/game/phaser/puzzle.types";
 import { EffectPlaygroundService } from "../../core/services/gameplay/effect-playground.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
+import { RDN_LEVEL_COIN_REWARDS, rdnCoinsForStars } from "../../core/game/phaser/config/rdn-level-rewards.config";
+import { RdnRewardedAdService } from "../../core/services/gameplay/rdn-rewarded-ad.service";
+import { StatisticType } from "../../core/models/remote/progress.models";
 
 @Component({
   selector: "app-gameplay",
@@ -87,6 +90,8 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly nav = inject(AppNavigationService);
   private readonly playground = inject(EffectPlaygroundService);
   private readonly effectTutorial = inject(EffectTutorialService);
+  private readonly rewardedAd = inject(RdnRewardedAdService);
+  readonly levelReward = signal<{ coins: number; bonusClaimed: boolean; adUnavailable: boolean } | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private game?: Phaser.Game;
@@ -118,6 +123,7 @@ export class GameplayPageComponent implements AfterViewInit {
       this.loadSessionPuzzle(nextSession);
       this.resetActionInstances();
       this.outcome.set(null);
+      this.levelReward.set(null);
       this.showInfo.set(false);
       this.resetTimeAttackTimer();
     }, { injector: this.injector });
@@ -140,6 +146,7 @@ export class GameplayPageComponent implements AfterViewInit {
       continue: () => this.continue(),
       retry: () => this.restart(),
       exit: () => this.exitGameplay(),
+      claimDoubleReward: () => this.claimDoubleReward(),
       info: () => this.showInfo.set(true),
       closeInfo: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null); },
       dismissTutorial: (id) => this.effectTutorial.markSeen(id),
@@ -182,6 +189,7 @@ export class GameplayPageComponent implements AfterViewInit {
           selectedGearGemIndex: this.selectedGearGemIndex(),
           selectedLinkEffectId: this.selectedLinkEffectId(),
           outcome: this.outcome(),
+          levelReward: this.levelReward() ?? undefined,
           timeRemaining: this.timeRemaining(),
           timeRemainingMs: this.timeRemainingMs(),
           timeTotalSeconds: this.timeAttackDurationSeconds,
@@ -221,22 +229,19 @@ export class GameplayPageComponent implements AfterViewInit {
     this.selectedGemIndex.set(null);
     this.selectedGearGemIndex.set(null);
     this.selectedLinkEffectId.set(null);
+    if (action.type === "ROTATE" && action.steps > 0) this.incrementStatistics({ rotationsPerformed: action.steps });
   }
   private impulse(): ImpulseResolutionPlan | null {
     if (this.outcome() !== null) return null;
     if (this.puzzle.flows().some((flow) => !flow.interactable)) return null;
     const plan = this.puzzle.planImpulse();
     this.puzzle.dispatch({ type: "IMPULSE" });
+    this.recordImpulseStatistics();
     this.puzzle.saveAdventureRun();
     this.saveCurrentRun();
     const failed = hasPuzzleFailed(this.puzzle.level(), this.puzzle.state());
-    const won = this.puzzle.state().won && !failed;
+    const won = this.completeWonLevel();
     const queuesExhausted = this.session.variant === "time-attack" && this.puzzle.queueStates().every((queue) => queue.exhausted);
-    if (won) {
-      if (this.session.variant !== "free" && this.session.variant !== "effect-playground") this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state()));
-      this.stopTimeAttackTimer();
-      this.puzzle.clearSavedRun(this.session.variant as "adventure" | "time-attack" | "free");
-    }
     if (won) this.outcome.set("win");
     else if (failed || queuesExhausted) this.finishTimeAttack("lose");
     else this.outcome.set(null);
@@ -253,13 +258,15 @@ export class GameplayPageComponent implements AfterViewInit {
     this.selectedLinkEffectId.set(null);
     this.resetTimeAttackTimer();
     this.resetActionInstances();
+    this.levelReward.set(null);
+    if (this.session.variant !== "effect-playground") this.incrementStatistics({ gamesPlayed: 1 });
   }
   private continue(): void {
     if (this.session.variant === "effect-playground") { this.changePlaygroundScenario(1); return; }
     if (this.session.variant === "free") {
       const overrides = this.gameplaySession.getLaunchOverrides();
       this.puzzle.load("free", 1, overrides?.freeDifficulty ?? "EASY", Math.floor(Math.random() * 0x7fffffff), overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false);
-      this.outcome.set(null); this.showInfo.set(false); return;
+      this.outcome.set(null); this.showInfo.set(false); this.levelReward.set(null); return;
     }
     this.puzzle.load(
       this.session.variant,
@@ -267,6 +274,7 @@ export class GameplayPageComponent implements AfterViewInit {
     );
     this.outcome.set(null);
     this.showInfo.set(false);
+    this.levelReward.set(null);
     this.resetTimeAttackTimer();
   }
   private resetTimeAttackTimer(): void {
@@ -329,10 +337,48 @@ export class GameplayPageComponent implements AfterViewInit {
     if (instance.id === "cleanse-corruption") applied = this.puzzle.cleanseCorruption();
     if (instance.id === "break-chains") applied = this.puzzle.breakChains();
     if (!applied) return;
+    if (instance.id === "destroy-fire-walls" || instance.id === "destroy-ice-walls" || instance.id === "destroy-stone-walls") this.incrementStatistics({ wallsDestroyed: 1, effectsResolved: 1 });
     this.actionInstances.update((items) => items.map((item, index) => index === slot ? { ...item, charges: item.charges - 1 } : item));
     this.state.mutateProgress((progress) => ({ ...progress, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [instance.id]: Math.max(0, (progress.inventory.actions[instance.id] ?? 0) - 1) }, }, lastUpdatedAt: new Date().toISOString() }));
     void this.state.persistProgressNow().catch(() => undefined);
     this.saveCurrentRun();
+    if (this.completeWonLevel()) this.outcome.set("win");
+  }
+  /** User actions do not dispatch an impulse, so they must finalize victory themselves. */
+  private completeWonLevel(): boolean {
+    if (!this.puzzle.state().won || hasPuzzleFailed(this.puzzle.level(), this.puzzle.state())) return false;
+    if (this.session.variant !== "free" && this.session.variant !== "effect-playground") this.levelReward.set(this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state())));
+    this.stopTimeAttackTimer();
+    if (this.session.variant !== "effect-playground") this.puzzle.clearSavedRun(this.session.variant as "adventure" | "time-attack" | "free");
+    return true;
+  }
+  private incrementStatistics(updates: Partial<Record<StatisticType, number>>): void {
+    this.state.mutateProgress((progress) => {
+      const statistics = { ...progress.statistics };
+      for (const [type, amount] of Object.entries(updates) as [StatisticType, number][]) if (amount > 0) statistics[type] = (statistics[type] ?? 0) + amount;
+      return { ...progress, statistics, lastUpdatedAt: new Date().toISOString() };
+    });
+  }
+  private recordImpulseStatistics(): void {
+    const events = this.puzzle.state().lastEffectEvents ?? [];
+    const count = (...types: string[]): number => events.filter((event) => types.includes(event.type)).length;
+    const specials = this.puzzle.state().lastOperationResults.filter((result) => result.valid && result.resourceConsumed).length;
+    this.incrementStatistics({
+      impulsesPlayed: 1,
+      effectsResolved: count("SHIELD_DEPLETED", "WALL_BROKEN", "ICE_BROKEN", "FIRE_BROKEN", "TIMER_COMPLETED", "MIRROR_APPLIED", "GEM_AMPLIFIER_APPLIED", "GEM_INVERTER_APPLIED", "AREA_TRIGGERED", "AREA_ICE_TRIGGERED", "AREA_INVERTER_TRIGGERED"),
+      wallsDestroyed: count("WALL_BROKEN", "ICE_BROKEN", "FIRE_BROKEN"), shieldsResolved: count("SHIELD_DEPLETED"),
+      linksActivated: count("FLOW_PROPAGATED"), areasTriggered: count("AREA_TRIGGERED", "AREA_ICE_TRIGGERED", "AREA_INVERTER_TRIGGERED"), specialOperatorsUsed: specials,
+    });
+  }
+  private claimDoubleReward(): void {
+    const reward = this.levelReward();
+    if (!reward || reward.bonusClaimed || reward.adUnavailable) return;
+    void this.rewardedAd.showLevelCompletionAd().then((watched) => {
+      if (!watched) { this.levelReward.update((current) => current ? { ...current, adUnavailable: true } : current); return; }
+      this.state.mutateProgress((progress) => ({ ...progress, coins: progress.coins + reward.coins, lastUpdatedAt: new Date().toISOString() }));
+      void this.state.persistProgressNow().catch(() => undefined);
+      this.levelReward.update((current) => current ? { ...current, bonusClaimed: true } : current);
+    });
   }
   private canUseAction(id: RdnActionId): boolean {
     if (id === "zero") return this.puzzle.canZeroActiveTarget();
@@ -348,6 +394,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (session.variant === "effect-playground") { this.puzzle.loadDebugLevel(this.playground.level()); return; }
     const overrides = this.gameplaySession.getLaunchOverrides();
     await this.puzzle.load(session.variant, session.matchLevel, overrides?.freeDifficulty ?? "EASY", overrides?.freeSeed ?? 0, overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false);
+    this.incrementStatistics({ gamesPlayed: 1 });
     const levelId = this.puzzle.level().id;
     if (this.puzzle.hasSavedRun(session.variant, levelId)) this.resumePrompt.set(true);
   }
@@ -366,12 +413,17 @@ export class GameplayPageComponent implements AfterViewInit {
   private sameSession(a: GameplaySession, b: GameplaySession): boolean {
     return a.launchId === b.launchId;
   }
-  private recordCompletedLevel(stars: number): void {
+  private recordCompletedLevel(stars: number): { coins: number; bonusClaimed: boolean; adUnavailable: boolean } {
     const completedLevel = this.puzzle.level().number;
     const modeId = this.session.modeId;
     const levelKey = String(completedLevel);
+    const normalizedStars = Math.max(1, Math.min(3, Math.floor(stars)));
+    const previousStars = Math.max(0, Math.min(3, this.state.progress().gameModeLevelStars?.[modeId]?.[levelKey] ?? 0));
+    const coins = previousStars >= 3 ? RDN_LEVEL_COIN_REWARDS.perfectReplayCoins : Math.max(0, rdnCoinsForStars(normalizedStars) - (previousStars > 0 ? rdnCoinsForStars(previousStars) : 0));
     this.state.mutateProgress((progress) => ({
       ...progress,
+      coins: progress.coins + coins,
+      statistics: { ...progress.statistics, highestLevelReached: Math.max(progress.statistics.highestLevelReached ?? 0, completedLevel) },
       gameModeLevels: {
         ...(progress.gameModeLevels ?? {}),
         [modeId]: Math.max(0, Math.min(RDN_MAX_LEVEL, Math.max(progress.gameModeLevels?.[modeId] ?? 0, completedLevel))),
@@ -380,11 +432,12 @@ export class GameplayPageComponent implements AfterViewInit {
         ...(progress.gameModeLevelStars ?? {}),
         [modeId]: {
           ...(progress.gameModeLevelStars?.[modeId] ?? {}),
-          [levelKey]: Math.max(progress.gameModeLevelStars?.[modeId]?.[levelKey] ?? 0, Math.max(1, Math.min(3, stars))),
+          [levelKey]: Math.max(progress.gameModeLevelStars?.[modeId]?.[levelKey] ?? 0, normalizedStars),
         },
       },
       lastUpdatedAt: new Date().toISOString(),
     }));
     void this.state.persistProgressNow().catch(() => undefined);
+    return { coins, bonusClaimed: false, adUnavailable: false };
   }
 }

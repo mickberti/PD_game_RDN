@@ -107,7 +107,7 @@ interface GuideMode {
               <article class="effect-card" [style.--icon-color]="effect.color">
                 <ui-sprite
                   class="effect-icon"
-                  [atlasSource]="'effects'"
+                  [atlasSource]="tutorialAtlas(effect)"
                   [frame]="{ name: effect.iconFrame, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />
@@ -134,7 +134,7 @@ interface GuideMode {
               <article>
                 <ui-sprite
                   class="action-icon"
-                  atlasSource="actions"
+                  [atlasSource]="actionAtlas(action.icon)"
                   [frame]="{ name: action.icon, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />
@@ -160,7 +160,7 @@ interface GuideMode {
               <article class="effect-card" [style.--icon-color]="effect.color">
                 <ui-sprite
                   class="effect-icon"
-                  [atlasSource]="'effects'"
+                  [atlasSource]="tutorialAtlas(effect)"
                   [frame]="{ name: effect.iconFrame, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />
@@ -187,7 +187,7 @@ interface GuideMode {
               <article class="effect-card" [style.--icon-color]="effect.color">
                 <ui-sprite
                   class="effect-icon"
-                  [atlasSource]="'effects'"
+                  [atlasSource]="tutorialAtlas(effect)"
                   [frame]="{ name: effect.iconFrame, effect: 'none' }"
                   [allowUpscale]="true"
                   [showScale]="false" />
@@ -397,6 +397,10 @@ export class GameGuidePage {
   readonly gemEffects = effectTutorialsForScope(EffectScope.GEM);
   readonly linkEffects = effectTutorialsForScope(EffectScope.LINK);
   readonly areaEffects = effectTutorialsForScope(EffectScope.AREA);
+  tutorialAtlas(effect: EffectTutorialDefinition): "effects" | "effect-actions" | undefined {
+    return effect.iconTexture === "rdn-effect-actions" ? "effect-actions" : effect.iconTexture === "rdn-effects" ? "effects" : undefined;
+  }
+  actionAtlas(icon: string): "effects" | "effect-actions" { return icon === "effect-mirror-sign" ? "effects" : "effect-actions"; }
   readonly actions = Object.values(RDN_ACTION_CATALOG);
   readonly modes: readonly GuideMode[] = [
     {

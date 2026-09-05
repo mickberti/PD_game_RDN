@@ -15,5 +15,5 @@ export class ShopPage {
   readonly state = inject(GameStateService);
   readonly actions = computed(() => RDN_ACTION_IDS.map((id) => RDN_ACTION_CATALOG[id]));
   quantity(id: RdnActionId): number { return this.state.inventoryActions()[id] ?? 0; }
-  buy(id: RdnActionId): void { const action = RDN_ACTION_CATALOG[id]; if (this.state.coins() < action.price) return; this.state.mutateProgress((progress) => ({ ...progress, coins: progress.coins - action.price, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [id]: (progress.inventory.actions[id] ?? 0) + 1 } }, statistics: { ...progress.statistics, coinsSpent: progress.statistics.coinsSpent + action.price, itemsPurchased: progress.statistics.itemsPurchased + 1 }, lastUpdatedAt: new Date().toISOString() })); void this.state.persistProgressNow().catch(() => undefined); }
+  buy(id: RdnActionId): void { const action = RDN_ACTION_CATALOG[id]; if (this.state.coins() < action.price) return; this.state.mutateProgress((progress) => ({ ...progress, coins: progress.coins - action.price, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [id]: (progress.inventory.actions[id] ?? 0) + 1 } }, lastUpdatedAt: new Date().toISOString() })); void this.state.persistProgressNow().catch(() => undefined); }
 }

@@ -79,8 +79,6 @@ export class ShopPurchaseService {
       dust: currentProgress.dust - (item.price?.type === 'dust' ? item.price.amount : 0),
       statistics: {
         ...currentProgress.statistics,
-        coinsSpent: currentProgress.statistics.coinsSpent + (item.price?.type === 'coin' ? item.price.amount : 0),
-        itemsPurchased: currentProgress.statistics.itemsPurchased + 1,
       },
       purchasedShopItems: {
         ...(currentProgress.purchasedShopItems ?? {}),

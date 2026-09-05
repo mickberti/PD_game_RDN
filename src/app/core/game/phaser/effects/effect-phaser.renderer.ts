@@ -129,7 +129,7 @@ export class EffectPhaserRenderer {
   private iconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
   private iconColor(effect: ResolvedEffect): number {
     if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.FIRE ? 0xff6558 : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff;
-    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : effect.config.type === LinkEffectType.CHAIN ? 0xff6c67 : 0xc890ff;
+    if (effect.config.scope === EffectScope.LINK) return effect.config.type === LinkEffectType.ECHO || effect.config.type === LinkEffectType.CHAIN ? 0x7edbff : effect.config.type === LinkEffectType.AMPLIFY ? 0xffcd62 : 0xc890ff;
     return effect.config.type === AreaEffectType.ICE ? 0x8cecff : effect.config.type === AreaEffectType.INVERTER ? 0xc890ff : 0xff9378;
   }
   /** Gem effects sit top-right; area effects reserve the bottom-right corner. */

@@ -28,10 +28,10 @@ export const defaultAward: AwardItem = {
 	title: "Name Rewards",
 	subtitle: "Reach stage 950",
 	statisticDefinition: 	{
-	  type: 'enemiesKilled',
-	  category: 'combat',
-	  title: 'Nemici uccisi',
-	  description: 'Numero totale di nemici sconfitti.',
+	  type: 'impulsesPlayed',
+	  category: 'gameplay',
+	  title: 'Impulsi giocati',
+	  description: 'Numero totale di impulsi eseguiti.',
 	},
 	progress: {
 		descr: "Tap 300k times",

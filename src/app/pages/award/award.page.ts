@@ -304,7 +304,6 @@ export class AwardPage implements OnInit {
       dust: (progress.dust ?? 0) + (price.type === "dust" ? price.amount : 0),
       statistics: {
         ...progress.statistics,
-        coinsEarned: progress.statistics.coinsEarned + (price.type === "coin" ? price.amount : 0),
       },
       lastUpdatedAt: new Date().toISOString(),
     });
