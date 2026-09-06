@@ -1,4 +1,3 @@
-import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { RdnActionId } from '../../game/phaser/config/rdn-actions.config';
 import { ShopItem } from '../shop.models';
 import { AvailabilityWindow } from './event.model';
@@ -25,12 +24,6 @@ export interface StatisticDefinition {
 export interface GameInventory {
   /** Consumable player actions. The local action catalogue defines their presentation. */
   actions: Partial<Record<RdnActionId, number>>;
-  /** @deprecated Legacy-only fields kept temporarily so obsolete pages can compile. They are no longer persisted. */
-  resources: ResourceItem[];
-  boxes: ChestItem[];
-  equip: EquipItem[];
-  heroes: HeroItem[];
-  selectedHeroId?: string;
 }
 
 export interface PurchasedShopItemProgress {
@@ -75,7 +68,6 @@ export interface GameProgress {
 
 export const DEFAULT_GAME_INVENTORY: GameInventory = {
   actions: {},
-  resources: [], boxes: [], equip: [], heroes: [],
 };
 
 export const DEFAULT_TIME_SHOP: TimeShop = {

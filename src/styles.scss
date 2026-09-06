@@ -52,7 +52,7 @@ app-gameplay .rnd-bonus b { position: absolute; right: -5px; bottom: -7px; displ
 .game-result-banner {
   color: var(--color-gold);
   background: var(--bg-dark);
-  border: var(--race-border-3-white);
+  border: 3px solid rgba(255, 255, 255, .72);
 }
 
 .game-result-banner strong {

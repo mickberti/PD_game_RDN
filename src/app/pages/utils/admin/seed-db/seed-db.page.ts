@@ -173,10 +173,6 @@ export class SeedDbPage {
   private readonly toastController = inject(ToastController);
 
   readonly seedOptions: { target: FirestoreSeedTarget; label: string; description: string }[] = [
-    { target: 'catalogHeroes', label: 'catalogHeroes', description: 'Eroi fantasy disponibili nel catalogo.' },
-    { target: 'catalogEquip', label: 'catalogEquip', description: 'Equipaggiamenti e varianti del catalogo.' },
-    { target: 'catalogChestes', label: 'catalogChestes', description: 'Chest apribili e relative configurazioni.' },
-    { target: 'catalogResources', label: 'catalogResources', description: 'Risorse e valute disponibili.' },
     { target: 'catalogAwards', label: 'catalogAwards', description: 'Premi e ricompense del catalogo.' },
     { target: 'events', label: 'events', description: 'Eventi live mock.' },
     { target: 'gameConfigs/public', label: 'gameConfigs/public', description: 'Configurazione pubblica del gioco.' }

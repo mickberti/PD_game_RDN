@@ -8,7 +8,6 @@ import { LanguageService } from "../../core/services/app/i18n/language.service";
 import { AppNavigationService } from "../../core/services/app/navigation/app-navigation.service";
 import { UIHeaderComponent } from "src/app/shared/components/ui-header.component";
 import { UIBottomNavComponent } from "src/app/shared/components/ui-bottom-nav.component";
-import { HeroProgressService } from "../../core/services/progression/hero-progress.service";
 import { StatisticProgressService } from "../../core/services/progression/statistic-progress.service";
 import { STATISTIC_TYPES, StatisticType } from "../../core/models/remote/progress.models";
 import { GameStateService } from "../../core/services/state/game-state.service";
@@ -19,7 +18,7 @@ import { environment } from "../../../environments/environment";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
 
-const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
+const THEMES: GameTheme[] = ["fantasy_bg"];
 
 @Component({
   selector: "app-settings",
@@ -87,10 +86,8 @@ const THEMES: GameTheme[] = ["fantasy_bg", "fantasy", "sketch", "race"];
         <ui-button variant="secondary">{{ t('community') }}</ui-button>
         <ui-button variant="secondary">{{ t('aboutUs') }}</ui-button>
         <ui-button variant="complementary" (pressed)="nav.go('utils/component-atlas-icon')" >{{ t('support') }}</ui-button>
-        <ui-button variant="complementary" (pressed)="levelUpAllUserItems()">levelup</ui-button>
         <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
         <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>
-        <ui-button variant="complementary" (pressed)="breakAllUserEquip()">broke equip</ui-button>
         <ui-button variant="complementary" [disabled]="resettingProgress()" (pressed)="resetUserProgress()">{{ resettingProgress() ? t('resettingProgress') : t('resetProgress') }}</ui-button>
       </div>
       @if (isAdmin()) {
@@ -127,7 +124,6 @@ export class SettingsPage {
   readonly nav = inject(AppNavigationService);
   readonly gameState = inject(GameStateService);
   readonly directRouteAccess = inject(DirectRouteAccessService);
-  private readonly heroProgress = inject(HeroProgressService);
   private readonly statisticProgress = inject(StatisticProgressService);
   private readonly gameplaySession = inject(GameplaySessionService);
   readonly effectTutorial = inject(EffectTutorialService);
@@ -170,10 +166,6 @@ export class SettingsPage {
     this.shiftTheme(1);
   }
 
-  levelUpAllUserItems(): void {
-    this.heroProgress.fillAllExperienceForNextLevel();
-  }
-
   boostAllStatistics(): void {
     const statisticBoosts = STATISTIC_TYPES.reduce<Partial<Record<StatisticType, number>>>(
       (updates, type) => ({
@@ -184,10 +176,6 @@ export class SettingsPage {
     );
 
     this.statisticProgress.incrementMany(statisticBoosts);
-  }
-
-  breakAllUserEquip(): void {
-    this.heroProgress.breakAllEquipDuration();
   }
 
   boostPlayerResources(): void {

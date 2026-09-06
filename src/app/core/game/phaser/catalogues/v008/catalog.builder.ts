@@ -3,7 +3,7 @@ import { PuzzleEngine } from "../../puzzle.engine";
 import { LevelEffectConfigResolver } from "../../effects/level-effect-config.resolver";
 import { EffectConfig, EffectScope, ElementalAffinity, GemEffectType, LinkDirection, ResolvedEffect } from "../../effects/effects.models";
 import { RDN_RELEASE } from "./rdn-release.config";
-import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, explicitEffectConfigurationForLevel, validateEffectComplexity, withProgressionPresetVariation } from "./effect-progression.config";
+import { createFreeModeEffectConfiguration, createProgressionEffectConfiguration, validateEffectComplexity, withProgressionPresetVariation } from "./effect-progression.config";
 import { LevelEffectConfiguration } from "../../effects/level-effects.types";
 import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, rdnEffectRuleForLevel, rdnElementalAffinitiesForBoard, rdnFixedLinksForBoard, rdnGenerationAttemptsForSpheres, rdnMinimumGemEffectsForBoard, rdnSpecialOperatorsForBoard, RdnModeBoardProgression } from "./progression-rules.config";
 import { rdnEffectCombinationIssues } from "./effect-combination.config";
@@ -405,8 +405,8 @@ const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configu
   return withStats(level, false);
 };
 
-/** Explicit checkpoint lessons take precedence over the deterministic progression. */
-const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T, configuration?: LevelEffectConfiguration): T => regenerateEffectAwareLevel(level, configuration ?? explicitEffectConfigurationForLevel(level.number) ?? createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
+/** The v008 sphere/mode table is canonical; obsolete checkpoints never override it. */
+const applyProgressionEffects = <T extends LevelDefinition>(mode: "adventure" | "time-attack", level: T, configuration?: LevelEffectConfiguration): T => regenerateEffectAwareLevel(level, configuration ?? createProgressionEffectConfiguration(mode, level.number, level.positions, level.generation?.seed ?? level.number));
 
 const effectAwareVariant = <T extends LevelDefinition>(number: number, mode: "adventure" | "time-attack", build: (variation: number) => T): T => {
   const startedAt = performance.now();
@@ -414,8 +414,8 @@ const effectAwareVariant = <T extends LevelDefinition>(number: number, mode: "ad
   const generationAttempts = generationAttemptsForLevel({ number, positions: first.positions }, mode);
   const attempts = generationAttempts.structureAttemptsBeforeScaling;
   const solutionAttemptsBeforeScaling = generationAttempts.solutionAttemptsBeforeScaling;
-  const explicitConfiguration = explicitEffectConfigurationForLevel(number);
-  const requestedConfiguration = explicitConfiguration ?? createProgressionEffectConfiguration(mode, number, first.positions, number);
+  const explicitConfiguration = undefined;
+  const requestedConfiguration = createProgressionEffectConfiguration(mode, number, first.positions, number);
   const effectSummary = requestedConfiguration?.effects?.map((effect) => effect.preset).join(", ") || "nessuno";
   console.info(`[RDN][${mode} ${number}] avvio: ${first.positions} sfere; strutture ${attempts}; soluzioni/candidato ${solutionAttemptsBeforeScaling}; effetti ${effectSummary}.`);
   if (!requestedConfiguration?.enabled) {

@@ -86,10 +86,9 @@ export class AppComponent {
 	      return;
 	    }
 
-	    // 🔓 loggato → main/welcome in base allo stato del bonus, dopo il boot.
-	    if (user && (currentUrl === '/login' || currentUrl === '/welcome')) {
-	      const welcomeBonusClaimed = this.progress().welcomeBonusClaimed === true;
-	      const target = welcomeBonusClaimed ? '/hub' : '/welcome';
+	    // Utente autenticato: entra direttamente nell'hub RDN.
+	    if (user && currentUrl === '/login') {
+	      const target: string = '/hub';
 
 	      if (currentUrl !== target) {
 	        this.logger.logDebug('[AppComponent] redirect →', target);

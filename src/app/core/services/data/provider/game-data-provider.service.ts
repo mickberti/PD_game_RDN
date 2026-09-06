@@ -13,15 +13,9 @@ import { RemoteConfigService } from '../remote/config.service';
 import { ProgressService } from '../remote/progress.service';
 import { ShopService, resolveAvailableShopItems } from '../remote/shop.service';
 import { ItemService } from '../remote/item.service';
-import { PLAYER_STATE_CONFIG } from '../../../config/game-progression.config';
 import { TimeService } from '../../utils/time.service';
 import { getActiveGameEvents } from '../../utils/availability/game-event-availability.util';
-import { createInitialPlayerInventory } from '../../inventory/factories/player-inventory.factory';
-import { mapMockShopToShopItems } from '../../../models/mock/shop.mapper';
 import { LoggerService } from '../../infrastructure/logging/logger.service';
-import { mockGameEvents } from "src/app/core/models/mock/fantasy/event-data";
-import { MockCatalogService } from '../mock/mock-catalog.service';
-import { MockSessionService } from '../mock/mock-session.service';
 import { TEMPORARY_RDN_CATALOG_AWARDS } from '../../../models/mock/fantasy/catalog-awards.rdn-temporary';
 
 export interface GameDataProvider {
@@ -72,25 +66,13 @@ export class RemoteGameDataProvider implements GameDataProvider {
 
 @Injectable({ providedIn: 'root' })
 export class MockGameDataProvider implements GameDataProvider {
-  private readonly mockCatalog = inject(MockCatalogService);
-  private readonly mockSession = inject(MockSessionService);
   private readonly timeService = inject(TimeService);
   private eventsCache: GameEvent[] | null = null;
   private readonly logger = inject(LoggerService);
 
   async loadProgress(_uid: string | null): Promise<GameProgress> {
 	this.logger.logDebug('[MockGameDataProvider] loadProgress',_uid);
-    const inventory = createInitialPlayerInventory(this.mockSession.createFantasySession());
-
-    return createMockGameProgress(
-      inventory,
-      {
-        coins: PLAYER_STATE_CONFIG.initialCoins,
-        gems: PLAYER_STATE_CONFIG.initialGems,
-        dust: PLAYER_STATE_CONFIG.initialDust,
-        lastUpdatedAt: new Date(0).toISOString()
-      }
-    );
+    return createMockGameProgress({}, { lastUpdatedAt: new Date(0).toISOString() });
   }
 
   async loadConfig(): Promise<RemoteConfigDocument> {
@@ -110,10 +92,7 @@ export class MockGameDataProvider implements GameDataProvider {
       return this.eventsCache;
     }
 
-    this.eventsCache = getActiveGameEvents(
-      mockGameEvents.map(event => ({ ...event })),
-      this.timeService.nowDate()
-    );
+    this.eventsCache = [];
 
     return this.eventsCache;
   }
@@ -123,6 +102,6 @@ export class MockGameDataProvider implements GameDataProvider {
   }
 
   async loadCatalog(_forceRefresh = false): Promise<GameCatalog> {
-    return { heroes: [], equip: [], boxes: [], resources: [], awards: [...TEMPORARY_RDN_CATALOG_AWARDS] };
+    return { awards: [...TEMPORARY_RDN_CATALOG_AWARDS] };
   }
 }

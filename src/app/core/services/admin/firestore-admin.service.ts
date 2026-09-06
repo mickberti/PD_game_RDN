@@ -28,12 +28,7 @@ import { RemoteConfigDocument } from '../../models/remote/config.model';
 import { GameEvent } from '../../models/remote/event.model';
 import { AdminLog } from '../../models/remote/admin-log.model';
 import { MOCK_REMOTE_CONFIG } from '../../models/mock/remote-config.mock';
-import { mockHeroItems } from '../../models/mock/fantasy/hero-data';
-import { equipItemsVariantMock } from '../../models/mock/fantasy/equip-data';
-import { resourceItemsMock } from '../../models/mock/fantasy/resource-data';
-import { chestItemsMock } from '../../models/mock/fantasy/box-data';
 import { fantasyAwards } from '../../models/mock/fantasy/awards-data';
-import { mockGameEvents } from '../../models/mock/fantasy/event-data';
 
 
 
@@ -57,19 +52,11 @@ export interface FirestoreWhereFilter {
 
 
 export type FirestoreSeedTarget =
-  | 'catalogHeroes'
-  | 'catalogEquip'
-  | 'catalogChestes'
-  | 'catalogResources'
   | 'catalogAwards'
   | 'events'
   | 'gameConfigs/public';
 
 export const FIRESTORE_SEED_TARGETS: readonly FirestoreSeedTarget[] = [
-  'catalogHeroes',
-  'catalogEquip',
-  'catalogChestes',
-  'catalogResources',
   'catalogAwards',
   'events',
   'gameConfigs/public'
@@ -252,21 +239,12 @@ export class FirestoreAdminService {
 
   private getSeedData(target: FirestoreSeedTarget): { type: 'collection' | 'document'; data: unknown } {
     switch (target) {
-      case 'catalogHeroes':
-        return { type: 'collection', data: mockHeroItems };
-      case 'catalogEquip':
-        return { type: 'collection', data: equipItemsVariantMock };
-      case 'catalogChestes':
-        return { type: 'collection', data: chestItemsMock };
-      case 'catalogResources':
-        return { type: 'collection', data: resourceItemsMock };
       case 'catalogAwards':
         return { type: 'collection', data: fantasyAwards };
-      case 'events':
-        return { type: 'collection', data: mockGameEvents };
       case 'gameConfigs/public':
         return { type: 'document', data: MOCK_REMOTE_CONFIG };
     }
+    throw new Error(`Seed target non supportato: ${target}`);
   }
 
   async deleteSeedTarget(target: FirestoreSeedTarget, result?: FirestoreSeedResult): Promise<number> {

@@ -2,14 +2,11 @@ import { computed, inject, Injectable, signal } from "@angular/core";
 import { MockDataService } from "../../data/mock/mock-data.service";
 import { BottomNavItem, ModeItem, ScoreItem } from "../../../models/game.models";
 
-export type GameTheme = "fantasy_bg" |"fantasy" | "sketch" | "race";
+export type GameTheme = "fantasy_bg";
 
 const THEME_STORAGE_KEY = "game-theme";
 const THEME_CLASSES: Record<GameTheme, string> = {
 	fantasy_bg: "theme-fantasy-bg",
-  fantasy: "theme-fantasy",
-  sketch: "theme-sketch",
-  race: "theme-race",
 };
 
 @Injectable({ providedIn: "root" })
@@ -70,6 +67,6 @@ export class ThemeService {
    * consentire al costruttore di scegliere un fallback sicuro.
    */
   private isTheme(theme: string | null): theme is GameTheme {
-    return theme === "fantasy_bg" || theme === "fantasy" || theme === "sketch" || theme === "race";
+    return theme === "fantasy_bg";
   }
 }

@@ -132,16 +132,14 @@ export class BootPage implements OnInit {
 		return;
 	  }
 
-	  const welcomeBonusClaimed = this.progress().welcomeBonusClaimed === true;
-	  const target = user ? (welcomeBonusClaimed ? '/hub' : '/welcome') : '/login';
+	  const target = user ? '/hub' : '/login';
 	  this.logger.logDebug('[BootPage] app initialized, navigating to:', target);
 	  void this.router.navigateByUrl(target, { replaceUrl: true });
 	});
   }
 
   continueAfterError(): void {
-    const welcomeBonusClaimed = this.progress().welcomeBonusClaimed === true;
-    const target = this.user() ? (welcomeBonusClaimed ? '/hub' : '/welcome') : '/login';
+    const target = this.user() ? '/hub' : '/login';
     this.logger.logWarning('[BootPage] user continued after startup error:', this.error());
     void this.router.navigateByUrl(target, { replaceUrl: true });
   }

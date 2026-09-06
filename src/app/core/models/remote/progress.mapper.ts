@@ -1,8 +1,7 @@
-import { ChestItem, EquipItem, HeroItem, ResourceItem } from '../game.models';
 import { DEFAULT_GAME_PROGRESS, DEFAULT_PLAYER_STATISTICS, GameInventory, GameProgress } from './progress.models';
 import { RDN_ACTION_IDS, RdnActionId } from '../../game/phaser/config/rdn-actions.config';
 
-export interface MockGameProgressSeed { actions?: Partial<Record<RdnActionId, number>>; resources?: ResourceItem[]; boxes?: ChestItem[]; equip?: EquipItem[]; heroes?: HeroItem[]; selectedHeroId?: string; }
+export interface MockGameProgressSeed { actions?: Partial<Record<RdnActionId, number>>; }
 type LegacyGameProgressDocument = Partial<GameProgress> & { inventory?: Partial<GameInventory> | null; actions?: Partial<Record<RdnActionId, number>>; };
 
 const normalizeInventory = (progress?: LegacyGameProgressDocument | null): GameInventory => {
@@ -13,7 +12,7 @@ const normalizeInventory = (progress?: LegacyGameProgressDocument | null): GameI
     if (Number.isFinite(quantity) && quantity > 0) result[id] = Math.floor(quantity);
     return result;
   }, {});
-  return { actions, resources: [], boxes: [], equip: [], heroes: [] };
+  return { actions };
 };
 
 const normalizeGameModeLevelStars = (value: unknown): Record<string, Record<string, number>> => {
@@ -83,15 +82,14 @@ const stripUndefined = <T>(value: T): T => {
 
 export const serializeGameProgress = (progress: GameProgress): GameProgress => {
   const normalized = normalizeGameProgress(progress);
-  const { resources: _resources, boxes: _boxes, equip: _equip, heroes: _heroes, selectedHeroId: _selectedHeroId, ...inventory } = normalized.inventory;
-  return stripUndefined({ ...normalized, inventory } as GameProgress);
+  return stripUndefined(normalized);
 };
 
 export const createMockGameProgress = (
   seed: MockGameProgressSeed = {},
   overrides: Partial<Omit<GameProgress, keyof MockGameProgressSeed>> = {}
 ): GameProgress => {
-  const inventory: GameInventory = { actions: { ...(seed.actions ?? {}) }, resources: seed.resources ?? [], boxes: seed.boxes ?? [], equip: seed.equip ?? [], heroes: seed.heroes ?? [], ...(seed.selectedHeroId ? { selectedHeroId: seed.selectedHeroId } : {}) };
+  const inventory: GameInventory = { actions: { ...(seed.actions ?? {}) } };
 
   return normalizeGameProgress({
     ...DEFAULT_GAME_PROGRESS,

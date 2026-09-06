@@ -1,7 +1,7 @@
 /** Active catalogue progression facade. */
 import { activeRdnCatalogueRuntime } from "../catalogues/catalogue.registry";
-export type { RdnProgressionRule, RdnEffectProgressionRule } from "../catalogues/v007/progression-rules.config";
-const progression = activeRdnCatalogueRuntime.progression as typeof import("../catalogues/v007/progression-rules.config");
+export type { RdnProgressionRule, RdnEffectProgressionRule } from "../catalogues/v008/progression-rules.config";
+const progression = activeRdnCatalogueRuntime.progression as typeof import("../catalogues/v008/progression-rules.config");
 export const RDN_PROGRESSION_RULES = progression.RDN_PROGRESSION_RULES;
 export const RDN_EFFECT_PROGRESSION_RULES = progression.RDN_EFFECT_PROGRESSION_RULES;
 export const RDN_EFFECT_SIMPLIFICATIONS = progression.RDN_EFFECT_SIMPLIFICATIONS;

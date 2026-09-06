@@ -1,4 +1,4 @@
-import { AwardItem, ChestItem, EquipItem, HeroItem, ResourceItem } from './game.models';
+import { AwardItem } from './game.models';
 
 /**
  * Catalogo globale degli item disponibili nel gioco.
@@ -8,17 +8,9 @@ import { AwardItem, ChestItem, EquipItem, HeroItem, ResourceItem } from './game.
  * copie possedute, quantità, progressi e stato utente.
  */
 export interface GameCatalog {
-  heroes: HeroItem[];
-  equip: EquipItem[];
-  boxes: ChestItem[];
-  resources: ResourceItem[];
   awards: AwardItem[];
 }
 
 export const EMPTY_GAME_CATALOG: GameCatalog = {
-  heroes: [],
-  equip: [],
-  boxes: [],
-  resources: [],
   awards: []
 };

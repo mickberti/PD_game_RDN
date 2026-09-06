@@ -29,10 +29,8 @@ import { ThemeService } from "../app/theme/theme.service";
 import { RemoteConfigDocument } from "../../models/remote/config.model";
 import { AvailabilityWindow, GameEvent } from "../../models/remote/event.model";
 
-import { PLAYER_STATE_CONFIG } from "../../config/game-progression.config";
 import { EMPTY_GAME_CATALOG, GameCatalog } from "../../models/game-catalog.model";
 import { ProgressStoreService } from "./progress-store.service";
-import { buildShopItemsByProgress } from "../shop/shop-generation.service";
 
 export type GameDataSourceMode = "mock" | "remote";
 export type BootstrapStepId = "theme" | "serverTime" | "firebaseAuth" | "playerProfile" | "gameData" | "routing";
@@ -125,22 +123,6 @@ export class GameStateService {
     () => this.progress().dust ?? DEFAULT_GAME_PROGRESS.dust,
   );
   readonly inventoryActions = computed(() => this.progress().inventory.actions ?? {});
-  readonly inventoryResources = computed(
-    () => this.progress().inventory.resources,
-  );
-  readonly inventoryEquip = computed(() => this.progress().inventory.equip);
-  readonly inventoryChestes = computed(() => this.progress().inventory.boxes);
-  readonly inventoryHeroes = computed(() => this.progress().inventory.heroes);
-  readonly currentHero = computed(() => {
-    const inventory = this.progress().inventory;
-    return (
-      inventory.heroes.find((hero) => hero.id === inventory.selectedHeroId) ??
-      inventory.heroes[0]
-    );
-  });
-
-  readonly maxInventoryItemsPerCategory =
-    PLAYER_STATE_CONFIG.maxInventoryItemsPerCategory;
 
   readonly displayName = computed(() => {
     const player = this.player();
@@ -297,7 +279,7 @@ export class GameStateService {
         try {
           const data = await this.loadSelectedProviderData(uid);
 
-          // Scarta risultati obsoleti dovuti a race condition (logout/login rapidi o switch provider).
+          // Scarta risultati obsoleti dovuti a login/logout rapidi o cambio provider.
           if (currentLoadVersion !== this.loadVersion) {
             return;
           }
@@ -597,15 +579,7 @@ export class GameStateService {
     return {
       shop: {
         availability,
-        item: buildShopItemsByProgress({
-          level: playerLevel,
-          ...counts,
-          heroItems: catalog.heroes,
-          equipItems: catalog.equip,
-          resourceItems: catalog.resources,
-          chestItems: catalog.boxes,
-          idSuffix: `${period}-${availability.startAt}`.replace(/[^a-zA-Z0-9]/g, ""),
-        }).map((item) => ({ ...item, availability })),
+        item: [],
       },
       regenerated: true,
     };
@@ -613,10 +587,7 @@ export class GameStateService {
 
   private isCatalogReadyForShopGeneration(catalog: GameCatalog): boolean {
     return (
-      catalog.heroes.length > 0 &&
-      catalog.equip.length > 0 &&
-      catalog.resources.length > 0 &&
-      catalog.boxes.length > 0
+      false
     );
   }
 

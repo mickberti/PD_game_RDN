@@ -1,7 +1,6 @@
 import { ShopItem } from "../../shop.models";
 import { effect } from "@angular/core";
-import { AwardItem, FrameItem, GlobalItem, HeroAttribute, IconItem, ScoreItem } from "../../game.models";
-import { defaulthero } from "./hero-data";
+import { AwardItem, FrameItem, GlobalItem, IconItem, ScoreItem } from "../../game.models";
 
 export const defaultGlobalItem: GlobalItem = {
 	id: "a1",
@@ -49,14 +48,13 @@ export const defaultPowerUps: GlobalItem = {
 	icon: { effect: "none", type: "attack", size: "md" },
 	price: { frame: {name: "none", effect: "none" }, type: 'gem',amount: 300 },
 	state: "collect",
-	type: "hero",
+  type: "global",
 };
 
 export const defaultShop: ShopItem = {
 	id: "free",
 	framePanel: { name: "card-parchment-red-banner", effect: "none" },
 	title: "100 Coins",
-	item: defaulthero,
 	price: { frame: {name: "none", effect: "none" }, type: 'gem',amount: 150 },
 	subtitle: "free",
 	state: "collect",
@@ -87,20 +85,3 @@ export const defaultRanking: ScoreItem = {
   	size: "sm" 
   };
   
-  export const defaultHeroAttribute: HeroAttribute = {
-		id: "Forza",
-		title: "Forza",
-		description: "Forza per secondo",
-        frame: {name: "skill-fist", effect: "none" },
-        bonus: 0,
-        malus: 0,
-        progress: { descr: "", current: 24, total: 100 },
-      }
-  
-export const defaultMasteryRange: { lower: number; upper: number } = { lower: 1, upper: 10 }
-
-export const defaultLevelRange: { lower: number; upper: number } = { lower: 1, upper: 100 };
-
-
-/** @deprecated Use defaultHeroAttribute. */
-export const defaultHeroAttibute = defaultHeroAttribute;

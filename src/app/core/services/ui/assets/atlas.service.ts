@@ -200,57 +200,6 @@ export class AtlasService {
   }
 
   private resolveThemeAtlasImagePath(image: string): string {
-    const normalizedPath = image.startsWith('/') ? image : `/${image}`;
-    const activeTheme = this.theme.activeTheme();
-    if (activeTheme === 'fantasy_bg' || !normalizedPath.includes('/assets/ui/fantasy_bg/')) {
-      return normalizedPath;
-    }
-
-    const fileName = normalizedPath.split('/').pop() ?? '';
-    const themedPath = this.resolveSupportedThemeAtlasPath(activeTheme, fileName);
-    return themedPath ?? normalizedPath;
-  }
-
-  private resolveSupportedThemeAtlasPath(theme: 'fantasy' | 'sketch' | 'race', fileName: string): string | null {
-    if (theme === 'fantasy') {
-      const supportedFantasyFiles = new Set([
-        'icons-set1.png',
-        'icons-set2.png',
-        'panel-set1.png',
-        'res-icons-set1.png',
-      ]);
-
-      return supportedFantasyFiles.has(fileName)
-        ? `/assets/ui/fantasy/${fileName}`
-        : null;
-    }
-
-    const aliases: Record<string, string> = {
-      'bedge-set1.png': 'badge-set1.png',
-    };
-    const resolvedFileName = aliases[fileName] ?? fileName;
-
-    const supportedFiles = new Set([
-      'abilita-set1.png',
-      'badge-set1.png',
-      'box1-set1.png',
-      'buttons-set1.png',
-      'chest-set1.png',
-      'equip-set1.png',
-      'game-set1.png',
-      'icon-set1.png',
-      'icon-set2.png',
-      'icon-set3.png',
-      'icon-set4.png',
-      'panel-set1.png',
-      'res-icons-set1.png',
-      'res-icons-set2.png',
-      'star-set1.png',
-      'star-set2.png',
-    ]);
-
-    return supportedFiles.has(resolvedFileName)
-      ? `/assets/ui/${theme}/${resolvedFileName}`
-      : null;
+    return image.startsWith('/') ? image : `/${image}`;
   }
 }

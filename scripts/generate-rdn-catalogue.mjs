@@ -61,7 +61,9 @@ const activateRuntimeVersion = async () => {
   await writeFile(activeCatalogueConfigPath, activeConfig.replace(/"v\d{3,}"/, `"${version}"`), "utf8");
   await Promise.all(activeFacadePaths.map(async (path) => {
     const content = await readFile(path, "utf8");
-    await writeFile(path, content.replace(/catalogues\/v\d{3,}\//, `catalogues/${version}/`), "utf8");
+    // A facade can contain both exported type aliases and runtime assertions:
+    // update every versioned import, not only the first match in the file.
+    await writeFile(path, content.replace(/catalogues\/v\d{3,}\//g, `catalogues/${version}/`), "utf8");
   }));
 };
 

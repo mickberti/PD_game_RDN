@@ -26,50 +26,9 @@ export const routes: Routes = [
   	loadComponent: () => import('./pages/login/login2.page').then((m) => m.Login2Page)
   },
   {
-    path: "welcome",
-    canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/welcome/welcome.page").then((m) => m.WelcomePage),
-  },
-  {
   	path: 'profile',
   	canActivate: [AuthGuard],
   	loadComponent: () => import('./pages/profile/profile.page').then((m) => m.ProfilePage)
-  },
-  {
-    path: "utils/data-mock",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/data-mock/data-mock.page").then(
-        (m) => m.DataMockPage,
-      ),
-  },
-
-  {
-    path: "utils/chest-items-test",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/data-mock/chest-items-test.page").then((m) => m.ChestItemsTestPage),
-  },
-  {
-    path: "utils/shop-progress-test",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/data-mock/shop-progress-test.page").then((m) => m.ShopProgressTestPage),
-  },
-  {
-    path: "utils/resource-milestone",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/data-mock/resourseMilestone.page").then((m) => m.ResourseMilestonePage),
-  },
-  {
-    path: "utils/component-viewer-icons",
-	canActivate: [AdminGuard],
-    loadComponent: () =>
-      import("./pages/utils/components/components/viewer-icons.page").then(
-        (m) => m.ViewerIconsPage,
-      ),
   },
   {
     path: "utils/component-sprite-tester",
@@ -153,18 +112,6 @@ export const routes: Routes = [
 	canActivate: [AuthGuard],
     loadComponent: () =>
       import("./pages/pause/pause.page").then((m) => m.PausePage),
-  },
-  {
-    path: "results/:status",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/results/results.page").then((m) => m.ResultsPage),
-  },
-  {
-    path: "ranking",
-	canActivate: [AuthGuard],
-    loadComponent: () =>
-      import("./pages/ranking/ranking.page").then((m) => m.RankingPage),
   },
   {
     path: "hub",
