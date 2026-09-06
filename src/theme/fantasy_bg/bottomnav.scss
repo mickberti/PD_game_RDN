@@ -5,7 +5,7 @@
 	grid-template-columns: repeat(5, 1fr);
 	gap: 2px;
 	padding: 2px;
-	background: linear-gradient(#316ef0, var(--fantasy-border-strong));
+	background: linear-gradient(#6230ec, var(--fantasy-border-strong));
 	box-shadow: var(--shadow-topnav-depth);
 	width: var(--width);
 	height: 58px;
@@ -24,14 +24,14 @@
 	text-shadow: var(--shadow-text-strong-35);
 	
 	border: 3px solid var(--fantasy-border-strong);
-	background: linear-gradient(var(--cta-gradient-top), var(--cta-gradient-bottom));
+	background: url("/assets/ui/fantasy_bg/sfondo/bg_lunar.png") center / 100% 100% no-repeat;
 	display: grid;
 	justify-content: center;
 	box-shadow: var(--shadow-inset-highlight);
 }
 
 .bottom-nav a.active {
-	background: linear-gradient(var(--cta-alt-gradient-top), var(--cta-alt-gradient-bottom));
+	background: url("/assets/ui/fantasy_bg/sfondo/bg_lunar.png") center / 100% 100% no-repeat;
 	transform: translateY(-5px);
 }
 

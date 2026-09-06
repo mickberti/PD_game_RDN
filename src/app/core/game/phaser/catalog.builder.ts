@@ -1,6 +1,6 @@
 /** Active catalogue facade. The selected version is controlled exclusively by ACTIVE_RDN_CATALOGUE_VERSION. */
 import { activeRdnCatalogueRuntime } from "./catalogues/catalogue.registry";
-import type { PuzzleSolutionAudit, PuzzleSolutionExecutionStep } from "./catalogues/v008/catalog.builder";
+import type { PuzzleSolutionAudit, PuzzleSolutionExecutionStep } from "./catalogues/v009/catalog.builder";
 
 export type { PuzzleSolutionAudit, PuzzleSolutionExecutionStep };
 export const RDN_LEVELS = activeRdnCatalogueRuntime.builder.RDN_LEVELS;

@@ -26,14 +26,14 @@ for (const file of ["catalogue.contract.ts", "rdn-release.config.ts"]) {
 
 const registryPath = resolve(root, "src/app/core/game/phaser/catalogues/catalogue.registry.ts");
 const registry = await readFile(registryPath, "utf8");
-const registryImports = `import { RDN_CATALOGUE_CONTRACT as ${to}Contract } from "./${to}/catalogue.contract";\nimport * as ${to}Builder from "./${to}/catalog.builder";\n`;
-const registryEntry = `  ${to}: {\n    contract: ${to}Contract,\n    generateRdnPuzzle: ${to}Builder.generateRdnPuzzle,\n    prepareRdnCatalogueLevel: ${to}Builder.prepareRdnCatalogueLevel,\n  },\n`;
+const registryImports = `import { RDN_CATALOGUE_CONTRACT as ${to}Contract } from "./${to}/catalogue.contract";\nimport * as ${to}Builder from "./${to}/catalog.builder";\nimport * as ${to}Levels from "./${to}/levels.config";\nimport * as ${to}Progression from "./${to}/progression-rules.config";\nimport * as ${to}Effects from "./${to}/effect-progression.config";\nimport * as ${to}Release from "./${to}/rdn-release.config";\n`;
+const registryEntry = `  ${to}: {\n    contract: ${to}Contract,\n    generateRdnPuzzle: ${to}Builder.generateRdnPuzzle,\n    prepareRdnCatalogueLevel: ${to}Builder.prepareRdnCatalogueLevel,\n    builder: ${to}Builder, levels: ${to}Levels, progression: ${to}Progression, effects: ${to}Effects, release: ${to}Release,\n  },\n`;
 if (registry.includes(`./${to}/catalogue.contract`)) throw new Error(`${to} e gia registrato.`);
 await writeFile(registryPath, registry.replace("\nconst catalogueRuntimes", `\n${registryImports}\nconst catalogueRuntimes`).replace("} as const;", `${registryEntry}} as const;`), "utf8");
 
 const runnerPath = resolve(root, "tools/rnd-catalogue/rnd-catalogue-runner.mjs");
 const runner = await readFile(runnerPath, "utf8");
-const runnerEntry = `  ${to}: {\n    levels: await import("../../src/app/core/game/phaser/catalogues/${to}/catalog.builder.ts"),\n    contract: await import("../../src/app/core/game/phaser/catalogues/${to}/catalogue.contract.ts"),\n  },\n`;
-await writeFile(runnerPath, runner.replace("};\nconst implementation", `${runnerEntry}};\nconst implementation`), "utf8");
+const runnerEntry = `  ${to}: () => Promise.all([\n    import("../../src/app/core/game/phaser/catalogues/${to}/catalog.builder.ts"),\n    import("../../src/app/core/game/phaser/catalogues/${to}/catalogue.contract.ts"),\n  ]),\n`;
+await writeFile(runnerPath, runner.replace("};\nconst loadImplementation", `${runnerEntry}};\nconst loadImplementation`), "utf8");
 
 console.info(`[RDN] Creato e registrato il motore ${to} da ${from}. Per attivarlo, imposta ACTIVE_RDN_CATALOGUE_VERSION a ${to}, poi pubblica con npm run rdn:catalogue -- --version ${to}.`);

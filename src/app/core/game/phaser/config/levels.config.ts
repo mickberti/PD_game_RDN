@@ -1,7 +1,7 @@
 /** Active catalogue configuration facade. */
 import { activeRdnCatalogueRuntime } from "../catalogues/catalogue.registry";
 
-const levels = activeRdnCatalogueRuntime.levels as Partial<typeof import("../catalogues/v008/levels.config")>;
+const levels = activeRdnCatalogueRuntime.levels as Partial<typeof import("../catalogues/v009/levels.config")>;
 export const RDN_MAX_LEVEL = levels.RDN_MAX_LEVEL ?? 450;
 export const RDN_MIN_SPHERES = levels.RDN_MIN_SPHERES ?? 4;
 export const RDN_MAX_SPHERES = levels.RDN_MAX_SPHERES ?? 8;

@@ -13,6 +13,10 @@ const catalogueIndexPath = resolve(catalogueRoot, "index.json");
 const checkOnly = process.argv.includes("--check");
 const activateOnly = process.argv.includes("--activate");
 const migrateOnly = process.argv.includes("--migrate-legacy");
+// Executes the complete generation pipeline, but deliberately leaves the
+// published catalogue untouched. `--test` is kept as a convenient alias for
+// interactive calibration runs.
+const noSave = process.argv.includes("--no-save") || process.argv.includes("--test");
 const versionArgument = process.argv.indexOf("--version");
 const requestedVersion = versionArgument >= 0 ? process.argv[versionArgument + 1] : undefined;
 const optionValue = (name) => {
@@ -31,6 +35,7 @@ const modesArgument = optionValue("--modes");
 const requestedModes = modesArgument === undefined || modesArgument === "all" ? undefined : [...new Set(modesArgument.split(",").map((mode) => mode.trim()).filter(Boolean))];
 if (requestedModes?.some((mode) => mode !== "adventure" && mode !== "time-attack")) throw new Error("--modes accetta adventure,time-attack oppure all.");
 if (requestedVersion !== undefined && !/^v\d{3,}$/.test(requestedVersion)) throw new Error("Versione catalogo non valida. Usa, ad esempio, v004.");
+if (noSave && (checkOnly || activateOnly || migrateOnly)) throw new Error("--no-save/--test non puÃ² essere combinato con --check, --activate o --migrate-legacy.");
 
 const legacyVersion = async () => "v004";
 const activeManifest = async () => { try { return JSON.parse(await readFile(manifestPath, "utf8")); } catch { return undefined; } };
@@ -67,16 +72,52 @@ const activateRuntimeVersion = async () => {
   }));
 };
 
+const isPartialRequest = requestedLevelFrom !== undefined || requestedLevelTo !== undefined || requestedModes !== undefined;
+const levelKey = (level) => level.id ?? `${level.variant}:${level.number}`;
+const auditKey = (audit) => `${audit.variant}:${audit.level ?? audit.number ?? audit.id}`;
+const sortLevels = (left, right) => (left.number - right.number) || String(left.variant).localeCompare(String(right.variant));
+const sortAudit = (left, right) => ((left.level ?? left.number) - (right.level ?? right.number)) || String(left.variant).localeCompare(String(right.variant));
+const replaceGeneratedEntries = (existing, generated, key, sort) => {
+  const replacements = new Map(generated.map((entry) => [key(entry), entry]));
+  const merged = existing.map((entry) => replacements.get(key(entry)) ?? entry);
+  const existingKeys = new Set(existing.map(key));
+  merged.push(...generated.filter((entry) => !existingKeys.has(key(entry))));
+  return merged.sort(sort);
+};
+const publishedCatalogue = async () => {
+  try {
+    return {
+      levels: JSON.parse(await readFile(levelsPath, "utf8")),
+      audit: JSON.parse(await readFile(auditPath, "utf8")),
+    };
+  } catch {
+    return undefined;
+  }
+};
+const catalogueForPublish = async (catalogue) => {
+  if (!isPartialRequest) return catalogue;
+  const current = await publishedCatalogue();
+  if (!current) {
+    throw new Error(`Il catalogo ${version} non esiste ancora: una pubblicazione parziale potrebbe creare un catalogo incompleto. Genera prima il catalogo completo oppure usa --no-save per il test.`);
+  }
+  return {
+    ...catalogue,
+    levels: replaceGeneratedEntries(current.levels, catalogue.levels, levelKey, sortLevels),
+    audit: replaceGeneratedEntries(current.audit, catalogue.audit, auditKey, sortAudit),
+  };
+};
 const publish = async (catalogue) => {
-  const levels = JSON.stringify(catalogue.levels); const audit = JSON.stringify(catalogue.audit);
+  const result = await catalogueForPublish(catalogue);
+  const levels = JSON.stringify(result.levels); const audit = JSON.stringify(result.audit);
   const fingerprint = createHash("sha256").update(levels).update(audit).digest("hex").slice(0, 16);
   await mkdir(directory, { recursive: true });
   await writeFile(levelsPath, levels, "utf8"); await writeFile(auditPath, audit, "utf8");
-  const entry = manifest(fingerprint, catalogue.contract);
+  const entry = manifest(fingerprint, result.contract);
   await updateCatalogueIndex(entry);
   const active = await activeManifest();
   if (!active || active.version === version) await writeFile(manifestPath, JSON.stringify(entry, null, 2) + "\n", "utf8");
-  console.info(`[RDN] Catalogo ${version} pubblicato: ${catalogue.levels.length} livelli, fingerprint ${fingerprint}.`);
+  const updateDetail = isPartialRequest ? `; aggiornamento parziale di ${catalogue.levels.length} livelli` : "";
+  console.info(`[RDN] Catalogo ${version} pubblicato: ${result.levels.length} livelli${updateDetail}, fingerprint ${fingerprint}.`);
 };
 const loadLegacy = async () => {
   const source = await readFile(resolve(root, "tools/rnd-catalogue/legacy", `rnd-catalogue-${version}.generated.ts`), "utf8");
@@ -102,7 +143,9 @@ try {
     console.info(`[RDN] Richiesta catalogo ${version}: livelli ${requestedRange}; modalitÃ  ${requestedModes?.join(", ") ?? "adventure, time-attack"}.`);
     await build({ entryPoints: [runner], bundle: true, format: "esm", platform: "node", target: "node20", outfile: bundle, logLevel: "info" });
     const { catalogue } = await import(`${pathToFileURL(bundle).href}?generatedAt=${Date.now()}`);
-    if (checkOnly) {
+    if (noSave) {
+      console.info(`[RDN] Test ${version} completato: ${catalogue.levels.length} livelli generati e ${catalogue.audit.length} audit prodotti. Nessun file del catalogo Ã¨ stato modificato.`);
+    } else if (checkOnly) {
       const fingerprint = createHash("sha256").update(JSON.stringify(catalogue.levels)).update(JSON.stringify(catalogue.audit)).digest("hex").slice(0, 16);
       if ((await activeManifest())?.sourceFingerprint !== fingerprint) throw new Error("Il catalogo RDN pubblicato non Ã¨ aggiornato. Esegui npm run rdn:catalogue.");
       console.info("[RDN] Catalogo pubblicato aggiornato.");

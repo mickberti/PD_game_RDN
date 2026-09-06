@@ -273,10 +273,16 @@ CREAZIONE DEL NUOVO MOTORE CATALOGO
 npm run rdn:catalogue:fork -- --from v007 --to v008         
 
 CREAZIONE DEL CATALOGO
+
  & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v003
- & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes adventure
- & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes time-attack
- & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes adventure,time-attack
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v009 --from-level 4 --to-level 60 --modes adventure
+
+TEST DEL CATALOGO
+
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes adventure --no-save
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes time-attack --no-save
+ & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --from-level 4 --to-level 60 --modes adventure,time-attack --no-save
+ 
  ATTIVAZIONE DEL CATALOGO
  
  & "D:\Programmi\nvm\v22.12.0\node.exe" scripts/generate-rdn-catalogue.mjs --version v008 --activate
