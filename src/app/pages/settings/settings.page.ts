@@ -73,6 +73,18 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
         </div>
       </ui-panel>
 
+      <ui-panel [variant]="'primary'" title="Traguardi">
+        <div class="settings-links">
+          <ui-button variant="complementary" [disabled]="resettingAwards()" (pressed)="resetClaimedAwards()">
+            {{ resettingAwards() ? 'Ripristino premi...' : 'Ripristina premi ritirati' }}
+          </ui-button>
+          <ui-button variant="complementary" (pressed)="nav.go('utils/component-atlas-icon')" >{{ t('support') }}</ui-button>
+        <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
+        <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>
+        <ui-button variant="complementary" [disabled]="resettingProgress()" (pressed)="resetUserProgress()">{{ resettingProgress() ? t('resettingProgress') : t('resetProgress') }}</ui-button>
+        </div>
+      </ui-panel>
+
       <ui-panel [variant]="'primary'" [title]="t('socialNetworks')" >
         <div class="settings-social">
           <ui-button-sprite [frame]="{name: 'social-fb', effect: 'none'}"></ui-button-sprite>
@@ -85,11 +97,8 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
         <ui-button variant="secondary">{{ t('gameInfo') }}</ui-button>
         <ui-button variant="secondary">{{ t('community') }}</ui-button>
         <ui-button variant="secondary">{{ t('aboutUs') }}</ui-button>
-        <ui-button variant="complementary" (pressed)="nav.go('utils/component-atlas-icon')" >{{ t('support') }}</ui-button>
-        <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
-        <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>
-        <ui-button variant="complementary" [disabled]="resettingProgress()" (pressed)="resetUserProgress()">{{ resettingProgress() ? t('resettingProgress') : t('resetProgress') }}</ui-button>
       </div>
+      
       @if (isAdmin()) {
         <ui-panel [variant]="'primary'" title="Strumenti amministratore">
           <div class="settings-links">
@@ -135,6 +144,7 @@ export class SettingsPage {
   readonly gameServiceModeLabel = computed(() => this.gameState.isMockMode() ? 'Mock' : 'Remote');
   readonly directRouteAccessLabel = computed(() => this.directRouteAccess.enabled() ? 'Accesso diretto attivo' : 'Passa da boot');
   readonly resettingProgress = signal(false);
+  readonly resettingAwards = signal(false);
   readonly adminLevelActionPending = signal(false);
   readonly effectPlaygroundAvailable = computed(() => this.isAdmin());
 
@@ -201,6 +211,25 @@ export class SettingsPage {
       await this.gameState.resetUserProgress();
     } finally {
       this.resettingProgress.set(false);
+    }
+  }
+
+  async resetClaimedAwards(): Promise<void> {
+    if (this.resettingAwards() || !window.confirm("Ripristinare tutti i premi ritirati? Potranno essere raccolti di nuovo se il relativo traguardo è già completato.")) {
+      return;
+    }
+
+    this.resettingAwards.set(true);
+    try {
+      const progress = this.gameState.progress();
+      this.gameState.updateProgress({
+        ...progress,
+        claimedStatisticAwardTiers: {},
+        lastUpdatedAt: new Date().toISOString(),
+      });
+      await this.gameState.persistProgressNow();
+    } finally {
+      this.resettingAwards.set(false);
     }
   }
 

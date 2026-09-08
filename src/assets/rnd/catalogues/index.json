@@ -58,5 +58,15 @@
     "sourceFingerprint": "ff4588786a9555af",
     "generatedAt": "2026-09-06T08:35:00.150Z",
     "validationPassed": true
+  },
+  {
+    "version": "v010",
+    "levels": "assets/rnd/catalogues/v010/levels.json",
+    "audit": "assets/rnd/catalogues/v010/audit.json",
+    "levelSchemaVersion": 1,
+    "generatorVersion": "rdn-generator-v2",
+    "sourceFingerprint": "d1f28e503ecf449d",
+    "generatedAt": "2026-09-07T17:03:52.825Z",
+    "validationPassed": true
   }
 ]

@@ -36,8 +36,6 @@ import { UiSpriteComponent } from "../basic/ui-sprite.component";
   <div class="resources-wrapper">
 	  <div class="resources">
 	    <ui-pill [frame]="{name:'coin_single', effect:'none'}" size="sm" [value]="state.coins()"/>
-	    <ui-pill [frame]="{name:'crystal_single', effect:'none'}" size="sm" [value]="state.gems()" />
-		<ui-pill [frame]="{name:'magic_dust_single', effect:'none'}" size="sm" [value]="state.dusts()" />
 	    <ng-content></ng-content>
 		</div>
   </div>

@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { AwardItem, FrameItem } from "../../../core/models/game.models";
-import { UIButtonComponent } from "../../basic/ui-button.component";
 import { UIProgressbarComponent } from "../../basic/ui-progress-bar.component";
 import { defaultFrame, defaultAward } from "../../../core/models/mock/fantasy/utils-data";
 import { UiSpriteComponent } from "../../basic/ui-sprite.component";
@@ -9,12 +8,23 @@ import { UiSpriteComponent } from "../../basic/ui-sprite.component";
 @Component({
   selector: "ui-award-box",
   standalone: true,
-  imports: [CommonModule, UIButtonComponent,  UIProgressbarComponent, UiSpriteComponent],
+  imports: [CommonModule, UIProgressbarComponent, UiSpriteComponent],
   template: `  <article class="reward" [ngClass]="[isLocked()]">
   
-	<div class="r-icon sprite">
+	<button
+	  type="button"
+	  class="r-icon sprite"
+	  [class.r-icon--collectable]="isCollectable()"
+	  [class.fx-golden]="isCollectable()"
+	  [disabled]="!isCollectable()"
+	  [attr.aria-label]="isCollectable() ? 'Raccogli ' + rewardCoins() + ' monete' : 'Ricompensa non disponibile'"
+	  (click)="collect.emit(item)"
+	>
 	  <ui-sprite [frame]="item.frame ?? defaultFrame" />
-	</div>
+	  @if (rewardCoins() > 0) {
+	    <span class="r-icon-amount">{{ rewardCoins() }}</span>
+	  }
+	</button>
 	
     <div class="r-desc">
       <div class="r-desc-title">{{ item.title }}</div>
@@ -23,19 +33,6 @@ import { UiSpriteComponent } from "../../basic/ui-sprite.component";
 		<ui-progress-bar [progress]="item.progress" />
 	  }
     </div>
-	
-	<div class="r-desc-action">
-	    <ui-button variant="secondary" particleMode="part3" [disabled]="item.state !== 'collect'" (pressed)="collect.emit(item)">{{
-	      item.state === "received"
-	        ? "Received"
-	        : item.state === "collect"
-	          ? "Collect"
-	          : "Locked"
-	    }}</ui-button>
-	</div>
-	<div *ngIf="'locked' === isLocked()" class="lock">
-	<ui-sprite [frame]="{ name:'icon-lock', effect:'none'}" />
-	</div>
   </article>`,
 
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -46,6 +43,14 @@ export class UIAwardBoxComponent {
   @Output() collect = new EventEmitter<AwardItem>();
   
   defaultFrame: FrameItem = defaultFrame;
+
+  isCollectable(): boolean {
+    return this.item.state === "collect";
+  }
+
+  rewardCoins(): number {
+    return this.item.reward?.type === "coin" ? (this.item.reward.amount ?? 0) : 0;
+  }
 
   isLocked(){
 	if(this.stat === 'locked' || !this.item.progress){

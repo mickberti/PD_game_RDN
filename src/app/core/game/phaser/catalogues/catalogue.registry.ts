@@ -44,6 +44,13 @@ import * as v009Progression from "./v009/progression-rules.config";
 import * as v009Effects from "./v009/effect-progression.config";
 import * as v009Release from "./v009/rdn-release.config";
 
+import { RDN_CATALOGUE_CONTRACT as v010Contract } from "./v010/catalogue.contract";
+import * as v010Builder from "./v010/catalog.builder";
+import * as v010Levels from "./v010/levels.config";
+import * as v010Progression from "./v010/progression-rules.config";
+import * as v010Effects from "./v010/effect-progression.config";
+import * as v010Release from "./v010/rdn-release.config";
+
 const catalogueRuntimes = {
   v004: {
     contract: v004Contract,
@@ -80,6 +87,12 @@ const catalogueRuntimes = {
     generateRdnPuzzle: v009Builder.generateRdnPuzzle,
     prepareRdnCatalogueLevel: v009Builder.prepareRdnCatalogueLevel,
     builder: v009Builder, levels: v009Levels, progression: v009Progression, effects: v009Effects, release: v009Release,
+  },
+  v010: {
+    contract: v010Contract,
+    generateRdnPuzzle: v010Builder.generateRdnPuzzle,
+    prepareRdnCatalogueLevel: v010Builder.prepareRdnCatalogueLevel,
+    builder: v010Builder, levels: v010Levels, progression: v010Progression, effects: v010Effects, release: v010Release,
   },
 } as const;
 

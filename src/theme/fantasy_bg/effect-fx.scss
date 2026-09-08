@@ -18,6 +18,10 @@
   filter: saturate(1.4) hue-rotate(12deg) drop-shadow(0 0 15px rgb(255, 128, 64));
 }
 
+.fx-golden {
+  filter: drop-shadow(0 0 4px #ffe28a) drop-shadow(0 0 9px #d99d38);
+}
+
 .fx-frozen {
   filter: hue-rotate(180deg) saturate(1.35) brightness(1.1) drop-shadow(0 0 8px #89d8ff);
 }

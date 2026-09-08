@@ -31,23 +31,54 @@
 }
 
 .reward {
-  display: grid;
-  grid-template-columns: 60px 1fr 110px;
+display: grid;
+  grid-template-columns: 80px 1fr;
   gap: 8px;
   align-items: center;
-  padding: 8px;
-  background: var(--fantasy-border-primary);
-  border: 3px solid var(--fantasy-surface-gold);
-  color: var(--fantasy-surface-gold);
+  padding: 8px 65px;
+  background: url(/assets/ui/fantasy_bg/button/button6-set1.png) center/100% 100% no-repeat;
+  border: 0;
+  color: var(--fantasy-text-cream);
+  height: 110px;
 }
 
 .r-icon {
+  position: relative;
   height: 50px;
   display: grid;
   place-items: center;
   font-size: 30px;
-  background: var(--fantasy-text-cream);
-  border: 3px solid var(--fantasy-surface-gold);
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: default;
+}
+
+.r-icon--collectable {
+  cursor: pointer;
+  animation: reward-collectable-pulse 1.15s cubic-bezier(.34, 1.56, .64, 1) infinite;
+}
+
+.r-icon:disabled {
+  opacity: .58;
+}
+
+.r-icon-amount {
+  position: absolute;
+  right: -9px;
+  bottom: -9px;
+  z-index: 1;
+  min-width: 22px;
+  padding: 2px 4px;
+  border: 2px solid #ffdc76;
+  border-radius: 999px;
+  background: #553611;
+  color: #fff2bd;
+  font: 800 12px/1 Arial, sans-serif;
+  text-align: center;
+  text-shadow: 0 1px 1px #201000;
 }
 .r-desc{
 	
@@ -61,8 +92,10 @@
 	font-weight: normal;
 }
 
-.r-desc-action{
-	margin: auto;
+@keyframes reward-collectable-pulse {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.12) rotate(-2deg); }
+  65% { transform: scale(1.07) rotate(1deg); }
 }
 
 
