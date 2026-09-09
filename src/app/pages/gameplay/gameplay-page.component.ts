@@ -280,8 +280,11 @@ export class GameplayPageComponent implements AfterViewInit {
   private resetTimeAttackTimer(): void {
     this.stopTimeAttackTimer();
     if (this.session.variant !== "time-attack") { this.timeRemaining.set(null); this.timeRemainingMs.set(null); this.timeAttackDurationSeconds = undefined; return; }
-    const cost = this.puzzle.level().optimalCost;
-    const seconds = Math.max(60, Math.min(180, 30 + (cost?.impulses ?? 0) * 3 + (cost?.rotationSteps ?? 0) * 2));
+    const level = this.puzzle.level();
+    const impulses = level.optimalCost?.impulses ?? 0;
+    // Time Attack rewards the catalogue's planned actions, not ring travel.
+    // Keep only a floor: a ceiling would flatten the per-level progression.
+    const seconds = Math.max(60, level.number * 3 + impulses * 10);
     this.timeAttackDurationSeconds = seconds;
     this.timeAttackEndAt = performance.now() + seconds * 1000;
     this.timeAttackPausedAt = undefined;

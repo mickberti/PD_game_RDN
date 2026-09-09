@@ -1,10 +1,10 @@
 {
-  "version": "v009",
-  "levels": "assets/rnd/catalogues/v009/levels.json",
-  "audit": "assets/rnd/catalogues/v009/audit.json",
+  "version": "v011",
+  "levels": "assets/rnd/catalogues/v011/levels.json",
+  "audit": "assets/rnd/catalogues/v011/audit.json",
   "levelSchemaVersion": 1,
   "generatorVersion": "rdn-generator-v2",
-  "sourceFingerprint": "ff4588786a9555af",
-  "generatedAt": "2026-09-06T08:35:00.150Z",
+  "sourceFingerprint": "fb7ca48efbcf423b",
+  "generatedAt": "2026-09-08T12:31:46.365Z",
   "validationPassed": true
 }

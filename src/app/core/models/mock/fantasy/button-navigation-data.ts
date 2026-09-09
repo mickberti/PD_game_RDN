@@ -35,7 +35,6 @@ export const fantasyBottomNav: BottomNavItem[] = [{
 	route: "/shop",
 	active: "active",
 	frame: {name: "icon-shop", effect: "none" },
-	badge: true,
 }];
 
 export const fantasyBottomUtils	: BottomNavItem[] = [{

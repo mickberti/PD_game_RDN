@@ -895,5 +895,33 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     this.button(cx + 140, cy - panelHeight / 2 + 28, "x", () => this.actions.closeInfo(), depth + 3);
   }
-  private dialog(cx: number, cy: number, outcome: "win" | "lose", model: RdnSceneModel): void { const depth = 20; const reward = outcome === "win" ? model.levelReward : undefined; const height = reward ? 238 : 180; this.add.rectangle(cx, cy, 310, height, 0x151914, .96).setStrokeStyle(3, 0xc49b50).setDepth(depth); this.label(cx, cy - height / 2 + 38, outcome === "win" ? "LIVELLO COMPLETATO" : "TENTATIVO FALLITO", 19, 0xf8dc8b).setDepth(depth + 1); if (outcome === "win") { const stars = getPuzzleStars(model.level, model.state); this.label(cx, cy - height / 2 + 73, "★".repeat(stars) + "☆".repeat(3 - stars), 27, 0xffdf70).setDepth(depth + 1); if (reward) { this.label(cx, cy - 2, `+${reward.coins}${reward.bonusClaimed ? " x2" : ""} MONETE`, 17, 0xffdf70).setDepth(depth + 1); if (!reward.bonusClaimed) { this.button(cx, cy + 37, "x2", () => this.actions.claimDoubleReward(), depth + 2); this.label(cx, cy + 70, reward.adUnavailable ? "PUBBLICITÀ NON DISPONIBILE" : "BONUS x2 · GUARDA PUBBLICITÀ", 9, reward.adUnavailable ? 0xff9378 : 0xf8dc8b).setDepth(depth + 4); } } this.button(cx - 92, cy + height / 2 - 37, "▶", () => this.actions.continue(), depth + 2); this.label(cx - 92, cy + height / 2 - 7, "PROSEGUI", 10, 0xf8dc8b).setDepth(depth + 4); } else { this.button(cx - 62, cy + 48, "↻", () => this.actions.retry(), depth + 2); this.label(cx - 62, cy + 80, "RITENTA", 10, 0xf8dc8b).setDepth(depth + 4); } this.button(cx + 92, cy + height / 2 - 37, "×", () => this.actions.exit(), depth + 2); this.label(cx + 92, cy + height / 2 - 7, "ESCI", 10, 0xf8dc8b).setDepth(depth + 4); }
+  private dialog(cx: number, cy: number, outcome: "win" | "lose", model: RdnSceneModel): void {
+    const depth = 20;
+    const reward = outcome === "win" ? model.levelReward : undefined;
+    const height = reward ? 310 : 240;
+
+    // Results use the same themed panel image as the information and tutorial popups.
+    this.add.image(cx, cy, this.infoPanelTexture(model)).setDisplaySize(360, height).setDepth(depth).setInteractive();
+    this.label(cx, cy - height / 2 + 47, outcome === "win" ? "LIVELLO COMPLETATO" : "TENTATIVO FALLITO", 19, 0xf8dc8b).setDepth(depth + 1);
+
+    if (outcome === "win") {
+      const stars = getPuzzleStars(model.level, model.state);
+      this.label(cx, cy - height / 2 + 91, "★".repeat(stars) + "☆".repeat(3 - stars), 27, 0xffdf70).setDepth(depth + 1);
+      if (reward) {
+        this.label(cx, cy - 27, `+${reward.coins}${reward.bonusClaimed ? " x2" : ""} MONETE`, 17, 0xffdf70).setDepth(depth + 1);
+        if (!reward.bonusClaimed) {
+          this.button(cx, cy + 22, "x2", () => this.actions.claimDoubleReward(), depth + 2);
+          this.label(cx, cy + 60, reward.adUnavailable ? "PUBBLICITÀ NON DISPONIBILE" : "BONUS x2 · GUARDA PUBBLICITÀ", 9, reward.adUnavailable ? 0xff9378 : 0xf8dc8b).setDepth(depth + 4);
+        }
+      }
+      this.button(cx - 96, cy + height / 2 - 51, "▶", () => this.actions.continue(), depth + 2);
+      this.label(cx - 96, cy + height / 2 - 17, "PROSEGUI", 10, 0xf8dc8b).setDepth(depth + 4);
+    } else {
+      this.button(cx - 68, cy + 58, "↻", () => this.actions.retry(), depth + 2);
+      this.label(cx - 68, cy + 94, "RITENTA", 10, 0xf8dc8b).setDepth(depth + 4);
+    }
+
+    this.button(cx + 96, cy + height / 2 - 51, "×", () => this.actions.exit(), depth + 2);
+    this.label(cx + 96, cy + height / 2 - 17, "ESCI", 10, 0xf8dc8b).setDepth(depth + 4);
+  }
 }

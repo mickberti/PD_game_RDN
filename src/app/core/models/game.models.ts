@@ -130,6 +130,8 @@ export interface RewardItem {
 }
 export type IconType = typeof ICON_TYPES[number];
 export type PriceType = typeof PRICE_TYPES[number];
+/** Identifiers accepted by the initial player resource state. */
+export type ResourceTypeId = 'res1' | 'res2';
 
 export type ComponentMode = typeof COMPONENT_MODE[number];
 export type ComponentSize = typeof COMPONENT_SIZE[number];
@@ -228,6 +230,13 @@ export interface PriceItem {
 	frame: FrameItem;
 	type: PriceType;
 	amount: number;
+}
+
+/** A named modifier included when calculating a hero's combat rating. */
+export interface HeroPowerMultiplier {
+  id: string;
+  title: string;
+  value: number;
 }
 
 export interface GlobalItem {

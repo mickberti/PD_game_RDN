@@ -56,16 +56,19 @@ clip-path: polygon(0 0, 100% 0%, 100% 100%, 50% 79%, 0 100%);
 .resources-wrapper {
 	position: absolute;
 	  color: white;
-	  right: 65px;
-	  top: 60px;
+	  right: 60px;
+	  top: 63px;
 }
 .resources-wrapper .pill-sm{
-	min-width: 65px;
+	min-width: 90px;
 }
 
 .resources-wrapper .pill-value-sm{
 	font-size: 10px;
 }
 .resources {
+	display: flex;
+	align-items: center;
+	gap: 6px;
 	width: 100%;
 }

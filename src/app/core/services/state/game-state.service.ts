@@ -30,7 +30,9 @@ import { RemoteConfigDocument } from "../../models/remote/config.model";
 import { AvailabilityWindow, GameEvent } from "../../models/remote/event.model";
 
 import { EMPTY_GAME_CATALOG, GameCatalog } from "../../models/game-catalog.model";
+import { DirectRouteAccessService } from "../app/navigation/direct-route-access.service";
 import { ProgressStoreService } from "./progress-store.service";
+import { calculatePlayerStarProgression } from "../progression/player-star-progression.service";
 
 export type GameDataSourceMode = "mock" | "remote";
 export type BootstrapStepId = "theme" | "serverTime" | "firebaseAuth" | "playerProfile" | "gameData" | "routing";
@@ -77,6 +79,7 @@ export class GameStateService {
   private readonly progressStore = inject(ProgressStoreService);
   private readonly shopService = inject(ShopService);
   private readonly itemService = inject(ItemService);
+  private readonly directRouteAccess = inject(DirectRouteAccessService);
   private readonly remoteGameDataProvider = inject(RemoteGameDataProvider);
   private readonly mockGameDataProvider = inject(MockGameDataProvider);
   private readonly logger = inject(LoggerService);
@@ -116,6 +119,9 @@ export class GameStateService {
   readonly error = computed(() => this.state().error);
   readonly lastRefreshAt = computed(() => this.state().lastRefreshAt);
   readonly progress = this.progressStore.progress;
+  /** Player rank is derived live from the best stars stored by every game mode. */
+  readonly playerStarProgression = computed(() => calculatePlayerStarProgression(this.progress().gameModeLevelStars));
+  readonly playerLevel = computed(() => this.playerStarProgression().level);
 
   readonly coins = computed(() => this.progress().coins);
   readonly gems = computed(() => this.progress().gems);
@@ -181,6 +187,17 @@ export class GameStateService {
   }
 
   // 🚀 BOOTSTRAP GLOBALE
+  /** A fresh profile must never inherit development-only browser preferences. */
+  private applyNewAccountDefaults(): void {
+    if (this.dataSourceMode() !== "remote") {
+      this.dataSourceMode.set("remote");
+      this.persistDataSourceMode("remote");
+    }
+    if (this.directRouteAccess.enabled()) {
+      this.directRouteAccess.setEnabled(false);
+    }
+  }
+
   private async bootstrap() {
     this.logger.logInfo("[GameState] bootstrap start");
     this.updateState({ loading: true, error: null });
@@ -245,6 +262,9 @@ export class GameStateService {
 
         const uid = user?.uid ?? null;
         const authInitializationError = this.auth.initializationError;
+        if (user && player?.createdAt === null) {
+          this.applyNewAccountDefaults();
+        }
         this.progressStore.setRemotePersistenceContext({
           enabled: this.isRemoteMode(),
           uid,
@@ -729,6 +749,7 @@ export class GameStateService {
   // 🧹 RESET (logout / cambio utente)
   reset() {
     this.logger.logInfo("[GameState] reset");
+    this.applyNewAccountDefaults();
     this.progressStore.clearProgress({ removeLocalSnapshot: true });
     this.progressStore.setRemotePersistenceContext({
       enabled: false,

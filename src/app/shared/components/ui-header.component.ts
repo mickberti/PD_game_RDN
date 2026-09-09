@@ -36,6 +36,7 @@ import { UiSpriteComponent } from "../basic/ui-sprite.component";
   <div class="resources-wrapper">
 	  <div class="resources">
 	    <ui-pill [frame]="{name:'coin_single', effect:'none'}" size="sm" [value]="state.coins()"/>
+	    <ui-pill [frame]="{name:'icon-ranking', effect:'none'}" size="sm" [value]="'Lv. ' + state.playerLevel()" styleClass="player-level-pill"/>
 	    <ng-content></ng-content>
 		</div>
   </div>
