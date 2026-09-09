@@ -15,8 +15,9 @@ import { IonContent } from '@ionic/angular/standalone';
     <ion-content>
 	<main class="screen boot-screen">
   	<section class="ui-stack">
-  		<div class="boot-box">
-  			<h1>GEARITHM: The Zero Mechanism</h1>
+		<div class="boot-box">
+			<img class="game-logo" src="assets/ui/fantasy_bg/Gearithm_title.png" alt="Gearithm: The Zero Mechanism" />
+			<p class="game-subtitle">The Zero Mechanism</p>
 			@if (error(); as startupError) {
 			  <section class="boot-error" role="alert">
 				<h2>Inizializzazione non completata</h2>
@@ -57,10 +58,8 @@ import { IonContent } from '@ionic/angular/standalone';
   	gap:18px;
   	text-align:center;
   }
-  h1 {
-  	margin:0;
-  	font-size:clamp(42px, 12vw, 72px); font-weight:1000; color:white; text-shadow:0 0 18px var(--ui-primary), 0 8px 0 rgba(0,0,0,.35);
-  }
+  .game-logo { display:block; width:min(86vw, 580px); height:auto; filter:drop-shadow(0 8px 10px rgba(0,0,0,.45)); }
+  .game-subtitle { margin:-12px 0 0; color:#fff; font-size:clamp(16px, 4vw, 24px); font-weight:800; letter-spacing:.12em; text-shadow:0 3px 6px rgba(0,0,0,.55); }
   p {
   	margin:0;
   	opacity:.82;

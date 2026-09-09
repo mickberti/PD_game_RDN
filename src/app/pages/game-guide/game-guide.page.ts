@@ -43,6 +43,11 @@ interface GuideMode {
     <ion-content>
       <main class="guide">
         <section class="hero">
+          <img
+            class="game-logo"
+            src="assets/ui/fantasy_bg/Gearithm_title.png"
+            alt="Gearithm: The Zero Mechanism" />
+          <p class="game-subtitle">The Zero Mechanism</p>
           <p class="eyebrow">RDN · GUIDA COMPLETA</p>
           <h1>Impara a dominare il flusso</h1>
           <p>
@@ -61,31 +66,31 @@ interface GuideMode {
           <h2>Regole e obiettivo</h2>
           <div class="rule-grid">
             <article>
-              <strong>1. Allinea</strong>
+              <strong>1. L'anello</strong>
               <p>
-                Ruota l’ingranaggio per mettere le operazioni davanti alle gemme
-                dell’anello.
+                I valori sulle gemme esterne sono gli obiettivi: portali tutti a
+                zero.
               </p>
             </article>
             <article>
-              <strong>2. Leggi il flusso</strong>
+              <strong>2. L'ingranaggio</strong>
+              <p>
+                Ruotalo per allineare un operatore con la gemma dell'anello che
+                vuoi modificare.
+              </p>
+            </article>
+            <article>
+              <strong>3. I flussi</strong>
               <p>
                 Il flusso verde indica le gemme che saranno coinvolte. I link lo
                 prolungano in una catena.
               </p>
             </article>
             <article>
-              <strong>3. Lancia l’impulso</strong>
+              <strong>4. L'impulso</strong>
               <p>
                 L’impulso centrale applica tutte le operazioni previste dal
                 flusso attivo.
-              </p>
-            </article>
-            <article>
-              <strong>4. Porta tutto a zero</strong>
-              <p>
-                Il livello termina quando tutte le gemme esterne sono a zero. In
-                Avventura e Time Attack gli impulsi determinano le stelle.
               </p>
             </article>
           </div>
@@ -235,14 +240,33 @@ interface GuideMode {
       }
       .hero,
       .guide-section {
-        background: linear-gradient(145deg, #17251f, #101915);
-        border: 1px solid #71572e;
-        border-radius: 16px;
-        padding: 24px;
+        border-style: solid;
+        border-width: 34px 30px 46px;
+        border-image-source: url("/assets/ui/fantasy_bg/panel/panel2-set1.png");
+        border-image-slice: 180 fill;
+        border-image-width: 76px;
+        border-image-repeat: stretch;
+        padding: 0 4px;
         margin-bottom: 18px;
       }
       .hero {
-        background: radial-gradient(circle at top right, #326744, #142017 62%);
+        border-image-source: url("/assets/ui/fantasy_bg/panel/panel2-set2.png");
+      }
+      .game-logo {
+        display: block;
+        width: min(100%, 460px);
+        height: auto;
+        margin: 0 auto 12px;
+        filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.42));
+      }
+      .game-subtitle {
+        margin: -8px 0 18px;
+        color: #f1cc6c;
+        font-size: clamp(14px, 3.5vw, 20px);
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-align: center;
+        text-shadow: 0 3px 5px rgba(0, 0, 0, 0.55);
       }
       h1,
       h2,
@@ -297,8 +321,8 @@ interface GuideMode {
       .mode-grid article,
       .effect-card,
       .action-grid article {
-        background: #0d1612;
-        border: 1px solid #314a38;
+        background: rgba(8, 17, 12, 0.62);
+        border: 1px solid rgba(127, 157, 105, 0.52);
         border-radius: 12px;
         padding: 14px;
       }
@@ -380,7 +404,9 @@ interface GuideMode {
         }
         .hero,
         .guide-section {
-          padding: 18px;
+          border-width: 28px 22px 38px;
+          border-image-width: 58px;
+          padding: 0 2px;
         }
         .rule-grid,
         .mode-grid,
@@ -394,7 +420,7 @@ interface GuideMode {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GameGuidePage {
-  readonly gemEffects = effectTutorialsForScope(EffectScope.GEM);
+  readonly gemEffects = effectTutorialsForScope(EffectScope.GEM).filter((effect) => !effect.id.startsWith("BASIC:"));
   readonly linkEffects = effectTutorialsForScope(EffectScope.LINK);
   readonly areaEffects = effectTutorialsForScope(EffectScope.AREA);
   tutorialAtlas(effect: EffectTutorialDefinition): "effects" | "effect-actions" | undefined {

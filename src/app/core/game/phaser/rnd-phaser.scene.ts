@@ -763,9 +763,10 @@ export class RdnPhaserScene extends Phaser.Scene {
     const color = Number.parseInt(tutorial.color.slice(1), 16);
     this.add.image(cx, cy, this.infoPanelTexture()).setDisplaySize(360, 410).setDepth(depth).setInteractive();
     this.add.rectangle(cx, cy, 360, 410, 0x101c18, 0).setStrokeStyle(3, color).setDepth(depth + 1);
-    this.label(cx, cy - 166, "NUOVO EFFETTO", 15, 0xf8dc8b).setDepth(depth + 1);
-    this.effectLegendIcon(cx - 112, cy - 120, tutorial.iconFrame, color, depth + 1, tutorial.iconTexture);
-    this.label(cx - 88, cy - 120, tutorial.title.toUpperCase(), 20, color).setOrigin(0, .5).setDepth(depth + 1);
+    const isBasicRule = tutorial.id.startsWith("BASIC:");
+    this.label(cx, cy - 166, isBasicRule ? "REGOLE BASE" : "NUOVO EFFETTO", 15, 0xf8dc8b).setDepth(depth + 1);
+    if (tutorial.iconFrame) this.effectLegendIcon(cx - 112, cy - 120, tutorial.iconFrame, color, depth + 1, tutorial.iconTexture);
+    this.label(isBasicRule ? cx : cx - 88, cy - 120, tutorial.title.toUpperCase(), 20, color).setOrigin(isBasicRule ? .5 : 0, .5).setDepth(depth + 1);
     this.wrappedLabel(cx - 144, cy - 80, tutorial.summary, 288, 15, 0xffffff, depth + 1);
     this.label(cx - 144, cy - 28, "COSA FA", 12, 0xf8dc8b).setOrigin(0, 0).setDepth(depth + 1);
     this.wrappedLabel(cx - 144, cy - 10, tutorial.behavior, 288, 14, 0xe6dfc3, depth + 1);

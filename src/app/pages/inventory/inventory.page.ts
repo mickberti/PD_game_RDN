@@ -64,13 +64,19 @@ import { UIHeaderComponent } from "../../shared/components/ui-header.component";
             variant="dark"
             styleClass="action-detail"
             (click)="$event.stopPropagation()"
-            ><button class="action-detail__close" (click)="close()">×</button
-            ><ui-sprite [frame]="{ name: action.icon, effect: 'none' }" />
-            <h2>{{ action.label }}</h2>
+            ><button
+              class="action-detail__close"
+              type="button"
+              aria-label="Chiudi dettagli azione"
+              (click)="close()"><ui-sprite [frame]="{ name: 'icon-close', effect: 'none' }" /></button
+            ><div class="action-detail__title">
+              <ui-sprite class="action-detail__icon" [frame]="{ name: action.icon, effect: 'none' }" />
+              <h2>{{ action.label }}</h2>
+            </div>
             <p>{{ action.description }}</p>
             <h3>Tutorial</h3>
             <p>{{ action.tutorial }}</p>
-            <button type="button" (click)="close()">CHIUDI</button></ui-panel
+            </ui-panel
           >
         </div>
       }</ion-content
@@ -141,7 +147,20 @@ import { UIHeaderComponent } from "../../shared/components/ui-header.component";
         max-width: 390px;
         text-align: center;
       }
+      .action-detail__title {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin: 0 34px 14px;
+      }
+      .action-detail__icon {
+        flex: 0 0 46px;
+        width: 46px;
+        height: 46px;
+      }
       .action-detail h2 {
+        margin: 0;
         color: #fff0a6;
       }
       .action-detail h3 {
@@ -158,11 +177,19 @@ import { UIHeaderComponent } from "../../shared/components/ui-header.component";
       }
       .action-detail__close {
         position: absolute;
-        right: 10px;
+        left: 10px;
         top: 8px;
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        padding: 4px !important;
         background: transparent !important;
         border: 0 !important;
-        font-size: 24px;
+      }
+      .action-detail__close ui-sprite {
+        width: 26px;
+        height: 26px;
       }
       @media (max-width: 360px) {
         .action-grid {

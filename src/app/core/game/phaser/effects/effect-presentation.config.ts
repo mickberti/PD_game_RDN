@@ -15,11 +15,11 @@ export const TIMER_PRESENTATION = {
 /** Central effect-type to atlas-frame map. `missing-effect` is deliberately a development fallback only. */
 export const EFFECT_ASSET_FRAME: Readonly<Record<string, string>> = {
   SHIELD: "effect-shield", WALL: "effect-wall", ICE: "effect-ice", FIRE: "fire", MIRROR: "effect-mirror-sign", AMPLIFIER: "effect-amplifier", INVERTER: "effect-inverter", TIMER: "effect-timer", CORRUPTION: "effect-corruption",
-  ECHO: "effect-echo-link", AMPLIFY: "effect-double-link", INVERT: "effect-mirror-link", CHAIN: "break-chain", BOMB: "effect-area-bomb",
+  ECHO: "effect-echo-link", AMPLIFY: "effect-double-link", INVERT: "effect-mirror-link", CHAIN: "effect-chain-link", BOMB: "effect-area-bomb",
 };
 
 export const effectAssetFrame = (effect: ResolvedEffect): string => EFFECT_ASSET_FRAME[effect.config.type] ?? "missing-effect";
-export const effectAssetTexture = (effect: ResolvedEffect): string => (effect.config.scope === EffectScope.GEM && effect.config.type === GemEffectType.FIRE) || (effect.config.scope === EffectScope.LINK && effect.config.type === "CHAIN") ? "rdn-effect-actions" : "rdn-effects";
+export const effectAssetTexture = (effect: ResolvedEffect): string => effect.config.scope === EffectScope.GEM && effect.config.type === GemEffectType.FIRE ? "rdn-effect-actions" : "rdn-effects";
 /** Atlas source used by Angular UI surfaces; Phaser uses the texture names above. */
 export const effectAssetAtlasSource = (effect: ResolvedEffect): "effects" | "effect-actions" => effectAssetTexture(effect) === "rdn-effect-actions" ? "effect-actions" : "effects";
 
