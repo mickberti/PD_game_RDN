@@ -6,6 +6,8 @@ import { AppNavigationService } from "../../core/services/app/navigation/app-nav
 import { UiSpriteComponent } from "../basic/ui-sprite.component";
 import { GameStateService } from "../../core/services/state/game-state.service";
 import { AwardProgressionService } from "../../core/services/progression/award-progression.service";
+import { DailyLoginAwardService } from "../../core/services/progression/daily-login-award.service";
+import { TimeService } from "../../core/services/utils/time.service";
 
 @Component({
   selector: "ui-bottom-nav",
@@ -29,8 +31,12 @@ export class UIBottomNavComponent {
 	readonly nav = inject(AppNavigationService);
 	private readonly state = inject(GameStateService);
 	private readonly awardProgression = inject(AwardProgressionService);
-	readonly hasClaimableAwards = computed(() => this.awardProgression
-	  .resolveVisibleAwards(this.state.catalog().awards, this.state.progress())
-	  .some((award) => award.state === "collect"));
+	private readonly dailyLoginAwards = inject(DailyLoginAwardService);
+	private readonly time = inject(TimeService);
+	readonly hasClaimableAwards = computed(() => {
+	  const progress = this.state.progress();
+	  return this.dailyLoginAwards.resolveAwards(progress, this.time.nowDate()).some((award) => award.state === "collect")
+	    || this.awardProgression.resolveVisibleAwards(this.state.catalog().awards, progress).some((award) => award.state === "collect");
+	});
 	
 }

@@ -36,6 +36,14 @@ export interface ActivatedEventProgress {
   endsAt?: string;
 }
 
+/** Login calendar state, keyed by Europe/Rome calendar days. */
+export interface DailyLoginProgress {
+  lastLoginDay?: string;
+  lastDailyRewardDay?: string;
+  streak: number;
+  lastStreakRewardCycle: number;
+}
+
 export interface TimeShop {
   availability: AvailabilityWindow;
   item: ShopItem[];
@@ -59,6 +67,7 @@ export interface GameProgress {
   gameModeLevels: Record<string, number>;
   /** Best star result for each completed RDN level, grouped by game mode. */
   gameModeLevelStars: Record<string, Record<string, number>>;
+  dailyLogin: DailyLoginProgress;
   claimedStatisticAwardTiers: Partial<Record<StatisticType, number>>;
   purchasedShopItems?: Record<string, PurchasedShopItemProgress>;
   activatedEvents?: Record<string, ActivatedEventProgress>;
@@ -98,6 +107,7 @@ export const DEFAULT_GAME_PROGRESS: GameProgress = {
   statistics: DEFAULT_PLAYER_STATISTICS,
   gameModeLevels: {},
   gameModeLevelStars: {},
+  dailyLogin: { streak: 0, lastStreakRewardCycle: 0 },
   claimedStatisticAwardTiers: {},
   inventory: DEFAULT_GAME_INVENTORY,
   shop: DEFAULT_SHOP,

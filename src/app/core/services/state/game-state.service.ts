@@ -33,6 +33,7 @@ import { EMPTY_GAME_CATALOG, GameCatalog } from "../../models/game-catalog.model
 import { DirectRouteAccessService } from "../app/navigation/direct-route-access.service";
 import { ProgressStoreService } from "./progress-store.service";
 import { calculatePlayerStarProgression } from "../progression/player-star-progression.service";
+import { DailyLoginAwardService } from "../progression/daily-login-award.service";
 
 export type GameDataSourceMode = "mock" | "remote";
 export type BootstrapStepId = "theme" | "serverTime" | "firebaseAuth" | "playerProfile" | "gameData" | "routing";
@@ -80,11 +81,13 @@ export class GameStateService {
   private readonly shopService = inject(ShopService);
   private readonly itemService = inject(ItemService);
   private readonly directRouteAccess = inject(DirectRouteAccessService);
+  private readonly dailyLoginAwards = inject(DailyLoginAwardService);
   private readonly remoteGameDataProvider = inject(RemoteGameDataProvider);
   private readonly mockGameDataProvider = inject(MockGameDataProvider);
   private readonly logger = inject(LoggerService);
   private readonly timeService = inject(TimeService);
   private lastLoadedUid: string | null = null;
+  private freshAccountDefaultsAppliedUid: string | null = null;
   private loadVersion = 0;
   private bootstrapCurrentStep: BootstrapStepId = "theme";
 
@@ -262,8 +265,15 @@ export class GameStateService {
 
         const uid = user?.uid ?? null;
         const authInitializationError = this.auth.initializationError;
-        if (user && player?.createdAt === null) {
+        if (user && player?.createdAt === null && this.freshAccountDefaultsAppliedUid !== uid) {
           this.applyNewAccountDefaults();
+          this.freshAccountDefaultsAppliedUid = uid;
+          // The first auth emission can arrive before PlayerService has created
+          // the profile. Reload after the profile confirms that this is new so
+          // a previously selected Mock provider cannot seed the account.
+          this.lastLoadedUid = null;
+        } else if (!user) {
+          this.freshAccountDefaultsAppliedUid = null;
         }
         this.progressStore.setRemotePersistenceContext({
           enabled: this.isRemoteMode(),
@@ -304,16 +314,21 @@ export class GameStateService {
             return;
           }
 
+          const dailyLogin = this.dailyLoginAwards.recordLogin(data.progress, this.timeService.nowDate());
+          const dataWithLogin = { ...data, progress: dailyLogin.progress };
           this.updateState({
-            ...data,
-            error: authInitializationError ?? data.error,
+            ...dataWithLogin,
+            error: authInitializationError ?? dataWithLogin.error,
             loading: false,
             lastRefreshAt: this.nowIso(),
           });
+          if (dailyLogin.recorded) {
+            void this.persistProgressNow().catch(() => undefined);
+          }
           this.setBootstrapStep(
             "gameData",
-            data.error ? "error" : "success",
-            data.error ?? "Ricevuti",
+            dataWithLogin.error ? "error" : "success",
+            dataWithLogin.error ?? "Ricevuti",
           );
           this.setBootstrapStep("routing", "success", "Pronto");
         } catch (error) {

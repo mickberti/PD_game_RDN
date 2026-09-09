@@ -53,14 +53,7 @@ export class UIAwardBoxComponent {
   }
 
   isLocked(){
-	if(this.stat === 'locked' || !this.item.progress){
-		return this.stat;
-	}
-	if(this.item.progress?.current < this.item.progress?.total){
-		return 'locked';
-	}
-
-	return 'collect';
+	return this.item.state;
   }
 }
 export { UIAwardBoxComponent as UIAwardChestComponent };

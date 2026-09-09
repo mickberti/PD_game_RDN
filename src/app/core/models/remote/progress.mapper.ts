@@ -1,4 +1,4 @@
-import { DEFAULT_GAME_PROGRESS, DEFAULT_PLAYER_STATISTICS, GameInventory, GameProgress } from './progress.models';
+import { DEFAULT_GAME_PROGRESS, DEFAULT_PLAYER_STATISTICS, DailyLoginProgress, GameInventory, GameProgress } from './progress.models';
 import { RDN_ACTION_IDS, RdnActionId } from '../../game/phaser/config/rdn-actions.config';
 
 export interface MockGameProgressSeed { actions?: Partial<Record<RdnActionId, number>>; }
@@ -32,6 +32,21 @@ const normalizeGameModeLevelStars = (value: unknown): Record<string, Record<stri
   }, {});
 };
 
+const normalizeCalendarDay = (value: unknown): string | undefined =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
+
+const normalizeDailyLogin = (value: unknown): DailyLoginProgress => {
+  const raw = value && typeof value === 'object' && !Array.isArray(value)
+    ? value as Partial<DailyLoginProgress>
+    : {};
+  return {
+    lastLoginDay: normalizeCalendarDay(raw.lastLoginDay),
+    lastDailyRewardDay: normalizeCalendarDay(raw.lastDailyRewardDay),
+    streak: Math.max(0, Math.floor(Number(raw.streak) || 0)),
+    lastStreakRewardCycle: Math.max(0, Math.floor(Number(raw.lastStreakRewardCycle) || 0)),
+  };
+};
+
 export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | null): GameProgress => {
   const inventory = normalizeInventory(progress);
 
@@ -52,6 +67,7 @@ export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | nu
       ...(progress?.gameModeLevels ?? {}),
     },
     gameModeLevelStars: normalizeGameModeLevelStars(progress?.gameModeLevelStars),
+    dailyLogin: normalizeDailyLogin(progress?.dailyLogin),
     activatedEvents: {
       ...(progress?.activatedEvents ?? {}),
     },

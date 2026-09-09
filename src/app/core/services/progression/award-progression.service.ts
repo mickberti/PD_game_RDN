@@ -1,24 +1,27 @@
 import { Injectable } from '@angular/core';
 
 import { AwardItem } from '../../models/game.models';
-import { GameProgress, StatisticType } from '../../models/remote/progress.models';
+import { GameProgress, StatisticDefinition, StatisticType } from '../../models/remote/progress.models';
+
+type StatisticAwardItem = AwardItem & { statisticDefinition: StatisticDefinition };
 
 @Injectable({ providedIn: 'root' })
 export class AwardProgressionService {
   resolveVisibleAwards(awards: AwardItem[], progress: GameProgress, type?: string): AwardItem[] {
     const groupedAwards = awards
-      .filter((award) => !type || award.type === type)
+      .filter((award): award is StatisticAwardItem =>
+        !!award.statisticDefinition && (!type || award.type === type))
       .reduce((groups, award) => {
         const statisticType = award.statisticDefinition.type;
         return {
           ...groups,
           [statisticType]: [...(groups[statisticType] ?? []), award],
         };
-      }, {} as Partial<Record<StatisticType, AwardItem[]>>);
+      }, {} as Partial<Record<StatisticType, StatisticAwardItem[]>>);
 
     const visibleAwards: AwardItem[] = [];
 
-    for (const [statisticType, statisticAwards] of Object.entries(groupedAwards) as [StatisticType, AwardItem[]][]) {
+    for (const [statisticType, statisticAwards] of Object.entries(groupedAwards) as [StatisticType, StatisticAwardItem[]][]) {
       const claimedTier = progress.claimedStatisticAwardTiers[statisticType as StatisticType] ?? 0;
       const sortedAwards = [...(statisticAwards ?? [])].sort((first, second) => (first.progress?.total ?? 0) - (second.progress?.total ?? 0));
       const nextAward = sortedAwards[claimedTier] ?? sortedAwards[sortedAwards.length - 1];
@@ -31,7 +34,7 @@ export class AwardProgressionService {
     return visibleAwards;
   }
 
-  resolveAward(award: AwardItem, progress: GameProgress): AwardItem {
+  resolveAward(award: StatisticAwardItem, progress: GameProgress): AwardItem {
     const statisticType = award.statisticDefinition.type;
     const total = award.progress?.total ?? 1;
     const current = progress.statistics[statisticType] ?? 0;
@@ -54,6 +57,7 @@ export class AwardProgressionService {
   }
 
   claimAward(progress: GameProgress, award: AwardItem): GameProgress {
+    if (!award.statisticDefinition) return progress;
     const statisticType = award.statisticDefinition.type;
     const tierIndex = this.getAwardTierIndex(award.id);
 

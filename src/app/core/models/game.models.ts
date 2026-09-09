@@ -256,13 +256,15 @@ export interface GlobalItem {
 
 export interface AwardItem {
   id: string;
+  /** Statistic awards come from the catalogue; login awards are generated from player state. */
+  source?: "statistic" | "daily-login" | "login-streak";
   framePanel?: FrameItem;
   frame?: FrameItem;
   type?: ItemType;
   title: string;
   subtitle?: string;
   icon?: IconItem;
-  statisticDefinition: StatisticDefinition;
+  statisticDefinition?: StatisticDefinition;
   progress?: Progress | null;
   stars?: number;
   state: CollectibleState;

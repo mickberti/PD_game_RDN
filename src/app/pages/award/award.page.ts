@@ -26,6 +26,8 @@ import { GameStateService } from "../../core/services/state/game-state.service";
 import { UIActionFeedbackOverlayComponent } from "../../shared/components/ui-action-feedback-overlay.component";
 import { FloatingNavigationService } from "../../core/services/app/navigation/floating-navigation.service";
 import { AwardProgressionService } from "../../core/services/progression/award-progression.service";
+import { DailyLoginAwardService } from "../../core/services/progression/daily-login-award.service";
+import { TimeService } from "../../core/services/utils/time.service";
 
 @Component({
   selector: "app-award",
@@ -103,6 +105,8 @@ export class AwardPage implements OnInit {
   readonly nav = inject(AppNavigationService);
   readonly floating = inject(FloatingNavigationService);
   private readonly awardProgression = inject(AwardProgressionService);
+  private readonly dailyLoginAwards = inject(DailyLoginAwardService);
+  private readonly time = inject(TimeService);
 
   contextActions = this.floating.contextActions;
   readonly purchaseFeedback = signal<{
@@ -118,22 +122,38 @@ export class AwardPage implements OnInit {
     this.updateCurrentItems();
   });
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    await this.time.sync();
     this.updateCurrentItems();
   }
 
   private updateCurrentItems(): void {
+    const progress = this.state.progress();
     this.currentItem.set(
-      this.awardProgression.resolveVisibleAwards(
-        this.state.catalog().awards,
-        this.state.progress(),
-        undefined,
-      ),
+      [
+        ...this.dailyLoginAwards.resolveAwards(progress, this.time.nowDate()),
+        ...this.awardProgression.resolveVisibleAwards(this.state.catalog().awards, progress),
+      ],
     );
   }
 
   async collectReward(award: AwardItem): Promise<void> {
     if (award.state !== "collect") return;
+    if (award.source === "daily-login" || award.source === "login-streak") {
+      const progress = this.dailyLoginAwards.claim(this.state.progress(), award, this.time.nowDate());
+      if (!progress) return;
+      this.state.updateProgress(progress);
+      if (award.reward) {
+        this.purchaseFeedback.set({
+          frame: award.reward.frame,
+          text: `+${award.reward.amount ?? 1}`,
+          variant: "gain",
+        });
+      }
+      await this.state.persistProgressNow().catch(() => undefined);
+      return;
+    }
+    if (!award.statisticDefinition) return;
     if (award.reward) {
       this.collectPrice(award.reward);
       this.purchaseFeedback.set({
