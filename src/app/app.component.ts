@@ -8,6 +8,7 @@ import { GameStateService } from "./core/services/state/game-state.service";
 import { Router } from "@angular/router";
 import { register } from 'swiper/element/bundle';
 import { DirectRouteAccessService } from "./core/services/app/navigation/direct-route-access.service";
+import { AudioService } from "./core/audio/audio.service";
 
 register();
 
@@ -31,6 +32,7 @@ export class AppComponent {
 	private readonly loginService = inject(LoginService);
 	private readonly logger = inject(LoggerService);
 	private readonly directRouteAccess = inject(DirectRouteAccessService);
+	private readonly audio = inject(AudioService);
 
 	// 🔥 signal diretto (no RxJS)
 	readonly initialized = this.gameState.initialized;
@@ -44,7 +46,7 @@ export class AppComponent {
 	}
 	
 	async initializeApp() {
-	  
+	  this.audio.initialize();
 	  this.timeService.setupAutoSync();
 	  this.loginService.refreshToken(); // 🔥 refresh token all'avvio (se presente) TEST DA ELIMINARE SE NON SERVE
 	  this.handleAuthRouting();

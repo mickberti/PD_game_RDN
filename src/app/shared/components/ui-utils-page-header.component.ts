@@ -1,6 +1,7 @@
 import { CommonModule } from "@angular/common";
 import { Component, Input } from "@angular/core";
 import { RouterLink, RouterLinkActive } from "@angular/router";
+import { environment } from "../../../environments/environment";
 
 type UtilityGroup = "frame" | "component" | "data" | "admin" | "game";
 
@@ -40,6 +41,7 @@ const GAME_LINKS: UtilityHeaderLink[] = [
   { label: "Soluzioni Time Attack", route: "/utils/rnd-solutions/time-attack" },
   { label: "Effetti Avventura", route: "/utils/rnd-effects/adventure" },
   { label: "Effetti Time Attack", route: "/utils/rnd-effects/time-attack" },
+  { label: "Audio Debug", route: "/utils/audio-debug" },
 ];
 
 @Component({
@@ -161,7 +163,7 @@ export class UiUtilsPageHeaderComponent {
 	    }
 
     if (this.group === "game") {
-      return GAME_LINKS;
+      return environment.production ? GAME_LINKS.filter((link) => link.route !== "/utils/audio-debug") : GAME_LINKS;
     }
 
     return COMPONENT_LINKS;

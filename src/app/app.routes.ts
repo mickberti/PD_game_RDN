@@ -2,6 +2,7 @@ import { Routes } from "@angular/router";
 import { AuthGuard } from "./core/guards/auth.guard";
 import { AdminGuard } from "./core/guards/admin.guard";
 import { AdminShellPage } from "./pages/utils/admin/admin-shell.page";
+import { AudioDebugGuard } from "./core/guards/audio-debug.guard";
 
 export const routes: Routes = [
   { path: "", redirectTo: "boot", pathMatch: "full" },
@@ -124,6 +125,11 @@ export const routes: Routes = [
 	canActivate: [AuthGuard],
     loadComponent: () =>
       import("./pages/settings/settings.page").then((m) => m.SettingsPage),
+  },
+  {
+    path: "utils/audio-debug",
+    canActivate: [AuthGuard, AudioDebugGuard],
+    loadComponent: () => import("./pages/utils/audio-debug/audio-debug.page").then((m) => m.AudioDebugPage),
   },
   {
     path: "inventory",

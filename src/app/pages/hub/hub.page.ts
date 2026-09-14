@@ -19,6 +19,7 @@ import { GameplaySessionService } from "../../core/services/gameplay/gameplay-se
 import { RDN_MAX_LEVEL } from "../../core/game/phaser/config/levels.config";
 import { PuzzleDifficulty } from "../../core/game/phaser/puzzle.types";
 import { FreeEffectSelections } from "../../core/models/gameplay-session.model";
+import { AudioService } from "../../core/audio/audio.service";
 
 const ACTIVE_GAME_MODE_IDS = new Set(["adventure", "time-attack", "free", "ranked"]);
 
@@ -193,6 +194,7 @@ interface LevelPickerItem {
   `],
 })
 export class HubPage {
+  private readonly audio = inject(AudioService);
   readonly theme = inject(ThemeService);
   readonly nav = inject(AppNavigationService);
   readonly floating = inject(FloatingNavigationService);
@@ -210,6 +212,7 @@ export class HubPage {
   readonly freeThemes = [1, 2, 3] as const;
   readonly freeTheme = signal<1 | 2 | 3>(3);
   readonly freeEffectSelections = signal<FreeEffectSelections>({ gem: false, link: false, area: false });
+  constructor() { this.audio.playMusic("menu.main"); }
   readonly freeEffectOptions: readonly { key: keyof FreeEffectSelections; label: string }[] = [
     { key: "gem", label: "GEMMA" }, { key: "link", label: "LINK" }, { key: "area", label: "AREA" },
   ];

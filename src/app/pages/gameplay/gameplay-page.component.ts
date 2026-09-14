@@ -27,6 +27,8 @@ import { EffectTutorialService } from "../../core/services/gameplay/effect-tutor
 import { RDN_LEVEL_COIN_REWARDS, rdnCoinsForStars } from "../../core/game/phaser/config/rdn-level-rewards.config";
 import { RdnRewardedAdService } from "../../core/services/gameplay/rdn-rewarded-ad.service";
 import { StatisticType } from "../../core/models/remote/progress.models";
+import { AudioService } from "../../core/audio/audio.service";
+import { MODE_AUDIO_CONFIG } from "../../core/audio/audio.config";
 
 @Component({
   selector: "app-gameplay",
@@ -91,6 +93,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly playground = inject(EffectPlaygroundService);
   private readonly effectTutorial = inject(EffectTutorialService);
   private readonly rewardedAd = inject(RdnRewardedAdService);
+  private readonly audio = inject(AudioService);
   readonly levelReward = signal<{ coins: number; bonusClaimed: boolean; adUnavailable: boolean } | null>(null);
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
@@ -102,6 +105,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private timeAttackEndAt?: number;
   private timeAttackPausedAt?: number;
   private timeAttackDurationSeconds?: number;
+  private readonly timeAttackAudioMarkers = new Set<number>();
   private readonly outcome = signal<"win" | "lose" | null>(null);
   private readonly timeRemaining = signal<number | null>(null);
   private readonly timeRemainingMs = signal<number | null>(null);
@@ -126,6 +130,7 @@ export class GameplayPageComponent implements AfterViewInit {
       this.levelReward.set(null);
       this.showInfo.set(false);
       this.resetTimeAttackTimer();
+      this.playModeMusic();
     }, { injector: this.injector });
     this.destroyRef.onDestroy(() => {
       this.hostResizeObserver?.disconnect();
@@ -154,6 +159,7 @@ export class GameplayPageComponent implements AfterViewInit {
       linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
       nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
       previousPlaygroundScenario: () => this.changePlaygroundScenario(-1),
+      audioCue: (cue) => this.audio.playSfx(cue as import("../../core/audio/audio.models").AudioCue),
     });
     this.game = new Phaser.Game({
       type: Phaser.AUTO,
@@ -200,6 +206,7 @@ export class GameplayPageComponent implements AfterViewInit {
       { injector: this.injector },
     );
     this.resetTimeAttackTimer();
+    this.playModeMusic();
   }
   ionViewDidEnter(): void {
     this.resizeGame();
@@ -279,6 +286,7 @@ export class GameplayPageComponent implements AfterViewInit {
   }
   private resetTimeAttackTimer(): void {
     this.stopTimeAttackTimer();
+    this.timeAttackAudioMarkers.clear();
     if (this.session.variant !== "time-attack") { this.timeRemaining.set(null); this.timeRemainingMs.set(null); this.timeAttackDurationSeconds = undefined; return; }
     const level = this.puzzle.level();
     const impulses = level.optimalCost?.impulses ?? 0;
@@ -294,6 +302,7 @@ export class GameplayPageComponent implements AfterViewInit {
       const remaining = Math.ceil(remainingMs / 1000);
       this.timeRemainingMs.set(remainingMs);
       this.timeRemaining.set(remaining);
+      this.updateTimeAttackAudio(remaining);
       if (remainingMs === 0) this.finishTimeAttack("lose");
     };
     update();
@@ -319,6 +328,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (this.outcome() !== null) return;
     this.stopTimeAttackTimer();
     this.outcome.set(outcome);
+    this.playOutcomeAudio(outcome);
   }
   private resetActionInstances(): void {
     const inventory = this.state.inventoryActions();
@@ -360,8 +370,10 @@ export class GameplayPageComponent implements AfterViewInit {
   /** User actions do not dispatch an impulse, so they must finalize victory themselves. */
   private completeWonLevel(): boolean {
     if (!this.puzzle.state().won || hasPuzzleFailed(this.puzzle.level(), this.puzzle.state())) return false;
-    if (this.session.variant !== "free" && this.session.variant !== "effect-playground") this.levelReward.set(this.recordCompletedLevel(getPuzzleStars(this.puzzle.level(), this.puzzle.state())));
+    const stars = getPuzzleStars(this.puzzle.level(), this.puzzle.state());
+    if (this.session.variant !== "free" && this.session.variant !== "effect-playground") this.levelReward.set(this.recordCompletedLevel(stars));
     this.stopTimeAttackTimer();
+    this.playOutcomeAudio("win", stars === 3);
     if (this.session.variant !== "effect-playground") this.puzzle.clearSavedRun(this.session.variant as "adventure" | "time-attack" | "free");
     return true;
   }
@@ -425,6 +437,25 @@ export class GameplayPageComponent implements AfterViewInit {
   }
   private exitGameplay(): void {
     void this.nav.go("/hub");
+  }
+  private playModeMusic(): void {
+    const cue = this.session.variant === "free" ? MODE_AUDIO_CONFIG.FREE.music
+      : this.session.variant === "time-attack" ? MODE_AUDIO_CONFIG.TIME_ATTACK.music
+      : MODE_AUDIO_CONFIG.ADVENTURE.music;
+    this.audio.playMusic(cue);
+  }
+  private playOutcomeAudio(outcome: "win" | "lose", perfect = false): void {
+    this.audio.playSfx(outcome === "win" ? perfect ? "game.perfect" : "game.win" : "game.fail");
+    this.audio.duckMusic(outcome === "win" ? .2 : .35);
+  }
+  private updateTimeAttackAudio(remaining: number): void {
+    if (this.session.variant !== "time-attack") return;
+    const intensity = remaining <= 10 ? "CRITICAL" : remaining <= 20 ? "WARNING" : "NORMAL";
+    this.audio.setTimeAttackIntensity(intensity);
+    const marker = remaining === 20 || remaining === 10 || remaining === 5 || remaining === 3 || remaining === 2 || remaining === 1 ? remaining : undefined;
+    if (marker === undefined || this.timeAttackAudioMarkers.has(marker)) return;
+    this.timeAttackAudioMarkers.add(marker);
+    this.audio.playSfx(marker === 20 ? "time.warning" : "time.critical");
   }
   private sameSession(a: GameplaySession, b: GameplaySession): boolean {
     return a.launchId === b.launchId;

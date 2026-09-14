@@ -17,6 +17,7 @@ import { RDN_MAX_LEVEL } from "../../core/game/phaser/config/levels.config";
 import { environment } from "../../../environments/environment";
 import { GameplaySessionService } from "../../core/services/gameplay/gameplay-session.service";
 import { EffectTutorialService } from "../../core/services/gameplay/effect-tutorial.service";
+import { AudioService } from "../../core/audio/audio.service";
 
 const THEMES: GameTheme[] = ["fantasy_bg"];
 
@@ -42,10 +43,13 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
       </ui-panel>
 
       <ui-panel [variant]="'primary'" [title]="t('effects')" >
-        <ui-setting-box type="music" [title]="t('music')" (toggle)="toggleMusic()"></ui-setting-box>
-        <ui-setting-box type="sfx" [title]="t('sfx')" (toggle)="toggleSfx()"></ui-setting-box>
+        <ui-setting-box type="music" [title]="t('music')" [checked]="!audio.musicMuted()" (toggle)="toggleMusic()"></ui-setting-box>
+        <label style="display:grid;gap:5px;padding:0 12px 13px;color:#f7e9c7">Volume musica: {{ volumePercent(audio.musicVolume()) }}%<input type="range" min="0" max="100" [value]="volumePercent(audio.musicVolume())" (input)="setMusicVolume($any($event.target).value)" /></label>
+        <ui-setting-box type="sfx" [title]="t('sfx')" [checked]="!audio.sfxMuted()" (toggle)="toggleSfx()"></ui-setting-box>
+        <label style="display:grid;gap:5px;padding:0 12px 13px;color:#f7e9c7">Volume effetti: {{ volumePercent(audio.sfxVolume()) }}%<input type="range" min="0" max="100" [value]="volumePercent(audio.sfxVolume())" (input)="setSfxVolume($any($event.target).value)" /></label>
         <ui-setting-box type="service" [title]="t('gameService')" [subtitle]="gameServiceModeLabel()" [checked]="gameState.isMockMode()" (toggle)="toggleService()"></ui-setting-box>
         <ui-setting-box type="task" title="URL diretto senza boot" [subtitle]="directRouteAccessLabel()" [checked]="directRouteAccess.enabled()" (toggle)="toggleDirectRouteAccess()"></ui-setting-box>
+        @if (audioDebugAvailable) { <div class="settings-links"><ui-button variant="complementary" (pressed)="openAudioDebug()">Audio Debug / Sound Test</ui-button></div> }
       </ui-panel>
 
       <ui-panel [variant]="'primary'" [title]="t('theme')" >
@@ -136,29 +140,33 @@ export class SettingsPage {
   private readonly statisticProgress = inject(StatisticProgressService);
   private readonly gameplaySession = inject(GameplaySessionService);
   readonly effectTutorial = inject(EffectTutorialService);
+  readonly audio = inject(AudioService);
 
   readonly activeTheme = computed(() => this.theme.activeTheme());
   readonly isAdmin = computed(() => this.gameState.player()?.role === 'admin');
-  readonly music = signal(true);
-  readonly sfx = signal(true);
   readonly gameServiceModeLabel = computed(() => this.gameState.isMockMode() ? 'Mock' : 'Remote');
   readonly directRouteAccessLabel = computed(() => this.directRouteAccess.enabled() ? 'Accesso diretto attivo' : 'Passa da boot');
   readonly resettingProgress = signal(false);
   readonly resettingAwards = signal(false);
   readonly adminLevelActionPending = signal(false);
   readonly effectPlaygroundAvailable = computed(() => this.isAdmin());
+  readonly audioDebugAvailable = !environment.production;
 
   t(key: string): string {
     return this.language.t(key);
   }
 
   toggleMusic(): void {
-    this.music.update((value) => !value);
+    this.audio.toggleMusicMute();
   }
 
   toggleSfx(): void {
-    this.sfx.update((value) => !value);
+    this.audio.toggleSfxMute();
   }
+  volumePercent(value: number): number { return Math.round(value * 100); }
+  setMusicVolume(value: string): void { this.audio.setMusicVolume(Number(value) / 100); }
+  setSfxVolume(value: string): void { this.audio.setSfxVolume(Number(value) / 100); }
+  openAudioDebug(): void { if (this.audioDebugAvailable) void this.nav.go("/utils/audio-debug"); }
 
   toggleService(): void {
     this.gameState.toggleDataSourceMode();
