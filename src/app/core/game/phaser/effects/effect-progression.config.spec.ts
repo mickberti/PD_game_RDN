@@ -44,7 +44,7 @@ describe("effect game-mode progression", () => {
     expect(createFreeModeEffectConfiguration("EXPERT", 8, 14, false)).toBeUndefined();
     const configuration = createFreeModeEffectConfiguration("EXPERT", 8, 14, true);
     expect(configuration?.enabled).toBeTrue();
-    expect(validateEffectComplexity(configuration, "free")).toEqual([]);
+    expect(validateEffectComplexity(configuration, "free", 8, "free")).toEqual([]);
   });
 
   it("enables only the selected Free effect families", () => {
@@ -52,6 +52,14 @@ describe("effect game-mode progression", () => {
     expect(linkOnly?.effects?.every((effect) => effect.target.type === EffectScope.LINK)).toBeTrue();
     const areaOnly = createFreeModeEffectConfiguration("EASY", 8, 14, { gem: false, link: false, area: true });
     expect(areaOnly?.effects?.every((effect) => effect.target.type === EffectScope.AREA)).toBeTrue();
+  });
+
+  it("applies every selected Free family independently from Adventure level gates", () => {
+    const configuration = createFreeModeEffectConfiguration("EASY", 4, 14, { gem: true, link: true, area: true });
+    const effects = configuration?.effects ?? [];
+    expect(effects.some((effect) => effect.target.type === EffectScope.GEM)).toBeTrue();
+    expect(effects.some((effect) => effect.target.type === EffectScope.LINK)).toBeTrue();
+    expect(effects.some((effect) => effect.target.type === EffectScope.AREA)).toBeTrue();
   });
 
   it("resolves the stable tier after the introduction sequence", () => {

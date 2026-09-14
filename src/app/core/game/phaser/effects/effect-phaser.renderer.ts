@@ -34,6 +34,7 @@ export class EffectPhaserRenderer {
       if (effect.config.scope === EffectScope.GEM && effect.target.type === EffectScope.GEM) this.drawGemEffect(effect, runtime, values);
       if (effect.config.scope === EffectScope.AREA && effect.target.type === EffectScope.AREA) this.drawAreaEffect(effect);
     }
+    this.drawAppliedAreaIceEffects(runtime, values);
   }
   /** Mirrors the engine's pre-impulse traversal on the static link visuals. */
   setActiveLinkPreview(events: readonly EffectEngineEvent[]): void {
@@ -126,6 +127,14 @@ export class EffectPhaserRenderer {
     this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value), "top-right", effectAssetTexture(effect));
   }
   private drawAreaEffect(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA || effect.config.scope !== EffectScope.AREA) return; const value = effect.config.type === AreaEffectType.BOMB && effect.config.value !== undefined ? `${effect.config.value > 0 ? "+" : ""}${effect.config.value}` : ""; this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect), value, "bottom-right"); }
+  /** Area ice is a runtime barrier on each target, not a declarative GEM effect. */
+  private drawAppliedAreaIceEffects(runtime?: EffectRuntimeState, values: readonly number[] = []): void {
+    for (const [gemId, remaining] of Object.entries(runtime?.areaIceRemainingStrength ?? {})) {
+      const index = Number(gemId.replace("target-", ""));
+      if (!Number.isInteger(index) || remaining <= 0 || values[index] === 0) continue;
+      this.drawEffectMarker(gemId, "effect-ice", 0x8cecff, String(remaining));
+    }
+  }
   private iconFrame(effect: ResolvedEffect): string { return effectAssetFrame(effect); }
   private iconColor(effect: ResolvedEffect): number {
     if (effect.config.scope === EffectScope.GEM) return effect.config.type === GemEffectType.SHIELD ? 0x72dfff : effect.config.type === GemEffectType.WALL ? 0xbca477 : effect.config.type === GemEffectType.ICE ? 0x8cecff : effect.config.type === GemEffectType.FIRE ? 0xff6558 : effect.config.type === GemEffectType.AMPLIFIER ? 0xffcd62 : effect.config.type === GemEffectType.TIMER ? 0xffcf75 : effect.config.type === GemEffectType.CORRUPTION ? 0xb35cff : effect.config.type === GemEffectType.INVERTER ? 0xc890ff : 0xdba0ff;
@@ -178,5 +187,5 @@ export class EffectPhaserRenderer {
   private flashGem(gemId: string | undefined, color: number): void { this.pulseGem(gemId, color, 1.42); }
   private breakWall(gemId: string | undefined, color = 0xc1a16f): void { const gem = gemId ? this.gems.get(gemId) : undefined; if (!gem) return; for (let index = 0; index < 6; index += 1) { const shard = this.scene.add.rectangle(gem.x, gem.y, 4, 4, color).setRotation(index); this.flowLayer.add(shard); const angle = index * Math.PI * 2 / 6; this.scene.tweens.add({ targets: shard, x: gem.x + Math.cos(angle) * gem.radius * 1.7, y: gem.y + Math.sin(angle) * gem.radius * 1.7, alpha: 0, duration: EFFECT_PHASER_VISUAL.wallBreakDuration, onComplete: () => shard.destroy() }); } }
   private bombBurst(gemId: string | undefined): void { const gem = gemId ? this.gems.get(gemId) : undefined; if (!gem) return; const blast = this.scene.add.circle(gem.x, gem.y, gem.radius * .7, 0xff886e, .7); this.flowLayer.add(blast); this.scene.tweens.add({ targets: blast, scale: 4, alpha: 0, duration: EFFECT_PHASER_VISUAL.bombDuration, ease: "Cubic.Out", onComplete: () => blast.destroy() }); }
-  private badge(x: number, y: number, text: string): Phaser.GameObjects.Container { const background = this.scene.add.circle(0, 0, 11, 0x151917, .98).setStrokeStyle(2, 0xe5bd62, 1); const label = this.scene.add.text(0, 0, text, { fontFamily: "Arial, Helvetica, sans-serif", fontSize: "12px", color: "#ffffff", fontStyle: "bold", stroke: "#000000", strokeThickness: 2 }).setOrigin(.5); return this.scene.add.container(x, y, [background, label]); }
+  private badge(x: number, y: number, text: string): Phaser.GameObjects.Container { const background = this.scene.add.circle(0, 0, 12, 0x151917, .98).setStrokeStyle(2, 0xe5bd62, 1); const label = this.scene.add.text(0, 0, text, { fontFamily: "Arial, Helvetica, sans-serif", fontSize: "12px", color: "#ffffff", fontStyle: "bold", stroke: "#000000", strokeThickness: 2 }).setOrigin(.5); return this.scene.add.container(x, y, [background, label]); }
 }

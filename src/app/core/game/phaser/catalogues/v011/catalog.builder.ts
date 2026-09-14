@@ -365,7 +365,7 @@ const recalculatedOuterValues = <T extends LevelDefinition>(candidate: T, result
  * board retains a deterministic playable solution. Its star budget is then
  * calibrated from the replayed route and the declared effect complexity.
  */
-const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration | undefined, reportDiagnostic?: DiagnosticReporter): T => {
+const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configuration: LevelEffectConfiguration | undefined, reportDiagnostic?: DiagnosticReporter, complexityMode: "catalogue" | "free" = "catalogue"): T => {
   if (!configuration) return level;
   const startedAt = performance.now();
   let calibrationAttempts = 0;
@@ -384,7 +384,7 @@ const regenerateEffectAwareLevel = <T extends LevelDefinition>(level: T, configu
   {
     const candidateConfiguration = withCalibratedTimerDeadlines(level, configuration);
     if (!candidateConfiguration) { fail("TIMER_DEADLINE_CALIBRATION_FAILED"); return withStats(level, false); }
-    const issues = validateEffectComplexity(candidateConfiguration, `${level.variant} level ${level.number}`, level.positions);
+    const issues = validateEffectComplexity(candidateConfiguration, `${level.variant} level ${level.number}`, level.positions, complexityMode);
     if (issues.length) { fail("COMPLEXITY_INVALID"); throw new Error(issues.join(" ")); }
     let outerValues = [...level.outerValues];
     const useSignedCalibration = needsSignedValueCalibration(candidateConfiguration);
@@ -613,11 +613,25 @@ export const getRdnLevel = (variant: "adventure" | "time-attack", number = 1): L
 /** Seedable entry point for replay, support and future ranked runs. */
 export const generateRdnPuzzle = (variant: "adventure" | "time-attack", difficulty: PuzzleDifficulty, seed: number, slotCount?: number, freeEffectsEnabled: boolean | import("./effect-progression.config").FreeEffectSelections = false): LevelDefinition => {
   const number = difficulty === "EASY" ? 10 : difficulty === "NORMAL" ? 30 : difficulty === "HARD" ? 55 : 80;
-  const board = generateBoard(number, Math.trunc(seed), "adventure", slotCount, true, true); const activeFlowCount = freeActiveFlowCount(difficulty); const generation = { ...generatedMetadata(number, board, difficulty, activeFlowCount), seed: board.seed, difficulty };
-  const level = variant === "adventure"
-    ? { id: `seeded-persistent-${generation.seed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
-    : { id: `seeded-loader-${generation.seed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
-  return regenerateEffectAwareLevel(level, createFreeModeEffectConfiguration(difficulty, level.positions, generation.seed, freeEffectsEnabled));
+  const requestedSeed = Math.trunc(seed);
+  const activeFlowCount = freeActiveFlowCount(difficulty);
+  const attempts = difficulty === "EASY" ? 12 : difficulty === "NORMAL" ? 20 : difficulty === "HARD" ? 32 : 64;
+  let fallback: LevelDefinition | undefined;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const board = generateBoard(number, requestedSeed + attempt * 101, "adventure", slotCount, true, true);
+    const generation = { ...generatedMetadata(number, board, difficulty, activeFlowCount), seed: requestedSeed, difficulty };
+    const level: LevelDefinition = variant === "adventure"
+      ? { id: `seeded-persistent-${requestedSeed}`, number, title: `Meccanismo ${number}`, schemaVersion: 1 as const, variant: "persistent" as const, activeFlowCount, generation, adventure: adventureConfig(number, board), ...board }
+      : { id: `seeded-loader-${requestedSeed}`, number, title: `Caricatore ${number}`, schemaVersion: 1 as const, variant: "loader" as const, activeFlowCount, generation, positions: board.positions, initialRotation: board.initialRotation, outerValues: board.outerValues, queues: board.loaderQueues, slotPhases: board.slotPhases, optimalCost: board.optimalCost, solution: board.solution, solutionMoves: board.solutionMoves };
+    const configuration = createFreeModeEffectConfiguration(difficulty, level.positions, requestedSeed + attempt * 101, freeEffectsEnabled);
+    const generated = regenerateEffectAwareLevel(level, configuration, undefined, "free");
+    fallback = generated;
+    const requestedEffectCount = configuration?.effects?.length ?? 0;
+    const failureReasons = generated.generation?.generationStats?.failureReasons ?? [];
+    if (!requestedEffectCount || (generated.effectConfiguration?.effects?.length === requestedEffectCount && !failureReasons.includes("NO_VALID_EFFECT_CONFIGURATION"))) return generated;
+  }
+  if (fallback?.effectConfiguration?.effects?.length) return fallback;
+  throw new Error(`Free ${difficulty}: nessuna plancia valida con gli effetti richiesti dopo ${attempts} tentativi.`);
 };
 
 export interface PuzzleSolutionAudit { level: number; variant: "adventure" | "time-attack"; providedOperators: readonly PuzzleOperator[]; slots: readonly PuzzleSlotSolution[]; moves: readonly PuzzleSolutionMove[]; execution: readonly PuzzleSolutionExecutionStep[]; effects: readonly ResolvedEffect[]; finalValues: readonly number[]; verified: boolean; }

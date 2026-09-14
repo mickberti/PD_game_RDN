@@ -17,7 +17,7 @@ interface AdventureRunSave {
   seed: number;
   state: string;
 }
-interface SavedLevelRun { schemaVersion: 1; catalogueVersion: string; variant: "adventure" | "time-attack" | "free"; levelNumber: number; levelId: string; seed?: number; freeSlotCount?: number; freeDifficulty?: PuzzleDifficulty; state: string; savedAt: number; }
+interface SavedLevelRun { schemaVersion: 1 | 2; catalogueVersion: string; variant: "adventure" | "time-attack" | "free"; levelNumber: number; levelId: string; seed?: number; freeSlotCount?: number; freeDifficulty?: PuzzleDifficulty; freeEffectSelections?: FreeEffectSelections; freeInnerValues?: PuzzleOperator[]; freeRerollState?: number; state: string; savedAt: number; }
 
 @Injectable({ providedIn: "root" })
 export class RdnPuzzleService {
@@ -26,6 +26,7 @@ export class RdnPuzzleService {
   private freeMode = false;
   private freeRerollState = 1;
   private freeDifficulty: PuzzleDifficulty = "EASY";
+  private freeEffectSelections: FreeEffectSelections = { gem: false, link: false, area: false };
   readonly level = signal(activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", "EASY", 0));
   readonly state = signal<PuzzleState>(this.engine.createInitialState(this.level()));
   readonly previews = computed(() => this.engine.previews(this.level(), this.state()));
@@ -37,6 +38,7 @@ export class RdnPuzzleService {
     const level = variant === "free" ? activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", difficulty, seed, slotCount, freeEffectsEnabled) : await this.catalogue.getLevel(variant, number);
     this.freeMode = variant === "free";
     this.freeDifficulty = difficulty;
+    this.freeEffectSelections = this.normalizeFreeEffectSelections(freeEffectsEnabled);
     this.freeRerollState = (Math.trunc(seed) ^ 0x6d2b79f5) >>> 0 || 1;
     this.level.set(level);
     this.state.set(this.engine.createInitialState(level));
@@ -100,17 +102,32 @@ export class RdnPuzzleService {
   saveCurrentRun(variant: "adventure" | "time-attack" | "free", seed?: number, slotCount?: number): void {
     const level = this.level();
     if (typeof localStorage === "undefined") return;
-    const save: SavedLevelRun = { schemaVersion: 1, catalogueVersion: ACTIVE_RDN_CATALOGUE_VERSION, variant, levelNumber: level.number, levelId: level.id, seed, freeSlotCount: slotCount, freeDifficulty: this.freeDifficulty, state: this.engine.serialize(this.state()), savedAt: Date.now() };
+    const save: SavedLevelRun = { schemaVersion: 2, catalogueVersion: ACTIVE_RDN_CATALOGUE_VERSION, variant, levelNumber: level.number, levelId: level.id, seed, freeSlotCount: slotCount, freeDifficulty: this.freeDifficulty, ...(variant === "free" ? { freeEffectSelections: this.freeEffectSelections, freeInnerValues: level.variant === "persistent" ? [...level.innerValues] : undefined, freeRerollState: this.freeRerollState } : {}), state: this.engine.serialize(this.state()), savedAt: Date.now() };
     localStorage.setItem(`rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${level.id}`, JSON.stringify(save));
   }
   hasSavedRun(variant: "adventure" | "time-attack" | "free", levelId: string): boolean { return typeof localStorage !== "undefined" && localStorage.getItem(`rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${levelId}`) !== null; }
   clearSavedRun(variant: "adventure" | "time-attack" | "free", levelId = this.level().id): void { if (typeof localStorage !== "undefined") localStorage.removeItem(`rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${levelId}`); }
-  async restoreSavedRun(variant: "adventure" | "time-attack" | "free", number: number, seed?: number, slotCount?: number): Promise<boolean> {
-    const candidate = variant === "free" ? activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", this.freeDifficulty, seed ?? 0, slotCount) : await this.catalogue.getLevel(variant, number);
-    const key = `rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${candidate.id}`;
+  async restoreSavedRun(variant: "adventure" | "time-attack" | "free", number: number, seed?: number, slotCount?: number, freeEffectsEnabled: boolean | FreeEffectSelections = false): Promise<boolean> {
+    const initialCandidate = variant === "free" ? activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", this.freeDifficulty, seed ?? 0, slotCount, freeEffectsEnabled) : await this.catalogue.getLevel(variant, number);
+    const key = `rdn-saved-run:${ACTIVE_RDN_CATALOGUE_VERSION}:${variant}:${initialCandidate.id}`;
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(key) : null;
     if (!raw) return false;
-    try { const save = JSON.parse(raw) as SavedLevelRun; if (save.schemaVersion !== 1 || save.catalogueVersion !== ACTIVE_RDN_CATALOGUE_VERSION || save.variant !== variant || save.levelId !== candidate.id || (variant === "free" && save.seed !== seed)) return false; this.level.set(candidate); this.state.set(this.engine.deserialize(candidate, save.state)); return true; } catch { localStorage.removeItem(key); return false; }
+    try {
+      const save = JSON.parse(raw) as SavedLevelRun;
+      if ((save.schemaVersion !== 1 && save.schemaVersion !== 2) || save.catalogueVersion !== ACTIVE_RDN_CATALOGUE_VERSION || save.variant !== variant || save.levelId !== initialCandidate.id || (variant === "free" && save.seed !== seed)) return false;
+      if (variant !== "free") { this.level.set(initialCandidate); this.state.set(this.engine.deserialize(initialCandidate, save.state)); return true; }
+      const difficulty = save.freeDifficulty ?? this.freeDifficulty;
+      const selections = this.normalizeFreeEffectSelections(save.freeEffectSelections ?? freeEffectsEnabled);
+      const regenerated = activeRdnCatalogueRuntime.generateRdnPuzzle("adventure", difficulty, seed ?? 0, slotCount, selections);
+      const level = save.freeInnerValues && regenerated.variant === "persistent" ? { ...regenerated, innerValues: [...save.freeInnerValues] } : regenerated;
+      this.freeMode = true;
+      this.freeDifficulty = difficulty;
+      this.freeEffectSelections = selections;
+      this.freeRerollState = save.freeRerollState ?? ((Math.trunc(seed ?? 0) ^ 0x6d2b79f5) >>> 0 || 1);
+      this.level.set(level);
+      this.state.set(this.engine.deserialize(level, save.state));
+      return true;
+    } catch { localStorage.removeItem(key); return false; }
   }
 
   /** Free mode recycles every successfully used gear gem into a different operator. */
@@ -140,6 +157,10 @@ export class RdnPuzzleService {
   private nextFreeRandom(): number {
     this.freeRerollState = (this.freeRerollState * 1664525 + 1013904223) >>> 0;
     return this.freeRerollState / 0x1_0000_0000;
+  }
+
+  private normalizeFreeEffectSelections(value: boolean | FreeEffectSelections): FreeEffectSelections {
+    return typeof value === "boolean" ? { gem: value, link: value, area: value } : { gem: !!value.gem, link: !!value.link, area: !!value.area };
   }
 
   zeroActiveTarget(): boolean {

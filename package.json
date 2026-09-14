@@ -35,7 +35,7 @@
     "@capacitor/ios": "^8.3.4",
     "@capacitor/keyboard": "8.0.2",
     "@capacitor/status-bar": "^8.0.2",
-    "@capgo/capacitor-social-login": "^8.3.22",
+    "@capgo/capacitor-social-login": "^8.5.7",
     "@ionic/angular": "^8.0.0",
     "firebase": "^11.10.0",
     "ionicons": "^7.0.0",

@@ -181,33 +181,96 @@ export const policyCompatibleEffectConfiguration = (configuration: LevelEffectCo
   return { ...configuration, effects: selected };
 };
 
+interface FreeEffectDifficultyRule {
+  readonly gem: { readonly count: number; readonly presets: readonly EffectPresetKey[] };
+  readonly link: { readonly count: number; readonly presets: readonly EffectPresetKey[] };
+  readonly area: { readonly count: number; readonly presets: readonly EffectPresetKey[] };
+}
+
+/** Free is balanced independently from Adventure's level progression. */
+const FREE_EFFECT_DIFFICULTY_RULES: Readonly<Record<PuzzleDifficulty, FreeEffectDifficultyRule>> = {
+  EASY: {
+    gem: { count: 1, presets: ["SHIELD_1", "WALL_1"] },
+    link: { count: 1, presets: ["ECHO_LINK"] },
+    area: { count: 1, presets: ["AREA_BOMB_MINUS_2", "AREA_BOMB_PLUS_2"] },
+  },
+  NORMAL: {
+    gem: { count: 1, presets: ["SHIELD_2", "WALL_1", "MIRROR_1", "AMPLIFIER_X2"] },
+    link: { count: 1, presets: ["ECHO_LINK", "DOUBLE_LINK"] },
+    area: { count: 1, presets: ["AREA_BOMB_MINUS_4", "AREA_BOMB_PLUS_4", "AREA_ICE_ADJACENT"] },
+  },
+  HARD: {
+    gem: { count: 2, presets: ["MIRROR_1", "AMPLIFIER_X2", "INVERTER_1", "ICE_1", "FIRE_1", "TIMER_3"] },
+    link: { count: 1, presets: ["ECHO_LINK", "DOUBLE_LINK", "INVERT_LINK"] },
+    area: { count: 1, presets: ["AREA_BOMB_MINUS_4", "AREA_BOMB_PLUS_4", "AREA_ICE_TWO_ADJACENT", "AREA_INVERTER_ADJACENT"] },
+  },
+  EXPERT: {
+    gem: { count: 2, presets: ["WALL_2", "AMPLIFIER_X3", "ICE_2", "FIRE_2", "TIMER_5", "CORRUPTION_1"] },
+    link: { count: 2, presets: ["ECHO_LINK", "DOUBLE_LINK", "INVERT_LINK", "CHAIN_LINK"] },
+    area: { count: 2, presets: ["AREA_BOMB_MINUS_7", "AREA_BOMB_PLUS_7", "AREA_ICE_ALL", "AREA_INVERTER_TWO_ADJACENT"] },
+  },
+};
+
+type FreeSphereCount = 4 | 5 | 6 | 7 | 8 | 9;
+interface FreeEffectCounts { readonly gem: number; readonly link: number; readonly area: number; }
+
+/**
+ * Free density is authored per difficulty and exact sphere count.
+ * Adjust this table to calibrate a board without inheriting Adventure rules.
+ */
+const FREE_EFFECT_COUNTS_BY_SPHERES: Readonly<Record<PuzzleDifficulty, Readonly<Record<FreeSphereCount, FreeEffectCounts>>>> = {
+  EASY: {
+    4: { gem: 0, link: 0, area: 0 }, 5: { gem: 1, link: 0, area: 0 }, 6: { gem: 1, link: 1, area: 1 },
+    7: { gem: 1, link: 1, area: 1 }, 8: { gem: 1, link: 1, area: 1 }, 9: { gem: 1, link: 1, area: 1 },
+  },
+  NORMAL: {
+    4: { gem: 1, link: 1, area: 1 }, 5: { gem: 1, link: 1, area: 1 }, 6: { gem: 1, link: 1, area: 1 },
+    7: { gem: 2, link: 1, area: 1 }, 8: { gem: 2, link: 1, area: 1 }, 9: { gem: 2, link: 1, area: 1 },
+  },
+  HARD: {
+    4: { gem: 1, link: 1, area: 1 }, 5: { gem: 1, link: 1, area: 1 }, 6: { gem: 2, link: 1, area: 1 },
+    7: { gem: 3, link: 2, area: 1 }, 8: { gem: 3, link: 2, area: 2 }, 9: { gem: 3, link: 2, area: 2 },
+  },
+  EXPERT: {
+    4: { gem: 1, link: 1, area: 1 }, 5: { gem: 2, link: 1, area: 1 }, 6: { gem: 2, link: 2, area: 1 },
+    7: { gem: 3, link: 2, area: 1 }, 8: { gem: 4, link: 3, area: 2 }, 9: { gem: 4, link: 4, area: 2 },
+  },
+};
+
 export const createFreeModeEffectConfiguration = (difficulty: PuzzleDifficulty, gemCount: number, seed = 0, selections: FreeEffectSelections | boolean = false): LevelEffectConfiguration | undefined => {
   const enabled = typeof selections === "boolean"
     ? { gem: selections, link: selections, area: selections }
     : selections;
   if (!enabled.gem && !enabled.link && !enabled.area) return undefined;
-  const progressionLevel = difficulty === "EASY" ? 20 : difficulty === "NORMAL" ? 40 : difficulty === "HARD" ? 60 : 81;
-  // Each control must remain meaningful even when the selected difficulty
-  // predates that category in the normal progression.
-  const effects = [
-    ...(enabled.gem ? createProgressionEffectConfiguration("free", progressionLevel, gemCount, seed)?.effects?.filter((effect) => effect.target.type === EffectScope.GEM) ?? [] : []),
-    ...(enabled.link ? createProgressionEffectConfiguration("free", Math.max(progressionLevel, 72), gemCount, seed)?.effects?.filter((effect) => effect.target.type === EffectScope.LINK) ?? [] : []),
-    ...(enabled.area ? createProgressionEffectConfiguration("free", Math.max(progressionLevel, 80), gemCount, seed)?.effects?.filter((effect) => effect.target.type === EffectScope.AREA) ?? [] : []),
-  ];
+  const rule = FREE_EFFECT_DIFFICULTY_RULES[difficulty];
+  const counts = FREE_EFFECT_COUNTS_BY_SPHERES[difficulty][gemCount as FreeSphereCount];
+  if (!counts) throw new Error(`Free richiede da 4 a 9 sfere; ricevute ${gemCount}.`);
+  const context = selectionContext("free", difficulty.length, gemCount, seed, "free");
+  const effects: NonNullable<LevelEffectConfiguration["effects"]>[number][] = [];
+  const firstGem = positiveModulo(hash(`${context}:gem`), gemCount);
+  const firstLink = positiveModulo(hash(`${context}:link`), gemCount);
+  const firstArea = positiveModulo(hash(`${context}:area`), gemCount);
+  if (enabled.gem) for (let index = 0; index < Math.min(rule.gem.count, counts.gem, gemCount); index += 1) effects.push({ preset: pick(rule.gem.presets, `${context}:gem-preset`, index), target: { type: EffectScope.GEM, gemIndex: positiveModulo(firstGem + index, gemCount) } });
+  if (enabled.link) for (let index = 0; index < Math.min(rule.link.count, counts.link, Math.max(0, gemCount - 1)); index += 1) {
+    const fromGemIndex = positiveModulo(firstLink + index, gemCount);
+    const candidateTarget = positiveModulo(firstLink + index * 2 + 1, gemCount);
+    effects.push({ preset: pick(rule.link.presets, `${context}:link-preset`, index), target: { type: EffectScope.LINK, fromGemIndex, toGemIndex: candidateTarget === fromGemIndex ? positiveModulo(candidateTarget + 1, gemCount) : candidateTarget }, overrides: { direction: LinkDirection.FORWARD } });
+  }
+  if (enabled.area) for (let index = 0; index < Math.min(rule.area.count, counts.area, RDN_MAX_AREA_EFFECTS_PER_BOARD); index += 1) effects.push({ preset: pick(rule.area.presets, `${context}:area-preset`, index), target: { type: EffectScope.AREA, sourceGemIndex: positiveModulo(firstArea + index, gemCount) } });
   return effects.length ? { enabled: true, effects, flowRules: RDN_EFFECT_FLOW_RULES } : undefined;
 };
 
 /** Development/test validator: link caps come from the sphere progression table. */
-export const validateEffectComplexity = (configuration: LevelEffectConfiguration | undefined, label: string, spheres = 8): readonly string[] => {
+export const validateEffectComplexity = (configuration: LevelEffectConfiguration | undefined, label: string, spheres = 8, mode: "catalogue" | "free" = "catalogue"): readonly string[] => {
   if (!configuration?.enabled) return [];
   const effects = configuration.effects ?? [];
   const gem = effects.filter((effect) => effect.target.type === EffectScope.GEM).length;
   const link = effects.filter((effect) => effect.target.type === EffectScope.LINK).length;
   const area = effects.filter((effect) => effect.target.type === EffectScope.AREA).length;
   const issues: string[] = [];
-  const maximumGemEffects = rdnMaximumGemEffectsForSpheres(spheres);
+  const maximumGemEffects = mode === "free" ? spheres : rdnMaximumGemEffectsForSpheres(spheres);
   if (gem > maximumGemEffects) issues.push(`${label}: GEM effect count = ${gem}, maximum allowed = ${maximumGemEffects}.`);
-  const maximumLinks = rdnMaximumLinksForSpheres(spheres);
+  const maximumLinks = mode === "free" ? Math.max(0, spheres - 1) : rdnMaximumLinksForSpheres(spheres);
   if (link > maximumLinks) issues.push(`${label}: LINK effect count = ${link}, maximum allowed = ${maximumLinks}.`);
   if (area > RDN_MAX_AREA_EFFECTS_PER_BOARD) issues.push(`${label}: AREA effect count = ${area}, maximum allowed = ${RDN_MAX_AREA_EFFECTS_PER_BOARD}.`);
   return issues;

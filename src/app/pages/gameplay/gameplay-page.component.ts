@@ -414,7 +414,7 @@ export class GameplayPageComponent implements AfterViewInit {
     const levelId = this.puzzle.level().id;
     if (this.puzzle.hasSavedRun(session.variant, levelId)) this.resumePrompt.set(true);
   }
-  async continueSavedRun(): Promise<void> { this.resumePrompt.set(false); const overrides = this.gameplaySession.getLaunchOverrides(); await this.puzzle.restoreSavedRun(this.session.variant as "adventure" | "time-attack" | "free", this.session.matchLevel, overrides?.freeSeed, overrides?.freeSlotCount); this.resetTimeAttackTimer(); }
+  async continueSavedRun(): Promise<void> { this.resumePrompt.set(false); const overrides = this.gameplaySession.getLaunchOverrides(); await this.puzzle.restoreSavedRun(this.session.variant as "adventure" | "time-attack" | "free", this.session.matchLevel, overrides?.freeSeed, overrides?.freeSlotCount, overrides?.freeEffectSelections ?? overrides?.freeEffectsEnabled ?? false); this.resetTimeAttackTimer(); }
   restartSavedRun(): void { this.resumePrompt.set(false); this.puzzle.clearSavedRun(this.session.variant as "adventure" | "time-attack" | "free"); this.puzzle.dispatch({ type: "RESTART" }); }
   private saveCurrentRun(): void { if (this.session.variant === "effect-playground") return; const overrides = this.gameplaySession.getLaunchOverrides(); this.puzzle.saveCurrentRun(this.session.variant as "adventure" | "time-attack" | "free", overrides?.freeSeed, overrides?.freeSlotCount); }
   private changePlaygroundScenario(direction: -1 | 1): void {
