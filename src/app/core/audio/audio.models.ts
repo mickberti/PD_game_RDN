@@ -36,6 +36,14 @@ export interface AudioSettings {
   readonly masterMuted: boolean;
   readonly musicMuted: boolean;
   readonly sfxMuted: boolean;
+  readonly audioPack: string;
+}
+
+export interface AudioPackConfig {
+  readonly id: string;
+  readonly label: string;
+  readonly assetRoot: string;
+  readonly description: string;
 }
 
 export type AudioAssetStatus = "NOT_LOADED" | "LOADED" | "MISSING" | "ERROR";

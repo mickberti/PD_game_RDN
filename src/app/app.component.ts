@@ -47,6 +47,7 @@ export class AppComponent {
 	
 	async initializeApp() {
 	  this.audio.initialize();
+	  this.audio.playMusic("menu.main");
 	  this.timeService.setupAutoSync();
 	  this.loginService.refreshToken(); // 🔥 refresh token all'avvio (se presente) TEST DA ELIMINARE SE NON SERVE
 	  this.handleAuthRouting();

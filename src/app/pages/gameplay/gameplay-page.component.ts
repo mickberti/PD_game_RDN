@@ -209,7 +209,16 @@ export class GameplayPageComponent implements AfterViewInit {
     this.playModeMusic();
   }
   ionViewDidEnter(): void {
+    this.game?.loop.wake();
+    this.resumeTimeAttackAfterView();
     this.resizeGame();
+    this.playModeMusic();
+  }
+  /** Ionic keeps routed pages alive. Suspend Phaser explicitly while this view is cached. */
+  ionViewWillLeave(): void {
+    this.game?.loop.sleep();
+    this.pauseTimeAttackForView();
+    this.audio.playMusic("menu.main");
   }
   private observeHostSize(): void {
     this.hostResizeObserver = new ResizeObserver(() => this.resizeGame());
@@ -436,7 +445,31 @@ export class GameplayPageComponent implements AfterViewInit {
     this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null);
   }
   private exitGameplay(): void {
+    // Do not depend solely on Ionic's cached-view lifecycle for this transition.
+    this.audio.playMusic("menu.main");
     void this.nav.go("/hub");
+  }
+  private pauseTimeAttackForView(): void {
+    if (this.session.variant !== "time-attack" || this.timeAttackEndAt === undefined || this.timeAttackPausedAt !== undefined) return;
+    this.timeAttackPausedAt = performance.now();
+    if (this.timeAttackTimer !== undefined) clearInterval(this.timeAttackTimer);
+    this.timeAttackTimer = undefined;
+  }
+  private resumeTimeAttackAfterView(): void {
+    if (this.session.variant !== "time-attack" || this.timeAttackEndAt === undefined || this.timeAttackPausedAt === undefined || this.outcome() !== null) return;
+    const now = performance.now();
+    this.timeAttackEndAt += now - this.timeAttackPausedAt;
+    this.timeAttackPausedAt = undefined;
+    const update = () => {
+      if (this.timeAttackPausedAt !== undefined || this.timeAttackEndAt === undefined || this.outcome() !== null) return;
+      const remainingMs = Math.max(0, this.timeAttackEndAt - performance.now());
+      this.timeRemainingMs.set(remainingMs);
+      this.timeRemaining.set(Math.ceil(remainingMs / 1000));
+      this.updateTimeAttackAudio(Math.ceil(remainingMs / 1000));
+      if (remainingMs === 0) this.finishTimeAttack("lose");
+    };
+    update();
+    this.timeAttackTimer = setInterval(update, 250);
   }
   private playModeMusic(): void {
     const cue = this.session.variant === "free" ? MODE_AUDIO_CONFIG.FREE.music

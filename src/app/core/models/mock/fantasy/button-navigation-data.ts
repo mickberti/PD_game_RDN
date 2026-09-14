@@ -38,6 +38,13 @@ export const fantasyBottomNav: BottomNavItem[] = [{
 }];
 
 export const fantasyBottomUtils	: BottomNavItem[] = [{
+		id: "audio-debug",
+		title: "Audio",
+		description: "Sound test e diagnostica audio",
+		route: "/utils/audio-debug",
+		active: "active",
+		frame: {name: "icon-music_on-s2", effect: "none" },
+	}, {
 		id: "component-atlas-icons",
 		title: "comp",
 		description: "View component",

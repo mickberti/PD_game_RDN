@@ -213,6 +213,8 @@ export class HubPage {
   readonly freeTheme = signal<1 | 2 | 3>(3);
   readonly freeEffectSelections = signal<FreeEffectSelections>({ gem: false, link: false, area: false });
   constructor() { this.audio.playMusic("menu.main"); }
+  /** Re-applies menu audio when Ionic restores this cached page after a game. */
+  ionViewDidEnter(): void { this.audio.playMusic("menu.main"); }
   readonly freeEffectOptions: readonly { key: keyof FreeEffectSelections; label: string }[] = [
     { key: "gem", label: "GEMMA" }, { key: "link", label: "LINK" }, { key: "area", label: "AREA" },
   ];

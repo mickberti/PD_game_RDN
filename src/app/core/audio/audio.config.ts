@@ -1,4 +1,4 @@
-import { AudioCue, AudioCueConfig, AudioDesignSpec, MusicCue } from "./audio.models";
+import { AudioCue, AudioCueConfig, AudioDesignSpec, AudioPackConfig, MusicCue } from "./audio.models";
 
 /** First test-audio delivery is WAV. Future release assets can switch this one mapping to OGG/MP3. */
 const asset = (path: string): readonly string[] => [`assets/audio/${path}.wav`];
@@ -7,6 +7,12 @@ const sfx = (key: string, path: string, options: Omit<AudioCueConfig, "key" | "s
 const variants = (...paths: string[]): readonly (readonly string[])[] => paths.map((path) => asset(`sfx/${path}`));
 
 export const AUDIO_SETTINGS = { music: { defaultVolume: .55, crossfadeMs: 500 }, sfx: { defaultVolume: .85 }, ducking: { enabled: true, targetVolume: .25, fadeMs: 100 } } as const;
+
+/** Asset roots are the only pack-specific concern; cue semantics and mixer rules stay shared. */
+export const AUDIO_PACKS: readonly AudioPackConfig[] = [
+  { id: "classic", label: "Dark Classic", assetRoot: "assets/audio/packs/dark-classic", description: "Set Classic attuale incluso nell'app." },
+  { id: "arcane-crystal", label: "Arcane Crystal", assetRoot: "assets/audio/packs/arcane-crystal", description: "Nuovo set Mechanical + Arcane + Crystal." },
+];
 
 /** Runtime catalog and asset-production brief. Paths follow Sound Design Specification §43. */
 export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
