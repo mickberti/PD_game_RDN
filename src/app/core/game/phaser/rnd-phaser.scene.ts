@@ -185,7 +185,13 @@ export class RdnPhaserScene extends Phaser.Scene {
     for (let index = 0; index < m.state.outerValues.length; index += 1) { const point = this.outerSlotPoint(ringX, ringY, outerR, index, m.level.positions, layout.outerSlots.angleOffset, visualSet); const sphereRadius = outerR * layout.outerSlots.sphereRadius; effectGemPositions.set(`target-${index}`, { x: point.x, y: point.y, radius: sphereRadius }); const preview = m.previews.find((item) => item.slot.outerIndex === index); const sphere = this.sphere(point.x, point.y, sphereRadius, m.state.outerValues[index], m.state.targetVisualStates[index] === "OFF", index, visualSet, outerR * numeralConfig.outerFontSizeRatio, numeralConfig.reservedWidthRatio); sphere.gem.setInteractive().on("pointerup", (pointer: Phaser.Input.Pointer) => this.openGemInfoFromTap(pointer, index)); this.outerSlots.set(index, sphere); if (preview) this.resultBadge(point.x + outerR * layout.outerSlots.badgeOffsetX, point.y + outerR * layout.outerSlots.badgeOffsetY, format(preview.result), preview.trend); }
     const resolvedEffects = this.effectResolver.resolve(m.level.effectConfiguration, m.level.positions).effects;
     if (resolvedEffects.length) {
-      this.effectRenderer = new EffectPhaserRenderer(this, effectGemPositions, new Phaser.Math.Vector2(ringX, ringY), (effectId, pointer) => this.openLinkInfoFromTap(pointer, effectId));
+      this.effectRenderer = new EffectPhaserRenderer(
+        this,
+        effectGemPositions,
+        new Phaser.Math.Vector2(ringX, ringY),
+        (effectId, pointer) => this.openLinkInfoFromTap(pointer, effectId),
+        (delayMs) => this.time.delayedCall(delayMs, () => this.actions.audioCue("link.travel")),
+      );
       this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues);
       this.effectRenderer.setActiveLinkPreview(m.effectPreviewEvents);
       const visualKey = `${m.level.id}-${m.state.impulses}`;
@@ -259,6 +265,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const outerRadius = Math.min(width * .39, height * .31); const centerX = width / 2; const centerY = height * .49; const themeDecoration = getRdnThemeDecorationCalibration(layout.positions, this.visualSet(model));
     const ringX = centerX + outerRadius * (layout.ring.offsetX + themeDecoration.ring.offsetX); const ringY = centerY + outerRadius * (layout.ring.offsetY + themeDecoration.ring.offsetY);
     const startX = this.wheelCenter.x; const startY = this.wheelCenter.y;
+    this.actions.audioCue("pulse.travel");
     for (const flow of model.flows.filter((item) => item.interactable)) {
       const destination = this.outerSlotPoint(ringX, ringY, outerRadius, flow.targetId, model.level.positions, layout.outerSlots.angleOffset, this.visualSet(model));
       this.animateImpulseDischargeSegment(startX, startY, destination.x, destination.y, 0, `target-${flow.targetId}`);
@@ -319,7 +326,6 @@ export class RdnPhaserScene extends Phaser.Scene {
     const slot = this.outerSlots.get(impact.targetId); if (!slot) return;
     this.events.emit("IMPULSE_GEM_IMPACT", impact);
     this.actions.audioCue(impact.resultValue === 0 && impact.previousValue !== 0 ? "gem.zero" : "gem.change");
-    if (impact.generation > 0) this.actions.audioCue("link.travel");
     for (const presentation of effectPresentations) {
       const cue = presentation.frame.includes("shield") ? "effect.shield"
         : presentation.frame.includes("wall") || presentation.frame.includes("ice") || presentation.frame.includes("fire") ? "effect.wall"

@@ -1,7 +1,9 @@
 import { AudioCue, AudioCueConfig, AudioDesignSpec, AudioPackConfig, MusicCue } from "./audio.models";
 
-/** First test-audio delivery is WAV. Future release assets can switch this one mapping to OGG/MP3. */
-const asset = (path: string): readonly string[] => [`assets/audio/${path}.wav`];
+type AudioFormat = "ogg" | "mp3" | "wav";
+/** Lists compatible alternatives in preference order; the runtime falls back when a format is absent or unsupported. */
+const asset = (path: string, formats: readonly AudioFormat[] = ["wav"]): readonly string[] => formats.map((format) => `assets/audio/${path}.${format}`);
+const musicAsset = (path: string): readonly string[] => asset(path, ["ogg", "mp3", "wav"]);
 const design = (durationMs: AudioDesignSpec["durationMs"], character: string, intensity: AudioDesignSpec["intensity"], priority: AudioDesignSpec["priority"]): AudioDesignSpec => ({ durationMs, character, intensity, priority });
 const sfx = (key: string, path: string, options: Omit<AudioCueConfig, "key" | "sources">): AudioCueConfig => ({ key, sources: asset(`sfx/${path}`), ...options });
 const variants = (...paths: string[]): readonly (readonly string[])[] => paths.map((path) => asset(`sfx/${path}`));
@@ -24,12 +26,12 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "ui.close": sfx("sfx-ui-close", "ui/close", { volume: .45, cooldownMs: 50, maxConcurrent: 2, design: design([150, 250], "Reverse opening: receding slide and shimmer.", 1, 1) }),
   "gear.rotate": sfx("sfx-gear-rotate", "gear/rotate-01", { variants: variants("gear/rotate-01", "gear/rotate-02", "gear/rotate-03"), volume: .40, cooldownMs: 40, maxConcurrent: 2, pitchVariation: .03, design: design([40, 90], "Precise ratchet click: 70% refined mechanics, 30% synthetic energy.", 1, 1) }),
   "gear.snap": sfx("sfx-gear-snap", "gear/snap", { volume: .55, cooldownMs: 60, maxConcurrent: 2, design: design([120, 220], "Metallic snap plus short resonance; confirms valid position.", 2, 2) }),
-  "pulse.start": sfx("sfx-pulse-start", "pulse/start", { volume: .70, cooldownMs: 50, maxConcurrent: 1, design: design([150, 300], "Short mechanical release and controlled energy charge.", 3, 3) }),
-  "pulse.travel": sfx("sfx-pulse-travel", "pulse/travel", { volume: .35, cooldownMs: 70, maxConcurrent: 2, design: design([80, 180], "Low energy zip / electric shimmer, deliberately unobtrusive.", 1, 1) }),
-  "gem.change": sfx("sfx-gem-change", "gem/change-01", { variants: variants("gem/change-01", "gem/change-02", "gem/change-03"), volume: .60, cooldownMs: 20, maxConcurrent: 4, pitchVariation: .03, design: design([100, 220], "Crystal tick with soft energy pop; change, not success.", 2, 2) }),
-  "gem.zero": sfx("sfx-gem-zero", "gem/zero", { volume: .85, cooldownMs: 50, maxConcurrent: 2, design: design([300, 550], "Crystal impact, energy collapse and harmonic shimmer; never coin/slot-machine.", 4, 4) }),
-  "link.travel": sfx("sfx-link-travel", "pulse/travel", { volume: .35, cooldownMs: 45, maxConcurrent: 2, design: design([80, 180], "Shared low-level energy transfer layer for linked flows.", 1, 1) }),
-  "link.hit": sfx("sfx-link-hit", "gem/change-01", { volume: .45, cooldownMs: 40, maxConcurrent: 2, design: design([100, 220], "Restrained arrival layer sharing the gem-change palette.", 2, 2) }),
+  "pulse.start": sfx("sfx-pulse-start", "pulse/start1", { volume: .10, cooldownMs: 50, maxConcurrent: 1, design: design([150, 300], "Short mechanical release and controlled energy charge.", 3, 3) }),
+  "pulse.travel": sfx("sfx-pulse-travel", "pulse/travel1", { volume: .65, trim: { startMs: 0 }, cooldownMs: 70, maxConcurrent: 2, design: design([80, 180], "Low energy zip / electric shimmer, deliberately unobtrusive.", 1, 1) }),
+  "gem.change": sfx("sfx-gem-change", "gem/change-01", { variants: variants("gem/change-01", "gem/change-02"), volume: .25, cooldownMs: 20, maxConcurrent: 4, pitchVariation: .03, design: design([100, 220], "Crystal tick with soft energy pop; change, not success.", 2, 2) }),
+  "gem.zero": sfx("sfx-gem-zero", "gem/zero-01", { volume: .65, cooldownMs: 50, maxConcurrent: 2, design: design([300, 550], "Crystal impact, energy collapse and harmonic shimmer; never coin/slot-machine.", 4, 4) }),
+  "link.travel": sfx("sfx-link-travel", "pulse/travel1", { volume: .65, trim: { startMs: 0 }, cooldownMs: 45, maxConcurrent: 2, design: design([80, 180], "Shared low-level energy transfer layer for linked flows.", 1, 1) }),
+  "link.hit": sfx("sfx-link-hit", "gem/change-01", { variants: variants("gem/change-01", "gem/change-02"), volume: .45, cooldownMs: 40, maxConcurrent: 2, design: design([100, 220], "Restrained arrival layer sharing the gem-change palette.", 2, 2) }),
   "bonus.activate": sfx("sfx-bonus-activate", "gameplay/bonus-activate", { volume: .75, cooldownMs: 80, maxConcurrent: 1, design: design([350, 700], "Energy charge with bright crystal resonance.", 3, 4) }),
   "effect.shield": sfx("sfx-effect-shield", "effects/shield", { volume: .75, cooldownMs: 60, maxConcurrent: 2, design: design([300, 600], "Low impact and glass/energy resonance; protection and absorption.", 3, 3) }),
   "effect.wall": sfx("sfx-effect-wall", "effects/wall", { volume: .75, cooldownMs: 60, maxConcurrent: 2, design: design([250, 500], "Stone/metal lock and low mechanical impact.", 3, 3) }),
@@ -47,12 +49,11 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
 };
 
 export const MUSIC_CONFIG: Readonly<Record<MusicCue, AudioCueConfig>> = {
-  "menu.main": { key: "music-menu-main", sources: asset("music/menu/menu-main"), volume: .55, loop: true, design: design([60_000, 120_000], "Relaxed mechanical ambient: pad, metallic texture, subtle pulse and crystal accents.", 1, 1) },
-  "menu.shop": { key: "music-menu-shop", sources: asset("music/menu/menu-main"), volume: .55, loop: true, design: design([60_000, 120_000], "Uses menu-main until a dedicated shop composition exists.", 1, 1) },
-  "game.adventure": { key: "music-game-adventure", sources: asset("music/gameplay/adventure"), volume: .55, loop: true, design: design([60_000, 120_000], "80–100 BPM, light rhythmic progression and discovery.", 2, 1) },
-  "game.free": { key: "music-game-free", sources: asset("music/gameplay/free"), volume: .55, loop: true, design: design([60_000, 120_000], "70–95 BPM, less rhythm and more ambient space.", 1, 1) },
-  "game.timeAttack": { key: "music-game-time-attack", sources: asset("music/gameplay/time-attack"), volume: .55, loop: true, design: design([60_000, 120_000], "105–125 BPM controlled pulse, mechanical percussion and synthetic sequence.", 3, 2) },
-  "game.ranked": { key: "music-game-ranked", sources: asset("music/gameplay/ranked"), volume: .55, loop: true, design: design([60_000, 120_000], "95–115 BPM competitive yet puzzle-focused; bass pulse and restrained percussion.", 3, 2) },
+  "menu.main": { key: "music-menu-main", sources: musicAsset("music/menu/gearithm_menu"), volume: .55, loop: true, design: design([60_000, 120_000], "Relaxed mechanical ambient: pad, metallic texture, subtle pulse and crystal accents.", 1, 1) },
+  "game.adventure": { key: "music-game-adventure", sources: musicAsset("music/gameplay/gearithm"), volume: .55, loop: true, design: design([60_000, 120_000], "80–100 BPM, light rhythmic progression and discovery.", 2, 1) },
+  "game.free": { key: "music-game-free", sources: musicAsset("music/gameplay/gearithm"), volume: .55, loop: true, design: design([60_000, 120_000], "70–95 BPM, less rhythm and more ambient space.", 1, 1) },
+  "game.timeAttack": { key: "music-game-time-attack", sources: musicAsset("music/gameplay/gearithm"), volume: .55, loop: true, design: design([60_000, 120_000], "105–125 BPM controlled pulse, mechanical percussion and synthetic sequence.", 3, 2) },
+  "game.ranked": { key: "music-game-ranked", sources: musicAsset("music/gameplay/gearithm"), volume: .55, loop: true, design: design([60_000, 120_000], "95–115 BPM competitive yet puzzle-focused; bass pulse and restrained percussion.", 3, 2) },
 };
 
 export const MODE_AUDIO_CONFIG = { FREE: { music: "game.free" }, ADVENTURE: { music: "game.adventure" }, TIME_ATTACK: { music: "game.timeAttack", dynamicIntensity: true }, RANKED: { music: "game.ranked" } } as const;

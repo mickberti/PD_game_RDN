@@ -24,7 +24,7 @@ export class ShopPage {
   readonly actions = computed(() => RDN_ACTION_IDS.map((id) => RDN_ACTION_CATALOG[id]));
   readonly selected = signal<RdnActionDefinition | null>(null);
   readonly purchaseFeedback = signal<{ frame: FrameItem; text: string; variant: "gain" } | null>(null);
-  constructor() { this.audio.playMusic("menu.shop"); }
+  constructor() { this.audio.playMusic("menu.main"); }
   quantity(id: RdnActionId): number { return this.state.inventoryActions()[id] ?? 0; }
   open(action: RdnActionDefinition): void { this.selected.set(action); }
   close(): void { this.selected.set(null); }

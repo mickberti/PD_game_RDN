@@ -16,7 +16,7 @@ export class EffectPhaserRenderer {
   private readonly dischargeLayer: Phaser.GameObjects.Container;
   private readonly links = new Map<string, LinkEffectView>();
   private readonly markerCounts = new Map<string, number>();
-  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void) {
+  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void, private readonly onLinkFlowStart?: (delayMs: number) => void) {
     this.linkLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     this.previewGemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth + 2);
     this.gemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.gemDepth);
@@ -86,6 +86,7 @@ export class EffectPhaserRenderer {
       if (!link || link.effect.target.type !== EffectScope.LINK) continue;
       const reverse = link.effect.target.fromGem.id === event.gemId;
       const delay = impulseLinkStartDelayMs(event.generation);
+      this.onLinkFlowStart?.(delay);
       this.animateDischargeLink(link, reverse, delay);
       const destinationId = reverse ? link.effect.target.fromGem.id : link.effect.target.toGem.id;
       // Do not delay the logical impact until every decorative tail has completed.
