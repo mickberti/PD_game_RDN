@@ -110,6 +110,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private readonly timeRemaining = signal<number | null>(null);
   private readonly timeRemainingMs = signal<number | null>(null);
   private readonly showInfo = signal(false);
+  private readonly showSettings = signal(false);
   private readonly selectedGemIndex = signal<number | null>(null);
   private readonly selectedGearGemIndex = signal<number | null>(null);
   private readonly selectedLinkEffectId = signal<string | null>(null);
@@ -129,6 +130,7 @@ export class GameplayPageComponent implements AfterViewInit {
       this.outcome.set(null);
       this.levelReward.set(null);
       this.showInfo.set(false);
+      this.showSettings.set(false);
       this.resetTimeAttackTimer();
       this.playModeMusic();
     }, { injector: this.injector });
@@ -154,6 +156,13 @@ export class GameplayPageComponent implements AfterViewInit {
       claimDoubleReward: () => this.claimDoubleReward(),
       info: () => this.showInfo.set(true),
       closeInfo: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null); },
+      openSettings: () => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null); this.showSettings.set(true); },
+      closeSettings: () => this.showSettings.set(false),
+      toggleMusicMute: () => this.audio.toggleMusicMute(),
+      toggleSfxMute: () => this.audio.toggleSfxMute(),
+      adjustMusicVolume: (delta) => this.audio.setMusicVolume(this.audio.musicVolume() + delta),
+      adjustSfxVolume: (delta) => this.audio.setSfxVolume(this.audio.sfxVolume() + delta),
+      shiftAudioPack: (direction) => this.shiftAudioPack(direction),
       dismissTutorial: (id) => this.effectTutorial.markSeen(id),
       gemInfo: (index, source = "ring") => { this.showInfo.set(false); this.selectedLinkEffectId.set(null); this.selectedGemIndex.set(source === "ring" ? index : null); this.selectedGearGemIndex.set(source === "gear" ? index : null); },
       linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
@@ -200,6 +209,15 @@ export class GameplayPageComponent implements AfterViewInit {
           timeRemainingMs: this.timeRemainingMs(),
           timeTotalSeconds: this.timeAttackDurationSeconds,
           showInfo: this.showInfo(),
+          showSettings: this.showSettings(),
+          audio: {
+            musicMuted: this.audio.musicMuted(),
+            sfxMuted: this.audio.sfxMuted(),
+            musicVolume: this.audio.musicVolume(),
+            sfxVolume: this.audio.sfxVolume(),
+            activePackId: this.audio.activeAudioPack(),
+            packs: this.audio.audioPacks,
+          },
         };
         this.scene?.setModel(model);
       },
@@ -269,6 +287,7 @@ export class GameplayPageComponent implements AfterViewInit {
     this.saveCurrentRun();
     this.outcome.set(null);
     this.showInfo.set(false);
+    this.showSettings.set(false);
     this.selectedGemIndex.set(null);
     this.selectedGearGemIndex.set(null);
     this.selectedLinkEffectId.set(null);
@@ -476,6 +495,13 @@ export class GameplayPageComponent implements AfterViewInit {
       : this.session.variant === "time-attack" ? MODE_AUDIO_CONFIG.TIME_ATTACK.music
       : MODE_AUDIO_CONFIG.ADVENTURE.music;
     this.audio.playMusic(cue);
+  }
+  private shiftAudioPack(direction: -1 | 1): void {
+    const packs = this.audio.audioPacks;
+    if (!packs.length) return;
+    const currentIndex = packs.findIndex((pack) => pack.id === this.audio.activeAudioPack());
+    const index = currentIndex >= 0 ? currentIndex : 0;
+    this.audio.setAudioPack(packs[(index + direction + packs.length) % packs.length].id);
   }
   private playOutcomeAudio(outcome: "win" | "lose", perfect = false): void {
     this.audio.playSfx(outcome === "win" ? perfect ? "game.perfect" : "game.win" : "game.fail");

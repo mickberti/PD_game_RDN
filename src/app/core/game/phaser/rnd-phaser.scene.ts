@@ -15,8 +15,9 @@ import { EffectTutorialDefinition } from "./effects/effect-tutorial.config";
 import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
 
 export interface RdnHudAction { icon: string; label: string; description: string; charges: number; disabled: boolean; }
-export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; levelReward?: { coins: number; bonusClaimed: boolean; adUnavailable: boolean }; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; }
-export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
+export interface RdnHudAudio { musicMuted: boolean; sfxMuted: boolean; musicVolume: number; sfxVolume: number; activePackId: string; packs: readonly { id: string; label: string }[]; }
+export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; levelReward?: { coins: number; bonusClaimed: boolean; adUnavailable: boolean }; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; showSettings: boolean; audio: RdnHudAudio; }
+export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value);
 const VISUAL_SET_COUNT = 3;
 const format = (value: number | null): string => value === null ? "—" : value > 0 ? `+${value}` : String(value);
@@ -25,7 +26,7 @@ const GEM_THEME_CONFIG = {
   2: { frame: "gem-sphere-green", tint: 0xffffff },
   3: { frame: "gem-sphere-green", tint: 0xffffff },
 } as const;
-const UI_ICON_BY_BUTTON_LABEL: Readonly<Record<string, string>> = { "⌂": "icon-home", "↻": "icon-reload", "▶": "icon-forward", "›": "icon-forward", "‹": "icon-backward", "×": "icon-close", "x": "icon-close", "X": "icon-close", "OK": "icon-confirm" };
+const UI_ICON_BY_BUTTON_LABEL: Readonly<Record<string, string>> = { "⌂": "icon-home", "↻": "icon-reload", "SETTINGS": "icon-settings", "▶": "icon-forward", "›": "icon-forward", "‹": "icon-backward", "×": "icon-close", "x": "icon-close", "X": "icon-close", "OK": "icon-confirm" };
 
 /** Phaser-only presentation layer. It never calculates puzzle rules. */
 export class RdnPhaserScene extends Phaser.Scene {
@@ -123,7 +124,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   /** Angular emits a new model every 250 ms in Time Attack; these changes must not reset Phaser tweens. */
   private isCountdownOnlyUpdate(next: RdnSceneModel): boolean {
     const previous = this.model;
-    return !!previous && previous.timeRemaining !== null && next.timeRemaining !== null && previous.level === next.level && previous.state === next.state && previous.outcome === next.outcome && previous.showInfo === next.showInfo && previous.tutorial === next.tutorial && previous.selectedGemIndex === next.selectedGemIndex && previous.selectedGearGemIndex === next.selectedGearGemIndex && previous.selectedLinkEffectId === next.selectedLinkEffectId && previous.modeLabel === next.modeLabel && previous.timeTotalSeconds === next.timeTotalSeconds;
+    return !!previous && !next.showSettings && previous.timeRemaining !== null && next.timeRemaining !== null && previous.level === next.level && previous.state === next.state && previous.outcome === next.outcome && previous.showInfo === next.showInfo && previous.showSettings === next.showSettings && previous.tutorial === next.tutorial && previous.selectedGemIndex === next.selectedGemIndex && previous.selectedGearGemIndex === next.selectedGearGemIndex && previous.selectedLinkEffectId === next.selectedLinkEffectId && previous.modeLabel === next.modeLabel && previous.timeTotalSeconds === next.timeTotalSeconds;
   }
   private requestRender(): void {
     if (!this.sys.isActive()) return;
@@ -177,7 +178,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.label(cx + hudWidth * .12, 46 + hudOffsetY, "IMPULSI", 10, 0xf3d27c); this.label(cx + hudWidth * .12, 73 + hudOffsetY, String(m.state.impulses), 27, 0xf3d27c);
     this.label(cx + hudWidth * .29, 46 + hudOffsetY, "ROT.", 10, 0xf3d27c); this.label(cx + hudWidth * .29, 73 + hudOffsetY, String(m.state.rotationSteps), 27, 0xf3d27c);
     this.starProgressHud(hudLeft + 88, 111 + hudOffsetY, m);
-    this.button(hudLeft + hudWidth - 38, 48 + hudOffsetY, "↻", () => this.actions.restart()); const info = this.add.circle(cx, 48 + hudOffsetY, 27, 0x183e28).setInteractive(); info.on("pointerup", () => this.actions.info()); this.add.image(cx, 48 + hudOffsetY, "rdn-ui-icons", "icon-info").setDisplaySize(48, 48).setDepth(1);
+    this.button(hudLeft + hudWidth - 38, 48 + hudOffsetY, "SETTINGS", () => this.openSettingsFromHud()); const info = this.add.circle(cx, 48 + hudOffsetY, 27, 0x183e28).setInteractive(); info.on("pointerup", () => this.actions.info()); this.add.image(cx, 48 + hudOffsetY, "rdn-ui-icons", "icon-info").setDisplaySize(48, 48).setDepth(1);
     this.addDecor(ringX, ringY, outerR * (layout.ring.diameter + themeDecoration.ring.diameterOffset), rdnRingTextureKey(layout, visualSet), layout.ring.angle + themeDecoration.ring.angleOffset, layout.ring.widthScale * themeDecoration.ring.widthScaleMultiplier, layout.ring.heightScale * themeDecoration.ring.heightScaleMultiplier); this.drawConnections(ringX, ringY, gearX, gearY, outerR, m, this.fadeFlowsAfterImpulse); this.fadeFlowsAfterImpulse = false;
     const effectGemPositions = new Map<string, EffectGemPosition>();
     const numeralConfig = RDN_GEM_NUMERAL_CONFIG[layout.positions];
@@ -230,17 +231,19 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     if (m.actions.length) this.actionPanel(cx, height, m.actions);
     if (m.playground) this.playgroundOverlay(width, height, m.playground);
-    if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m); }
+    if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.showSettings) this.settingsDialog(cx, cy, m); else if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m); }
   }
   private beginDrag(pointer: Phaser.Input.Pointer): void { if (performance.now() < this.suppressBoardTapUntil) return; this.pointerDownAt = { x: pointer.x, y: pointer.y }; if (this.model?.selectedGemIndex !== null && this.infoScrollMax > 0) { this.infoScrollDragY = pointer.y; return; } if (this.busy || !this.model || this.model.outcome || this.hasInfoOverlay(this.model) || this.model.tutorial) return; const dx = pointer.x - this.wheelCenter.x; const dy = pointer.y - this.wheelCenter.y; const distance = Math.hypot(dx, dy); if (distance > this.wheelCenter.radius || distance < this.wheelCenter.radius * .3) return; this.dragging = true; this.dragStart = Math.atan2(dy, dx); this.dragDelta = 0; }
   private drag(pointer: Phaser.Input.Pointer): void { if (this.infoScrollDragY !== null) { const delta = this.infoScrollDragY - pointer.y; this.infoScrollDragY = pointer.y; this.scrollInfo(delta); return; } if (!this.dragging || !this.wheel || !pointer.isDown || !this.model) return; const a = Math.atan2(pointer.y - this.wheelCenter.y, pointer.x - this.wheelCenter.x); let delta = (a - this.dragStart) * 180 / Math.PI; if (delta > 180) delta -= 360; if (delta < -180) delta += 360; this.dragDelta = delta; this.setWheelAngle(this.model.state.rotationTurns * 360 / this.model.level.positions + delta); }
   private release(): void { if (this.infoScrollDragY !== null) { this.infoScrollDragY = null; return; } if (!this.dragging || !this.model || !this.wheel) return; this.dragging = false; const minimumDragAngle = 3; const snapAngle = 360 / this.model.level.positions; const base = this.model.state.rotationTurns * snapAngle; if (Math.abs(this.dragDelta) < minimumDragAngle) { this.setWheelAngle(base); this.dragDelta = 0; this.flushPendingRender(); return; } const direction = this.dragDelta > 0 ? 1 : -1; const step = direction * Math.max(1, Math.round(Math.abs(this.dragDelta) / snapAngle)); const target = base + step * snapAngle; this.busy = true; this.actions.audioCue("gear.rotate"); this.tweens.add({ targets: this, visualAngle: target, duration: RDN_MOTION.dragSnapMs, ease: "Cubic.Out", onUpdate: () => this.setWheelAngle(this.visualAngle), onComplete: () => { this.actions.rotate(step > 0 ? "CW" : "CCW", Math.abs(step)); this.actions.audioCue("gear.snap"); this.dragDelta = 0; this.busy = false; this.flushPendingRender(); } }); }
-  private hasInfoOverlay(model: RdnSceneModel = this.model!): boolean { return !!model && (model.showInfo || model.selectedGemIndex !== null || model.selectedGearGemIndex !== null || model.selectedLinkEffectId !== null); }
+  private hasInfoOverlay(model: RdnSceneModel = this.model!): boolean { return !!model && (model.showSettings || model.showInfo || model.selectedGemIndex !== null || model.selectedGearGemIndex !== null || model.selectedLinkEffectId !== null); }
   private openGemInfoFromTap(pointer: Phaser.Input.Pointer, index: number, source: "ring" | "gear" = "ring"): void { if (performance.now() < this.suppressBoardTapUntil) return; const start = this.pointerDownAt; const moved = !start || Math.hypot(pointer.x - start.x, pointer.y - start.y) > 8; if (!moved && !this.busy && !this.hasInfoOverlay()) this.actions.gemInfo(index, source); }
   private openLinkInfoFromTap(pointer: Phaser.Input.Pointer, effectId: string): void { if (performance.now() < this.suppressBoardTapUntil) return; const start = this.pointerDownAt; const moved = !start || Math.hypot(pointer.x - start.x, pointer.y - start.y) > 8; if (!moved && !this.busy && !this.hasInfoOverlay()) this.actions.linkInfo(effectId); }
   /** Blocks the board while keeping dismissal discoverable: tap anywhere outside the card. */
   private infoBackdrop(cx: number, cy: number, width: number, height: number): void { const backdrop = this.add.rectangle(cx, cy, width, height, 0x020907, .46).setDepth(19).setInteractive(); backdrop.on("pointerup", () => this.closeInfoFromPointer()); }
-  private closeInfoFromPointer(): void { this.consumeNextPointerUp = true; this.suppressBoardTapUntil = performance.now() + 120; this.dragging = false; this.infoScrollDragY = null; this.pointerDownAt = null; this.actions.closeInfo(); }
+  private closeInfoFromPointer(): void { this.consumeNextPointerUp = true; this.suppressBoardTapUntil = performance.now() + 120; this.dragging = false; this.infoScrollDragY = null; this.pointerDownAt = null; if (this.model?.showSettings) this.actions.closeSettings(); else this.actions.closeInfo(); }
+  /** Delay the modal until the HUD tap has finished, so its backdrop cannot consume that same release. */
+  private openSettingsFromHud(): void { this.time.delayedCall(0, () => this.actions.openSettings()); }
   private scrollInfo(delta: number): void { if (!this.model || this.model.selectedGemIndex === null || this.infoScrollMax <= 0) return; const next = Phaser.Math.Clamp(this.infoScrollOffset + delta, 0, this.infoScrollMax); if (next === this.infoScrollOffset) return; this.infoScrollOffset = next; this.render(); }
   private setWheelAngle(angle: number): void { if (!this.wheel) return; this.visualAngle = angle; this.wheel.setAngle(((angle + this.layout.gear.angle + this.gearThemeAngleOffset + 180) % 360 + 360) % 360 - 180); this.keepLabelsUpright(); }
   /** A quiet visual cue that keeps the central action discoverable without distracting from the board. */
@@ -249,7 +252,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: impulseIcon, scaleX: impulseIcon.scaleX * 1.035, scaleY: impulseIcon.scaleY * 1.035, alpha: .92, duration: 1250, ease: "Sine.InOut", yoyo: true, repeat: -1 });
   }
   private keepLabelsUpright(): void { if (!this.wheel) return; const angle = this.wheel.rotation; const cos = Math.cos(angle); const sin = Math.sin(angle); for (const slot of this.innerSlots) { const x = this.wheel.x + slot.localX * cos - slot.localY * sin; const y = this.wheel.y + slot.localX * sin + slot.localY * cos; slot.sphere.setPosition(x, y); slot.text.setPosition(x, y).setAngle(0); slot.badge?.setPosition(x + slot.sphere.displayWidth * .33, y + slot.sphere.displayHeight * .33).setAngle(0); } }
-  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.model.showInfo || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.actions.audioCue("pulse.start"); this.fadeFlowsAfterImpulse = true; this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); this.cameras.main.shake(90, .006); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
+  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.hasInfoOverlay(this.model) || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.actions.audioCue("pulse.start"); this.fadeFlowsAfterImpulse = true; this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
   /** One-shot, multi-particle current from the impulse to every currently active gem. */
   private playImpulseDischarge(model: RdnSceneModel, plan: ImpulseResolutionPlan): number {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const { width, height } = this.scale; const layout = this.layout;
@@ -911,6 +914,41 @@ export class RdnPhaserScene extends Phaser.Scene {
       this.label(cx, cy + 49, `SCONFITTA  oltre ${policy.oneStarImpulseLimit} impulsi`, 12, 0xfb8c8c).setDepth(depth + 1);
     }
     this.button(cx + 140, cy - panelHeight / 2 + 28, "x", () => this.actions.closeInfo(), depth + 3);
+  }
+  /** In-game settings use the same panel asset and input shielding as every board popup. */
+  private settingsDialog(cx: number, cy: number, model: RdnSceneModel): void {
+    const depth = 20;
+    const height = 470;
+    const audio = model.audio;
+    const activePack = audio.packs.find((pack) => pack.id === audio.activePackId)?.label ?? "—";
+    this.add.image(cx, cy, this.infoPanelTexture(model)).setDisplaySize(390, height).setDepth(depth).setInteractive();
+    this.label(cx, cy - height / 2 + 39, "CONFIGURAZIONI", 18, 0xf8dc8b).setDepth(depth + 1);
+    this.button(cx + 166, cy - height / 2 + 31, "X", () => this.actions.closeSettings(), depth + 3);
+    this.label(cx, cy - 164, "AUDIO", 13, 0xffdf70).setDepth(depth + 1);
+
+    this.settingsVolumeRow(cx, cy - 124, "MUSICA", audio.musicVolume, audio.musicMuted, () => this.actions.adjustMusicVolume(-.1), () => this.actions.adjustMusicVolume(.1), () => this.actions.toggleMusicMute(), depth);
+    this.settingsVolumeRow(cx, cy - 72, "EFFETTI", audio.sfxVolume, audio.sfxMuted, () => this.actions.adjustSfxVolume(-.1), () => this.actions.adjustSfxVolume(.1), () => this.actions.toggleSfxMute(), depth);
+
+    this.label(cx, cy - 17, "SET AUDIO", 12, 0xf8dc8b).setDepth(depth + 1);
+    this.button(cx - 142, cy + 18, "‹", () => this.actions.shiftAudioPack(-1), depth + 2);
+    this.label(cx, cy + 18, activePack.toUpperCase(), 14, 0xe6dfc3).setDepth(depth + 2);
+    this.button(cx + 142, cy + 18, "›", () => this.actions.shiftAudioPack(1), depth + 2);
+
+    this.add.rectangle(cx, cy + 65, 292, 1, 0xd6af58, .55).setDepth(depth + 1);
+    this.label(cx, cy + 97, "LIVELLO", 13, 0xffdf70).setDepth(depth + 1);
+    this.settingsWideButton(cx, cy + 143, "RIPRISTINA LIVELLO", () => { this.actions.restart(); this.actions.closeSettings(); }, depth);
+  }
+  private settingsVolumeRow(cx: number, y: number, title: string, volume: number, muted: boolean, decrease: () => void, increase: () => void, toggleMute: () => void, depth: number): void {
+    this.label(cx - 118, y, title, 12, 0xe6dfc3).setOrigin(0, .5).setDepth(depth + 1);
+    this.button(cx - 48, y, "‹", decrease, depth + 2);
+    this.label(cx, y, `${Math.round(volume * 100)}%`, 14, muted ? 0x9b9b9b : 0xffffff).setDepth(depth + 2);
+    this.button(cx + 48, y, "›", increase, depth + 2);
+    this.settingsWideButton(cx + 121, y, muted ? "ATTIVA" : "MUTE", toggleMute, depth, 70, 31);
+  }
+  private settingsWideButton(x: number, y: number, text: string, action: () => void, depth: number, width = 250, height = 38): void {
+    const button = this.add.rectangle(x, y, width, height, 0x245438, .98).setStrokeStyle(1, 0xd6af58, .95).setDepth(depth + 2).setInteractive({ useHandCursor: true });
+    button.on("pointerdown", action);
+    this.label(x, y, text, 11, 0xffe3a0).setDepth(depth + 3);
   }
   private dialog(cx: number, cy: number, outcome: "win" | "lose", model: RdnSceneModel): void {
     const depth = 20;

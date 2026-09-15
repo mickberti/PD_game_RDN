@@ -91,7 +91,14 @@ export class AudioService {
   private finalMusicVolume(config: AudioCueConfig): number { return this.masterMuted() || this.musicMuted() ? 0 : clamp(this.masterVolume() * this.musicVolume() * (config.volume ?? 1)); }
   private refreshVolumes(): void { if (this.currentMusic) this.currentMusic.element.volume = this.finalMusicVolume(MUSIC_CONFIG[this.currentMusic.cue]); for (const [cue, elements] of this.activeSfx) for (const element of elements) element.volume = this.finalSfxVolume(SFX_CONFIG[cue]); }
   private fade(element: HTMLAudioElement, target: number, duration: number, done?: () => void): void { const start = element.volume; const started = performance.now(); const frame = () => { const p = Math.min(1, (performance.now() - started) / Math.max(1, duration)); element.volume = start + (target - start) * p; if (p < 1) requestAnimationFrame(frame); else done?.(); }; requestAnimationFrame(frame); }
-  private onBackground(): void { this.musicWasPlayingBeforeBackground = !!this.currentMusic && !this.currentMusic.element.paused; this.pauseMusic(); for (const elements of this.activeSfx.values()) for (const element of elements) element.pause(); }
+  private onBackground(): void {
+    // Both Capacitor and document.visibilitychange can signal the same suspension.
+    // Preserve the initial state until foreground is reached; a duplicate event sees
+    // the element already paused and must not cancel its pending resume.
+    this.musicWasPlayingBeforeBackground ||= !!this.currentMusic && !this.currentMusic.element.paused;
+    this.pauseMusic();
+    for (const elements of this.activeSfx.values()) for (const element of elements) element.pause();
+  }
   private onForeground(): void { if (this.musicWasPlayingBeforeBackground) this.resumeMusic(); this.musicWasPlayingBeforeBackground = false; }
   private tryPlayMusic(element: HTMLAudioElement, cue: MusicCue): void { void element.play().then(() => { this.musicAwaitingUserGesture = false; this.setAssetStatus(cue, "LOADED"); }).catch(() => { this.musicAwaitingUserGesture = true; this.warn(`Music ${cue} awaits a user gesture or could not start`); }); }
   private resumePendingMusicFromGesture(): void { if (!this.musicAwaitingUserGesture || !this.currentMusic) return; this.tryPlayMusic(this.currentMusic.element, this.currentMusic.cue); }

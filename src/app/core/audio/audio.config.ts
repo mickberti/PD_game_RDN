@@ -12,6 +12,7 @@ export const AUDIO_SETTINGS = { music: { defaultVolume: .55, crossfadeMs: 500 },
 export const AUDIO_PACKS: readonly AudioPackConfig[] = [
   { id: "classic", label: "Dark Classic", assetRoot: "assets/audio/packs/dark-classic", description: "Set Classic attuale incluso nell'app." },
   { id: "arcane-crystal", label: "Arcane Crystal", assetRoot: "assets/audio/packs/arcane-crystal", description: "Nuovo set Mechanical + Arcane + Crystal." },
+  { id: "tribal-deluxe", label: "Tribal Deluxe", assetRoot: "assets/audio/packs/tribal-deluxe", description: "Set tribale completo con musica e effetti dedicati." },
 ];
 
 /** Runtime catalog and asset-production brief. Paths follow Sound Design Specification §43. */
