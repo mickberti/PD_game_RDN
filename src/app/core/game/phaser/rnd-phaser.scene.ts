@@ -325,7 +325,9 @@ export class RdnPhaserScene extends Phaser.Scene {
   private presentImpulseImpact(impact: ImpulseResolutionPlan["impacts"][number], effectPresentations: readonly { frame: string; breaks: boolean }[] = []): void {
     const slot = this.outerSlots.get(impact.targetId); if (!slot) return;
     this.events.emit("IMPULSE_GEM_IMPACT", impact);
-    this.actions.audioCue(impact.resultValue === 0 && impact.previousValue !== 0 ? "gem.zero" : "gem.change");
+    // A zero has its own arrival cue; the physical break gets its own cue below.
+    const zero = impact.resultValue === 0 && impact.previousValue !== 0;
+    this.actions.audioCue(zero ? "gem.zero" : "gem.change");
     for (const presentation of effectPresentations) {
       const cue = presentation.frame.includes("shield") ? "effect.shield"
         : presentation.frame.includes("wall") || presentation.frame.includes("ice") || presentation.frame.includes("fire") ? "effect.wall"
@@ -340,7 +342,6 @@ export class RdnPhaserScene extends Phaser.Scene {
     slot.text.setText(format(impact.resultValue)).setColor(impact.resultValue === 0 ? "#e6e6e6" : "#ffffff");
     if (impact.resultValue === 0) slot.gem.setTint(0x909090);
     const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
-    const zero = impact.resultValue === 0 && impact.previousValue !== 0;
     const absorbed = !zero && impact.resultValue === impact.previousValue;
     if (zero) this.lastZeroBurstKey = `${this.model?.level.id}-${this.model?.state.impulses}`;
     this.playImpactFeedback(slot.gem, slot.text, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", effectPresentations, gemTintBeforeImpact);
@@ -364,6 +365,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     for (let index = 0; index < count; index += 1) { const angle = Math.PI * 2 * index / count + targetId * .43; const distance = radius * style.distanceRatio * (.9 + (index % 3) * .2); const color = index % 6 === 4 ? style.secondaryParticleColor : index % 6 === 5 ? style.tertiaryParticleColor : style.particleColor; const spark = this.acquireImpactCircle(x, y, Math.max(9.6, radius * style.particleRadiusRatio), color, 1, visual.depth + 2); this.tweens.add({ targets: spark, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance, scale: .12, alpha: 0, duration: reduce ? 140 : style.durationMs, delay: reduce ? 0 : index * 12, ease: "Cubic.Out", onComplete: () => this.releaseImpact(spark) }); }
     this.showImpactEffectIcons(x, y, radius, effectPresentations, reduce);
     if (variant === "zero" && !reduce) this.showZeroGemShatter(gem, gemValue, gemTintBeforeImpact ?? 0xffffff);
+    else if (variant === "zero") this.time.delayedCall(0, () => this.actions.audioCue("gem.break"));
     this.events.emit("IMPULSE_FEEDBACK_SOUND", { variant });
     this.triggerImpactHaptic(variant === "zero");
   }
@@ -438,11 +440,15 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: zeroValue, alpha: 1, duration: icon.fadeInMs, ease: "Sine.Out" });
     this.tweens.add({ targets: shardGem, alpha: icon.alpha, scaleX: icon.finalScale, scaleY: icon.finalScale, duration: icon.fadeInMs, ease: "Sine.Out", onComplete: () => {
       if (icon.shatter.enabled) this.tweens.add({ targets: shardGem, alpha: icon.alpha, duration: Math.max(1, icon.durationMs - icon.fadeInMs), ease: "Linear", onComplete: () => {
+        this.actions.audioCue("gem.break");
         this.shatterImage(gem.texture.key, gem.frame.name, gem.x, gem.y - size * icon.offsetYRatio, size * icon.sizeRatio, tint, true);
         this.releaseImpact(shardGem);
         this.releaseImpact(zeroValue);
       } });
-      else this.tweens.add({ targets: [shardGem, zeroValue], alpha: 0, delay: icon.holdMs, duration: icon.fadeOutMs, ease: "Sine.In", onComplete: () => { this.releaseImpact(shardGem); this.releaseImpact(zeroValue); } });
+      else {
+        this.actions.audioCue("gem.break");
+        this.tweens.add({ targets: [shardGem, zeroValue], alpha: 0, delay: icon.holdMs, duration: icon.fadeOutMs, ease: "Sine.In", onComplete: () => { this.releaseImpact(shardGem); this.releaseImpact(zeroValue); } });
+      }
     } });
   }
   private shatterImage(textureKey: string, frame: string | number, x: number, y: number, size: number, tint?: number, zeroGem = false): void {
