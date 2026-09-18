@@ -28,7 +28,10 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     const iconPosition = this.pointAt(geometry.iconProgress); const frame = config.type === LinkEffectType.ECHO ? "effect-echo-link" : config.type === LinkEffectType.AMPLIFY ? "effect-double-link" : config.type === LinkEffectType.CHAIN ? "effect-chain-link" : "effect-mirror-link"; const texture = "rdn-effects";
     const size = Math.max(13, geometry.radius * .72) + 5;
     const background = scene.add.circle(iconPosition.x, iconPosition.y, size * .56, 0x101c18, .94).setStrokeStyle(Math.max(1, size * .08), color, 1).setInteractive({ useHandCursor: true });
-    const icon = scene.add.image(iconPosition.x, iconPosition.y - 2, texture, frame).setDisplaySize(size, size).setTint(color).setInteractive({ useHandCursor: true });
+    const icon = scene.textures.getFrame(texture, frame)
+      ? scene.add.image(iconPosition.x, iconPosition.y - 2, texture, frame).setDisplaySize(size, size)
+      : scene.add.circle(iconPosition.x, iconPosition.y - 2, size * .38, color, .72);
+    icon.setInteractive({ useHandCursor: true });
     if (onInfo) { background.on("pointerup", (pointer: Phaser.Input.Pointer) => onInfo(effect.id, pointer)); icon.on("pointerup", (pointer: Phaser.Input.Pointer) => onInfo(effect.id, pointer)); }
     this.add([graphic, background, icon]);
     if (direction !== LinkDirection.REVERSE) this.animateDirection(scene, color, true, 0);

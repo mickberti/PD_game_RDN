@@ -2,8 +2,9 @@ export type AudioCue =
   | "ui.tap" | "ui.confirm" | "ui.cancel" | "ui.open" | "ui.close"
   | "gear.rotate" | "gear.snap" | "pulse.start" | "pulse.travel"
   | "gem.change" | "gem.zero" | "gem.break" | "link.travel" | "link.hit" | "bonus.activate"
-  | "effect.shield" | "effect.wall" | "effect.mirror" | "effect.amplifier"
-  | "effect.inverter" | "effect.freeze" | "effect.timer" | "effect.corruption"
+  | "effect.shield" | "effect.wall" | "effect.fire" | "effect.mirror" | "effect.amplifier"
+  | "effect.inverter" | "effect.freeze" | "effect.area.bombs" | "effect.timer" | "effect.corruption"
+  | "effect.iceResist" | "effect.fireResist" | "effect.iceMelt" | "effect.fireExtinguish"
   | "game.win" | "game.perfect" | "game.fail" | "time.warning" | "time.critical";
 
 export type MusicCue = "menu.main" | "game.adventure" | "game.timeAttack" | "game.ranked" | "game.free";

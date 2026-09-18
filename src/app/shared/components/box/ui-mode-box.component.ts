@@ -43,7 +43,7 @@ import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
       width: 100%;
       min-height: 180px;
       overflow: hidden;
-      border: 0;
+      border: 1px solid rgba(159, 169, 183, 0.85);
       border-radius: 24px;
       padding: 0;
     }

@@ -16,7 +16,7 @@ export class EffectPhaserRenderer {
   private readonly dischargeLayer: Phaser.GameObjects.Container;
   private readonly links = new Map<string, LinkEffectView>();
   private readonly markerCounts = new Map<string, number>();
-  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void, private readonly onLinkFlowStart?: (delayMs: number) => void) {
+  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void, private readonly onLinkFlowStart?: (delayMs: number) => void, private readonly onEffectCue?: (cue: string) => void) {
     this.linkLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     this.previewGemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth + 2);
     this.gemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.gemDepth);
@@ -68,9 +68,9 @@ export class EffectPhaserRenderer {
       case "CORRUPTION_APPLIED": this.pulseGem(event.gemId, 0xb35cff, 1.48); break;
       case "BOMB_TRIGGERED": this.bombBurst(event.gemId); break;
       case "AREA_ICE_TRIGGERED": this.flashGem(event.gemId, 0x8cecff); break;
-      case "AREA_ICE_APPLIED": this.flashGem(event.gemId, 0x8cecff); break;
+      case "AREA_ICE_APPLIED": this.onEffectCue?.("effect.freeze"); this.flashGem(event.gemId, 0x8cecff); break;
       case "AREA_INVERTER_TRIGGERED": this.flashGem(event.gemId, 0xc890ff); break;
-      case "AREA_INVERTER_APPLIED": this.flashGem(event.gemId, 0xc890ff); break;
+      case "AREA_INVERTER_APPLIED": this.onEffectCue?.("effect.inverter"); this.flashGem(event.gemId, 0xc890ff); break;
     }
   }
   /**
@@ -152,8 +152,11 @@ export class EffectPhaserRenderer {
     const size = Math.max(13, gem.radius * .72) + 5;
     const x = gem.x + gem.radius * offsetX; const y = gem.y + gem.radius * offsetY;
     const background = this.scene.add.circle(x, y, size * .56, 0x101c18, .92).setStrokeStyle(Math.max(1, size * .08), color, .95);
-    const icon = this.scene.add.image(x, y, texture, frame).setDisplaySize(size, size).setTint(color);
-    const children: Phaser.GameObjects.GameObject[] = [background, icon];
+    const iconFrame = this.scene.textures.getFrame(texture, frame);
+    const markerContent = iconFrame
+      ? this.scene.add.image(x, y, texture, frame).setDisplaySize(size, size)
+      : this.scene.add.circle(x, y, size * .38, color, .72);
+    const children: Phaser.GameObjects.GameObject[] = [background, markerContent];
     if (value) children.push(this.badge(x + size * .44, y - size * .44, value).setScale(.82));
     this.markerLayer.add(children);
   }
