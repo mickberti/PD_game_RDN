@@ -1,7 +1,7 @@
 import { Injectable, signal } from "@angular/core";
 import { App } from "@capacitor/app";
 import { AUDIO_PACKS, AUDIO_SETTINGS, MUSIC_CONFIG, SFX_CONFIG } from "./audio.config";
-import { AudioAssetStatus, AudioCue, AudioCueConfig, AudioDebugCounters, AudioDebugEvent, AudioPackConfig, AudioSettings, MusicCue } from "./audio.models";
+import { AudioAssetStatus, AudioCue, AudioCueConfig, AudioDebugCounters, AudioDebugEvent, AudioPackConfig, AudioSettings, MusicCue, SfxRuntimeTuning } from "./audio.models";
 
 const STORAGE_KEY = "gearithm.audio.settings.v1";
 const defaults: AudioSettings = { masterVolume: 1, musicVolume: AUDIO_SETTINGS.music.defaultVolume, sfxVolume: AUDIO_SETTINGS.sfx.defaultVolume, masterMuted: false, musicMuted: false, sfxMuted: false, audioPack: "classic" };
@@ -15,6 +15,8 @@ export class AudioService {
   readonly masterMuted = signal(defaults.masterMuted); readonly musicMuted = signal(defaults.musicMuted); readonly sfxMuted = signal(defaults.sfxMuted);
   readonly activeAudioPack = signal(defaults.audioPack); readonly audioPacks: readonly AudioPackConfig[] = AUDIO_PACKS; readonly audioDebugEnabled = signal(false);
   readonly currentMusicCue = signal<MusicCue | null>(null); readonly debugCounters = signal<Readonly<Record<string, AudioDebugCounters>>>({}); readonly debugEvents = signal<readonly AudioDebugEvent[]>([]); readonly assetStatuses = signal<Readonly<Record<string, AudioAssetStatus>>>({});
+  /** Non-persistent calibration overlay used by the audio-debug mixer. */
+  readonly sfxRuntimeTunings = signal<Readonly<Partial<Record<AudioCue, SfxRuntimeTuning>>>>({});
   private readonly lastPlayed = new Map<AudioCue, number>();
   private readonly activeSfx = new Map<AudioCue, Set<ActiveSfx>>();
   private readonly sfxBuffers = new Map<string, AudioBuffer>();
@@ -39,7 +41,7 @@ export class AudioService {
 
   playUi(cue: "tap" | "confirm" | "cancel" | "open" | "close"): void { this.playSfx(`ui.${cue}`); }
   playSfx(cue: AudioCue): void {
-    const config = SFX_CONFIG[cue]; const now = performance.now(); this.count(cue, "requested");
+    const config = this.sfxConfig(cue); const now = performance.now(); this.count(cue, "requested");
     if ((config.cooldownMs ?? 0) > now - (this.lastPlayed.get(cue) ?? -Infinity)) { this.count(cue, "skippedCooldown"); this.debug(`SKIP ${cue} cooldown`, "SKIP"); return; }
     const active = this.activeSfx.get(cue) ?? new Set<ActiveSfx>();
     if (active.size >= (config.maxConcurrent ?? Infinity)) { this.count(cue, "skippedConcurrency"); this.debug(`SKIP ${cue} maxConcurrent`, "SKIP"); return; }
@@ -78,11 +80,24 @@ export class AudioService {
   clearDebugStats(): void { this.debugCounters.set({}); this.debugEvents.set([]); }
   activeSounds(): Readonly<Record<string, number>> { return Object.fromEntries([...this.activeSfx].map(([cue, values]) => [cue, values.size])); }
   resolveActivePackSource(source: string): string { const pack = AUDIO_PACKS.find((item) => item.id === this.activeAudioPack()) ?? AUDIO_PACKS[0]; return source.replace(/^assets\/audio(?=\/)/, pack.assetRoot); }
+  sfxConfig(cue: AudioCue): AudioCueConfig { return { ...SFX_CONFIG[cue], ...this.sfxRuntimeTunings()[cue] }; }
+  setSfxRuntimeTuning(cue: AudioCue, tuning: SfxRuntimeTuning): void {
+    const normalized: SfxRuntimeTuning = {};
+    if ("volume" in tuning && tuning.volume !== undefined) normalized.volume = clamp(tuning.volume);
+    if ("cooldownMs" in tuning && tuning.cooldownMs !== undefined) normalized.cooldownMs = Math.max(0, tuning.cooldownMs);
+    if ("maxConcurrent" in tuning && tuning.maxConcurrent !== undefined) normalized.maxConcurrent = Math.max(1, Math.floor(tuning.maxConcurrent));
+    if ("pitchVariation" in tuning && tuning.pitchVariation !== undefined) normalized.pitchVariation = Math.max(0, tuning.pitchVariation);
+    if ("trim" in tuning) normalized.trim = tuning.trim && { startMs: tuning.trim.startMs === undefined ? undefined : Math.max(0, tuning.trim.startMs), endMs: tuning.trim.endMs === undefined ? undefined : Math.max(0, tuning.trim.endMs) };
+    this.sfxRuntimeTunings.update((all) => ({ ...all, [cue]: { ...all[cue], ...normalized } }));
+    this.refreshVolumes();
+  }
+  resetSfxRuntimeTunings(): void { this.sfxRuntimeTunings.set({}); this.refreshVolumes(); }
+  calibratedSfxCatalog(): Readonly<Record<AudioCue, AudioCueConfig>> { return Object.fromEntries((Object.keys(SFX_CONFIG) as AudioCue[]).map((cue) => [cue, this.sfxConfig(cue)])) as Readonly<Record<AudioCue, AudioCueConfig>>; }
 
   private resetSfxPack(): void { this.stopAllSfx(); this.sfxBuffers.clear(); this.sfxBufferLoads.clear(); this.assetStatuses.set({}); void this.preloadActivePack(); }
   private async preloadActivePack(): Promise<void> {
     const generation = ++this.preloadGeneration; const packId = this.activeAudioPack();
-    const entries = Object.entries(SFX_CONFIG) as [AudioCue, AudioCueConfig][];
+    const entries = (Object.keys(SFX_CONFIG) as AudioCue[]).map((cue) => [cue, this.sfxConfig(cue)] as [AudioCue, AudioCueConfig]);
     entries.forEach(([cue]) => this.setAssetStatus(cue, "LOADING"));
     if (!this.getSfxContext()) return;
     await Promise.all(entries.map(async ([cue, config]) => {
@@ -131,7 +146,7 @@ export class AudioService {
   private trimWindow(config: AudioCueConfig, totalSeconds: number): { startSeconds: number; durationSeconds?: number } { const startSeconds = Math.min(Math.max(0, (config.trim?.startMs ?? 0) / 1000), totalSeconds); if (config.trim?.endMs === undefined) return { startSeconds }; const endSeconds = Math.min(Math.max(startSeconds, config.trim.endMs / 1000), totalSeconds); return { startSeconds, durationSeconds: Math.max(0, endSeconds - startSeconds) }; }
   private finalSfxVolume(config: AudioCueConfig): number { return this.masterMuted() || this.sfxMuted() ? 0 : clamp(this.masterVolume() * this.sfxVolume() * (config.volume ?? 1)); }
   private finalMusicVolume(config: AudioCueConfig): number { return this.masterMuted() || this.musicMuted() ? 0 : clamp(this.masterVolume() * this.musicVolume() * (config.volume ?? 1)); }
-  private refreshVolumes(): void { if (this.currentMusic) this.currentMusic.element.volume = this.finalMusicVolume(MUSIC_CONFIG[this.currentMusic.cue]); for (const [cue, elements] of this.activeSfx) for (const element of elements) element.setVolume(this.finalSfxVolume(SFX_CONFIG[cue])); }
+  private refreshVolumes(): void { if (this.currentMusic) this.currentMusic.element.volume = this.finalMusicVolume(MUSIC_CONFIG[this.currentMusic.cue]); for (const [cue, elements] of this.activeSfx) for (const element of elements) element.setVolume(this.finalSfxVolume(this.sfxConfig(cue))); }
   private fade(element: HTMLAudioElement, target: number, duration: number, done?: () => void): void { const start = element.volume; const started = performance.now(); const frame = () => { const p = Math.min(1, (performance.now() - started) / Math.max(1, duration)); element.volume = start + (target - start) * p; if (p < 1) requestAnimationFrame(frame); else done?.(); }; requestAnimationFrame(frame); }
   private onBackground(): void { this.musicWasPlayingBeforeBackground ||= !!this.currentMusic && !this.currentMusic.element.paused; this.pauseMusic(); this.stopAllSfx(); }
   private onForeground(): void { if (this.musicWasPlayingBeforeBackground) this.resumeMusic(); this.musicWasPlayingBeforeBackground = false; }

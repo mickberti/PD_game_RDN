@@ -18,43 +18,707 @@ export const AUDIO_PACKS: readonly AudioPackConfig[] = [
 ];
 
 /** Runtime catalog and asset-production brief. Paths follow Sound Design Specification §43. */
+
 export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
-  "ui.tap": sfx("sfx-ui-tap", "ui/tap", { volume: .45, cooldownMs: 30, maxConcurrent: 2, design: design([40, 80], "Soft mechanical click with discreet digital tick.", 1, 1) }),
-  "ui.confirm": sfx("sfx-ui-confirm", "ui/confirm", { volume: .45, cooldownMs: 50, maxConcurrent: 2, design: design([100, 180], "Click with a micro tonal rise; positive, never celebratory.", 1, 1) }),
-  "ui.cancel": sfx("sfx-ui-cancel", "ui/cancel", { volume: .45, cooldownMs: 50, maxConcurrent: 2, design: design([80, 160], "Soft click and small downward tone.", 1, 1) }),
-  "ui.open": sfx("sfx-ui-open", "ui/open", { volume: .45, cooldownMs: 50, maxConcurrent: 2, design: design([150, 250], "Mechanical slide with soft energy shimmer.", 1, 1) }),
-  "ui.close": sfx("sfx-ui-close", "ui/close", { volume: .45, cooldownMs: 50, maxConcurrent: 2, design: design([150, 250], "Reverse opening: receding slide and shimmer.", 1, 1) }),
-  "gear.rotate": sfx("sfx-gear-rotate", "gear/small-metal-hit-01", { variants: variants("gear/small-metal-hit-01", "gear/small-metal-hit-05", "gear/small-metal-hit-11"), volume: .30, cooldownMs: 40, maxConcurrent: 2, pitchVariation: .03, design: design([40, 90], "Precise ratchet click: 70% refined mechanics, 30% synthetic energy.", 1, 1) }),
-  "gear.snap": sfx("sfx-gear-snap", "gear/snap", { volume: .0, cooldownMs: 60, maxConcurrent: 2, design: design([120, 220], "Metallic snap plus short resonance; confirms valid position.", 2, 2) }),
-  "pulse.start": sfx("sfx-pulse-start", "pulse/start1", { volume: .10, cooldownMs: 50, maxConcurrent: 1, design: design([150, 300], "Short mechanical release and controlled energy charge.", 3, 3) }),
-  "pulse.travel": sfx("sfx-pulse-travel", "pulse/travel1", { volume: .65, trim: { startMs: 0 }, cooldownMs: 70, maxConcurrent: 2, design: design([80, 180], "Low energy zip / electric shimmer, deliberately unobtrusive.", 1, 1) }),
-  "gem.change": sfx("sfx-gem-change", "gem/sysenter_5", { variants: variants("gem/sysenter_5", "gem/sysenter_6", "gem/sysenter_7"), volume: .25, cooldownMs: 20, maxConcurrent: 4, pitchVariation: .03, design: design([100, 220], "Crystal tick with soft energy pop; change, not success.", 2, 2) }),
-  "gem.zero": sfx("sfx-gem-zero", "gem/sysenter_1", { variants: variants("gem/sysenter_1", "gem/sysenter_2"), volume: .35, cooldownMs: 20, maxConcurrent: 1, pitchVariation: .03, design: design([100, 220], "Crystal tick with soft energy pop; zero arrival placeholder.", 2, 2) }),
-  "gem.break": sfx("sfx-gem-break", "gem/lsprice__gb012", { variants: variants("gem/lsprice__gb04", "gem/lsprice__gb09", "gem/lsprice__gb012"), volume: .65, cooldownMs: 50, maxConcurrent: 2, design: design([300, 550], "Crystal impact, energy collapse and harmonic shimmer; never coin/slot-machine.", 4, 4) }),
-  "link.travel": sfx("sfx-link-travel", "pulse/travel1", { volume: .65, trim: { startMs: 0 }, cooldownMs: 45, maxConcurrent: 2, design: design([80, 180], "Shared low-level energy transfer layer for linked flows.", 1, 1) }),
-  "link.hit": sfx("sfx-link-hit", "gem/change-01", { variants: variants("gem/change-01", "gem/change-02"), volume: .45, cooldownMs: 40, maxConcurrent: 2, design: design([100, 220], "Restrained arrival layer sharing the gem-change palette.", 2, 2) }),
-  "bonus.activate": sfx("sfx-bonus-activate", "gameplay/bonus-activate", { volume: .75, cooldownMs: 80, maxConcurrent: 1, design: design([350, 700], "Energy charge with bright crystal resonance.", 3, 4) }),
-  "effect.shield": sfx("sfx-effect-shield", "effects/impact-explosiom-sci-fi-explode-boom-effect-sfx", { volume: .65, trim: { startMs: 1000, endMs: 3000 }, cooldownMs: 60, maxConcurrent: 2, design: design([300, 600], "Low impact and glass/energy resonance; protection and absorption.", 3, 3) }),
-  "effect.wall": sfx("sfx-effect-wall", "effects/small-metal-hit-08", { volume: .75, cooldownMs: 60, maxConcurrent: 2, design: design([250, 500], "Stone/metal lock and low mechanical impact.", 3, 3) }),
-  // Dedicated fire cue; it temporarily shares the wall asset until each pack supplies effects/fire.
-  "effect.fire": sfx("sfx-effect-fire", "effects/ireball-pass-by-crackle", { volume: .75, cooldownMs: 60, maxConcurrent: 2, design: design([250, 500], "Temporary fire barrier cue using the wall asset.", 3, 3) }),
-  "effect.mirror": sfx("sfx-effect-mirror", "effects/sfx-sci-fi-user-interface-robot-sci-fi", { volume: .45, trim: { startMs: 7030, endMs: 8010 }, cooldownMs: 60, maxConcurrent: 2, design: design([300, 500], "Reverse shimmer and crystal sweep.", 3, 3) }),
-  "effect.amplifier": sfx("sfx-effect-amplifier", "effects/amplifier", { volume: .45, cooldownMs: 60, maxConcurrent: 2, design: design([300, 550], "Rising energy pulse; increased power without arcade excess.", 3, 3) }),
-  "effect.inverter": sfx("sfx-effect-inverter", "effects/sfx-sci-fi-user-interface-robot-sci-fi", { volume: .45, trim: { startMs: 630, endMs: 2370 }, cooldownMs: 0, maxConcurrent: 10, design: design([250, 450], "Short tone and reverse tonal flip.", 3, 3) }),
-  "effect.freeze": sfx("sfx-effect-freeze", "effects/iceball-impact-freeze-over-crack", { volume: .75, cooldownMs: 0, maxConcurrent: 10, design: design([350, 650], "Technological crystal-ice snap, not fantasy ice magic.", 3, 3) }),
-  "effect.area.bombs": sfx("sfx-effect-area", "effects/explode-boom-explosion-bomb", { volume: .2, trim: { startMs: 3230, endMs: 6000 }, cooldownMs: 0, maxConcurrent: 10, design: design([350, 700], "Temporary area-bomb cue; replace independently when dedicated assets are available.", 4, 4) }),
-  "effect.iceResist": sfx("sfx-effect-ice-resist", "effects/impact-explosiom-sci-fi-explode-boom-effect-sfx", { volume: .65, trim: { startMs: 1000, endMs: 3000 },  cooldownMs: 40, maxConcurrent: 3, design: design([180, 360], "Ice wall resists an ice sphere.", 3, 3) }),
-  "effect.fireResist": sfx("sfx-effect-fire-resist", "effects/impact-explosiom-sci-fi-explode-boom-effect-sfx", { volume: .65, trim: { startMs: 1000, endMs: 3000 }, cooldownMs: 40, maxConcurrent: 3, design: design([180, 360], "Fire wall resists a fire sphere.", 3, 3) }),
-  "effect.iceMelt": sfx("sfx-effect-ice-melt", "effects/iceball-impact-freeze-over-crack", { volume: .75, cooldownMs: 40, maxConcurrent: 3, design: design([220, 440], "Fire sphere melts an ice wall.", 3, 3) }),
-  "effect.fireExtinguish": sfx("sfx-effect-fire-extinguish", "effects/fireball-pass-by-crackle", { volume: .75, cooldownMs: 40, maxConcurrent: 3, design: design([220, 440], "Ice sphere extinguishes a fire wall.", 3, 3) }),
-  "effect.timer": sfx("sfx-effect-timer", "effects/timer", { volume: .75, cooldownMs: 80, maxConcurrent: 1, design: design([150, 300], "Single clock-like pressure pulse; no continuous ticking.", 2, 3) }),
-  "effect.corruption": sfx("sfx-effect-corruption", "effects/corruption", { volume: .75, cooldownMs: 60, maxConcurrent: 2, design: design([400, 800], "Controlled digital glitch and low energy growl; no horror.", 3, 3) }),
-  "game.win": sfx("sfx-game-win", "gameplay/game-win", { volume: 1, cooldownMs: 500, maxConcurrent: 1, design: design([1200, 2200], "Mechanical resolution, harmonic crystal chord and energy bloom; solution found, not jackpot.", 5, 5) }),
-  "game.perfect": sfx("sfx-game-perfect", "gameplay/game-perfect", { volume: 1, cooldownMs: 500, maxConcurrent: 1, design: design([1500, 2500], "Win identity with higher harmonic resolution and extra crystal shimmer.", 5, 5) }),
-  "game.fail": sfx("sfx-game-fail", "gameplay/game-fail", { volume: .75, cooldownMs: 500, maxConcurrent: 1, design: design([700, 1300], "Mechanical slowdown and low tonal fall; sober, no buzzer.", 3, 5) }),
-  "time.warning": sfx("sfx-time-warning", "gameplay/time-warning", { volume: .60, cooldownMs: 1000, maxConcurrent: 1, design: design([200, 400], "Low pulse with concise alert tone at final phase.", 3, 3) }),
-  "time.critical": sfx("sfx-time-critical", "gameplay/time-critical", { volume: .65, cooldownMs: 1000, maxConcurrent: 1, design: design([200, 400], "Discreet critical alert for selected final-second thresholds only.", 4, 4) }),
+  "ui.tap": {
+    "key": "sfx-ui-tap",
+    "sources": [
+      "assets/audio/sfx/ui/tap.wav"
+    ],
+    "volume": 0.45,
+    "cooldownMs": 30,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        40,
+        80
+      ],
+      "character": "Soft mechanical click with discreet digital tick.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "ui.confirm": {
+    "key": "sfx-ui-confirm",
+    "sources": [
+      "assets/audio/sfx/ui/confirm.wav"
+    ],
+    "volume": 0.45,
+    "cooldownMs": 50,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        100,
+        180
+      ],
+      "character": "Click with a micro tonal rise; positive, never celebratory.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "ui.cancel": {
+    "key": "sfx-ui-cancel",
+    "sources": [
+      "assets/audio/sfx/ui/cancel.wav"
+    ],
+    "volume": 0.45,
+    "cooldownMs": 50,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        80,
+        160
+      ],
+      "character": "Soft click and small downward tone.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "ui.open": {
+    "key": "sfx-ui-open",
+    "sources": [
+      "assets/audio/sfx/ui/open.wav"
+    ],
+    "volume": 0.45,
+    "cooldownMs": 50,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        150,
+        250
+      ],
+      "character": "Mechanical slide with soft energy shimmer.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "ui.close": {
+    "key": "sfx-ui-close",
+    "sources": [
+      "assets/audio/sfx/ui/close.wav"
+    ],
+    "volume": 0.45,
+    "cooldownMs": 50,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        150,
+        250
+      ],
+      "character": "Reverse opening: receding slide and shimmer.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "gear.rotate": {
+    "key": "sfx-gear-rotate",
+    "sources": [
+      "assets/audio/sfx/gear/small-metal-hit-01.wav"
+    ],
+    "variants": [
+      [
+        "assets/audio/sfx/gear/small-metal-hit-01.wav"
+      ],
+      [
+        "assets/audio/sfx/gear/small-metal-hit-05.wav"
+      ],
+      [
+        "assets/audio/sfx/gear/small-metal-hit-11.wav"
+      ]
+    ],
+    "volume": 0.3,
+    "cooldownMs": 40,
+    "maxConcurrent": 2,
+    "pitchVariation": 0.03,
+    "design": {
+      "durationMs": [
+        40,
+        90
+      ],
+      "character": "Precise ratchet click: 70% refined mechanics, 30% synthetic energy.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "gear.snap": {
+    "key": "sfx-gear-snap",
+    "sources": [
+      "assets/audio/sfx/gear/snap.wav"
+    ],
+    "volume": 0,
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        120,
+        220
+      ],
+      "character": "Metallic snap plus short resonance; confirms valid position.",
+      "intensity": 2,
+      "priority": 2
+    }
+  },
+  "pulse.start": {
+    "key": "sfx-pulse-start",
+    "sources": [
+      "assets/audio/sfx/pulse/start1.wav"
+    ],
+    "volume": 0.1,
+    "cooldownMs": 50,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        150,
+        300
+      ],
+      "character": "Short mechanical release and controlled energy charge.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "pulse.travel": {
+    "key": "sfx-pulse-travel",
+    "sources": [
+      "assets/audio/sfx/pulse/travel1.wav"
+    ],
+    "volume": 0.65,
+    "trim": {
+      "startMs": 0
+    },
+    "cooldownMs": 70,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        80,
+        180
+      ],
+      "character": "Low energy zip / electric shimmer, deliberately unobtrusive.",
+      "intensity": 1,
+      "priority": 1
+    },
+    "pitchVariation": 0
+  },
+  "gem.change": {
+    "key": "sfx-gem-change",
+    "sources": [
+      "assets/audio/sfx/gem/sysenter_5.wav"
+    ],
+    "variants": [
+      [
+        "assets/audio/sfx/gem/sysenter_5.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/sysenter_6.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/sysenter_7.wav"
+      ]
+    ],
+    "volume": 0.25,
+    "cooldownMs": 20,
+    "maxConcurrent": 4,
+    "pitchVariation": 0.03,
+    "design": {
+      "durationMs": [
+        100,
+        220
+      ],
+      "character": "Crystal tick with soft energy pop; change, not success.",
+      "intensity": 2,
+      "priority": 2
+    }
+  },
+  "gem.zero": {
+    "key": "sfx-gem-zero",
+    "sources": [
+      "assets/audio/sfx/gem/sysenter_1.wav"
+    ],
+    "variants": [
+      [
+        "assets/audio/sfx/gem/sysenter_1.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/sysenter_2.wav"
+      ]
+    ],
+    "volume": 0.35,
+    "cooldownMs": 20,
+    "maxConcurrent": 1,
+    "pitchVariation": 0.03,
+    "design": {
+      "durationMs": [
+        100,
+        220
+      ],
+      "character": "Crystal tick with soft energy pop; zero arrival placeholder.",
+      "intensity": 2,
+      "priority": 2
+    }
+  },
+  "gem.break": {
+    "key": "sfx-gem-break",
+    "sources": [
+      "assets/audio/sfx/gem/lsprice__gb012.wav"
+    ],
+    "variants": [
+      [
+        "assets/audio/sfx/gem/lsprice__gb04.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/lsprice__gb09.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/lsprice__gb012.wav"
+      ]
+    ],
+    "volume": 0.65,
+    "cooldownMs": 50,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        300,
+        550
+      ],
+      "character": "Crystal impact, energy collapse and harmonic shimmer; never coin/slot-machine.",
+      "intensity": 4,
+      "priority": 4
+    },
+    "pitchVariation": 0.11
+  },
+  "link.travel": {
+    "key": "sfx-link-travel",
+    "sources": [
+      "assets/audio/sfx/pulse/travel1.wav"
+    ],
+    "volume": 0.65,
+    "trim": {
+      "startMs": 0
+    },
+    "cooldownMs": 45,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        80,
+        180
+      ],
+      "character": "Shared low-level energy transfer layer for linked flows.",
+      "intensity": 1,
+      "priority": 1
+    }
+  },
+  "link.hit": {
+    "key": "sfx-link-hit",
+    "sources": [
+      "assets/audio/sfx/gem/change-01.wav"
+    ],
+    "variants": [
+      [
+        "assets/audio/sfx/gem/change-01.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/change-02.wav"
+      ]
+    ],
+    "volume": 0.45,
+    "cooldownMs": 40,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        100,
+        220
+      ],
+      "character": "Restrained arrival layer sharing the gem-change palette.",
+      "intensity": 2,
+      "priority": 2
+    }
+  },
+  "bonus.activate": {
+    "key": "sfx-bonus-activate",
+    "sources": [
+      "assets/audio/sfx/gameplay/bonus-activate.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 80,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        350,
+        700
+      ],
+      "character": "Energy charge with bright crystal resonance.",
+      "intensity": 3,
+      "priority": 4
+    }
+  },
+  "effect.shield": {
+    "key": "sfx-effect-shield",
+    "sources": [
+      "assets/audio/sfx/effects/impact-explosiom-sci-fi-explode-boom-effect-sfx.wav"
+    ],
+    "volume": 0.65,
+    "trim": {
+      "startMs": 1000,
+      "endMs": 3000
+    },
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        300,
+        600
+      ],
+      "character": "Low impact and glass/energy resonance; protection and absorption.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.wall": {
+    "key": "sfx-effect-wall",
+    "sources": [
+      "assets/audio/sfx/effects/small-metal-hit-08.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        250,
+        500
+      ],
+      "character": "Stone/metal lock and low mechanical impact.",
+      "intensity": 3,
+      "priority": 3
+    },
+    "pitchVariation": 0.15
+  },
+  "effect.fire": {
+    "key": "sfx-effect-fire",
+    "sources": [
+      "assets/audio/sfx/effects/ireball-pass-by-crackle.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        250,
+        500
+      ],
+      "character": "Temporary fire barrier cue using the wall asset.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.mirror": {
+    "key": "sfx-effect-mirror",
+    "sources": [
+      "assets/audio/sfx/effects/sfx-sci-fi-user-interface-robot-sci-fi.wav"
+    ],
+    "volume": 0.45,
+    "trim": {
+      "startMs": 7030,
+      "endMs": 8010
+    },
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        300,
+        500
+      ],
+      "character": "Reverse shimmer and crystal sweep.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.amplifier": {
+    "key": "sfx-effect-amplifier",
+    "sources": [
+      "assets/audio/sfx/effects/amplifier.wav"
+    ],
+    "volume": 0.45,
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        300,
+        550
+      ],
+      "character": "Rising energy pulse; increased power without arcade excess.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.inverter": {
+    "key": "sfx-effect-inverter",
+    "sources": [
+      "assets/audio/sfx/effects/sfx-sci-fi-user-interface-robot-sci-fi.wav"
+    ],
+    "volume": 0.45,
+    "trim": {
+      "startMs": 630,
+      "endMs": 2370
+    },
+    "cooldownMs": 0,
+    "maxConcurrent": 10,
+    "design": {
+      "durationMs": [
+        250,
+        450
+      ],
+      "character": "Short tone and reverse tonal flip.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.freeze": {
+    "key": "sfx-effect-freeze",
+    "sources": [
+      "assets/audio/sfx/effects/iceball-impact-freeze-over-crack.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 0,
+    "maxConcurrent": 10,
+    "design": {
+      "durationMs": [
+        350,
+        650
+      ],
+      "character": "Technological crystal-ice snap, not fantasy ice magic.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.area.bombs": {
+    "key": "sfx-effect-area",
+    "sources": [
+      "assets/audio/sfx/effects/explode-boom-explosion-bomb.wav"
+    ],
+    "volume": 0.2,
+    "trim": {
+      "startMs": 3900,
+      "endMs": 6000
+    },
+    "cooldownMs": 0,
+    "maxConcurrent": 10,
+    "design": {
+      "durationMs": [
+        350,
+        700
+      ],
+      "character": "Temporary area-bomb cue; replace independently when dedicated assets are available.",
+      "intensity": 4,
+      "priority": 4
+    }
+  },
+  "effect.iceResist": {
+    "key": "sfx-effect-ice-resist",
+    "sources": [
+      "assets/audio/sfx/effects/impact-explosiom-sci-fi-explode-boom-effect-sfx.wav"
+    ],
+    "volume": 0.65,
+    "trim": {
+      "startMs": 1000,
+      "endMs": 3000
+    },
+    "cooldownMs": 40,
+    "maxConcurrent": 3,
+    "design": {
+      "durationMs": [
+        180,
+        360
+      ],
+      "character": "Ice wall resists an ice sphere.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.fireResist": {
+    "key": "sfx-effect-fire-resist",
+    "sources": [
+      "assets/audio/sfx/effects/impact-explosiom-sci-fi-explode-boom-effect-sfx.wav"
+    ],
+    "volume": 0.65,
+    "trim": {
+      "startMs": 1000,
+      "endMs": 3000
+    },
+    "cooldownMs": 40,
+    "maxConcurrent": 3,
+    "design": {
+      "durationMs": [
+        180,
+        360
+      ],
+      "character": "Fire wall resists a fire sphere.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.iceMelt": {
+    "key": "sfx-effect-ice-melt",
+    "sources": [
+      "assets/audio/sfx/effects/iceball-impact-freeze-over-crack.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 40,
+    "maxConcurrent": 3,
+    "design": {
+      "durationMs": [
+        220,
+        440
+      ],
+      "character": "Fire sphere melts an ice wall.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.fireExtinguish": {
+    "key": "sfx-effect-fire-extinguish",
+    "sources": [
+      "assets/audio/sfx/effects/fireball-pass-by-crackle.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 40,
+    "maxConcurrent": 3,
+    "design": {
+      "durationMs": [
+        220,
+        440
+      ],
+      "character": "Ice sphere extinguishes a fire wall.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.timer": {
+    "key": "sfx-effect-timer",
+    "sources": [
+      "assets/audio/sfx/effects/timer.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 80,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        150,
+        300
+      ],
+      "character": "Single clock-like pressure pulse; no continuous ticking.",
+      "intensity": 2,
+      "priority": 3
+    }
+  },
+  "effect.corruption": {
+    "key": "sfx-effect-corruption",
+    "sources": [
+      "assets/audio/sfx/effects/corruption.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 60,
+    "maxConcurrent": 2,
+    "design": {
+      "durationMs": [
+        400,
+        800
+      ],
+      "character": "Controlled digital glitch and low energy growl; no horror.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "game.win": {
+    "key": "sfx-game-win",
+    "sources": [
+      "assets/audio/sfx/gameplay/game-win.wav"
+    ],
+    "volume": 1,
+    "cooldownMs": 500,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        1200,
+        2200
+      ],
+      "character": "Mechanical resolution, harmonic crystal chord and energy bloom; solution found, not jackpot.",
+      "intensity": 5,
+      "priority": 5
+    }
+  },
+  "game.perfect": {
+    "key": "sfx-game-perfect",
+    "sources": [
+      "assets/audio/sfx/gameplay/game-perfect.wav"
+    ],
+    "volume": 1,
+    "cooldownMs": 500,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        1500,
+        2500
+      ],
+      "character": "Win identity with higher harmonic resolution and extra crystal shimmer.",
+      "intensity": 5,
+      "priority": 5
+    }
+  },
+  "game.fail": {
+    "key": "sfx-game-fail",
+    "sources": [
+      "assets/audio/sfx/gameplay/game-fail.wav"
+    ],
+    "volume": 0.75,
+    "cooldownMs": 500,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        700,
+        1300
+      ],
+      "character": "Mechanical slowdown and low tonal fall; sober, no buzzer.",
+      "intensity": 3,
+      "priority": 5
+    }
+  },
+  "time.warning": {
+    "key": "sfx-time-warning",
+    "sources": [
+      "assets/audio/sfx/gameplay/time-warning.wav"
+    ],
+    "volume": 0.6,
+    "cooldownMs": 1000,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        200,
+        400
+      ],
+      "character": "Low pulse with concise alert tone at final phase.",
+      "intensity": 3,
+      "priority": 3
+    }
+  },
+  "time.critical": {
+    "key": "sfx-time-critical",
+    "sources": [
+      "assets/audio/sfx/gameplay/time-critical.wav"
+    ],
+    "volume": 0.65,
+    "cooldownMs": 1000,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        200,
+        400
+      ],
+      "character": "Discreet critical alert for selected final-second thresholds only.",
+      "intensity": 4,
+      "priority": 4
+    }
+  }
 };
+
 
 export const MUSIC_CONFIG: Readonly<Record<MusicCue, AudioCueConfig>> = {
   "menu.main": { key: "music-menu-main", sources: musicAsset("music/menu/gearithm_menu"), volume: .55, loop: true, design: design([60_000, 120_000], "Relaxed mechanical ambient: pad, metallic texture, subtle pulse and crystal accents.", 1, 1) },

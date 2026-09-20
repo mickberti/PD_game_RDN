@@ -25,6 +25,15 @@ export interface AudioCueConfig {
   readonly design: AudioDesignSpec;
 }
 
+/** The playback-related portion of an SFX cue, adjustable from the audio-debug mixer. */
+export interface SfxRuntimeTuning {
+  volume?: number;
+  cooldownMs?: number;
+  maxConcurrent?: number;
+  pitchVariation?: number;
+  trim?: { startMs?: number; endMs?: number };
+}
+
 export interface AudioDesignSpec {
   readonly durationMs: readonly [number, number];
   readonly character: string;
