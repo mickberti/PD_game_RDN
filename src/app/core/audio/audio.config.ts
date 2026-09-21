@@ -126,10 +126,10 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
         "assets/audio/sfx/gear/small-metal-hit-11.wav"
       ]
     ],
-    "volume": 0.3,
+    "volume": 0.5,
     "cooldownMs": 40,
     "maxConcurrent": 2,
-    "pitchVariation": 0.03,
+    "pitchVariation": 0.15,
     "design": {
       "durationMs": [
         40,
@@ -181,12 +181,12 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/pulse/travel1.wav"
     ],
-    "volume": 0.65,
+    "volume": 1,
     "trim": {
       "startMs": 0
     },
     "cooldownMs": 70,
-    "maxConcurrent": 2,
+    "maxConcurrent": 1,
     "design": {
       "durationMs": [
         80,
@@ -196,7 +196,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "intensity": 1,
       "priority": 1
     },
-    "pitchVariation": 0
+    "pitchVariation": 0.23
   },
   "gem.change": {
     "key": "sfx-gem-change",
@@ -214,7 +214,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
         "assets/audio/sfx/gem/sysenter_7.wav"
       ]
     ],
-    "volume": 0.25,
+    "volume": 0.4,
     "cooldownMs": 20,
     "maxConcurrent": 4,
     "pitchVariation": 0.03,
@@ -241,7 +241,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
         "assets/audio/sfx/gem/sysenter_2.wav"
       ]
     ],
-    "volume": 0.35,
+    "volume": 0.4,
     "cooldownMs": 20,
     "maxConcurrent": 1,
     "pitchVariation": 0.03,
@@ -271,9 +271,9 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
         "assets/audio/sfx/gem/lsprice__gb012.wav"
       ]
     ],
-    "volume": 0.65,
+    "volume": 0.75,
     "cooldownMs": 50,
-    "maxConcurrent": 2,
+    "maxConcurrent": 1,
     "design": {
       "durationMs": [
         300,
@@ -290,12 +290,12 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/pulse/travel1.wav"
     ],
-    "volume": 0.65,
+    "volume": 1,
     "trim": {
       "startMs": 0
     },
     "cooldownMs": 45,
-    "maxConcurrent": 2,
+    "maxConcurrent": 4,
     "design": {
       "durationMs": [
         80,
@@ -355,7 +355,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/impact-explosiom-sci-fi-explode-boom-effect-sfx.wav"
     ],
-    "volume": 0.65,
+    "volume": 1,
     "trim": {
       "startMs": 1000,
       "endMs": 3000
@@ -377,7 +377,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/small-metal-hit-08.wav"
     ],
-    "volume": 0.75,
+    "volume": 0.9,
     "cooldownMs": 60,
     "maxConcurrent": 2,
     "design": {
@@ -391,10 +391,40 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     },
     "pitchVariation": 0.15
   },
+  "effect.barrierBreak": {
+    "key": "sfx-effect-barrier-break",
+    "sources": [
+      "assets/audio/sfx/gem/lsprice__gb012.wav"
+    ],
+    "variants": [
+      [
+        "assets/audio/sfx/gem/lsprice__gb04.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/lsprice__gb09.wav"
+      ],
+      [
+        "assets/audio/sfx/gem/lsprice__gb012.wav"
+      ]
+    ],
+    "volume": 0.75,
+    "cooldownMs": 50,
+    "maxConcurrent": 4,
+    "design": {
+      "durationMs": [
+        300,
+        700
+      ],
+      "character": "Decisive crystalline/metallic shatter for normal, ice, and fire barriers breaking into fragments.",
+      "intensity": 4,
+      "priority": 4
+    },
+    "pitchVariation": 0.1
+  },
   "effect.fire": {
     "key": "sfx-effect-fire",
     "sources": [
-      "assets/audio/sfx/effects/ireball-pass-by-crackle.wav"
+      "assets/audio/sfx/effects/fireball-pass-by-crackle.wav"
     ],
     "volume": 0.75,
     "cooldownMs": 60,
@@ -414,7 +444,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/sfx-sci-fi-user-interface-robot-sci-fi.wav"
     ],
-    "volume": 0.45,
+    "volume": 0.5,
     "trim": {
       "startMs": 7030,
       "endMs": 8010
@@ -429,14 +459,15 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "character": "Reverse shimmer and crystal sweep.",
       "intensity": 3,
       "priority": 3
-    }
+    },
+    "pitchVariation": 0.19
   },
   "effect.amplifier": {
     "key": "sfx-effect-amplifier",
     "sources": [
       "assets/audio/sfx/effects/amplifier.wav"
     ],
-    "volume": 0.45,
+    "volume": 0.5,
     "cooldownMs": 60,
     "maxConcurrent": 2,
     "design": {
@@ -447,17 +478,18 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "character": "Rising energy pulse; increased power without arcade excess.",
       "intensity": 3,
       "priority": 3
-    }
+    },
+    "pitchVariation": 0.19
   },
   "effect.inverter": {
     "key": "sfx-effect-inverter",
     "sources": [
       "assets/audio/sfx/effects/sfx-sci-fi-user-interface-robot-sci-fi.wav"
     ],
-    "volume": 0.45,
+    "volume": 0.5,
     "trim": {
-      "startMs": 630,
-      "endMs": 2370
+      "startMs": 930,
+      "endMs": 2670
     },
     "cooldownMs": 0,
     "maxConcurrent": 10,
@@ -469,14 +501,15 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "character": "Short tone and reverse tonal flip.",
       "intensity": 3,
       "priority": 3
-    }
+    },
+    "pitchVariation": 0.19
   },
   "effect.freeze": {
     "key": "sfx-effect-freeze",
     "sources": [
       "assets/audio/sfx/effects/iceball-impact-freeze-over-crack.wav"
     ],
-    "volume": 0.75,
+    "volume": 0.8,
     "cooldownMs": 0,
     "maxConcurrent": 10,
     "design": {
@@ -494,7 +527,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/explode-boom-explosion-bomb.wav"
     ],
-    "volume": 0.2,
+    "volume": 0.28,
     "trim": {
       "startMs": 3900,
       "endMs": 6000
@@ -516,7 +549,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/impact-explosiom-sci-fi-explode-boom-effect-sfx.wav"
     ],
-    "volume": 0.65,
+    "volume": 1,
     "trim": {
       "startMs": 1000,
       "endMs": 3000
@@ -538,7 +571,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/impact-explosiom-sci-fi-explode-boom-effect-sfx.wav"
     ],
-    "volume": 0.65,
+    "volume": 1,
     "trim": {
       "startMs": 1000,
       "endMs": 3000
@@ -560,7 +593,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/iceball-impact-freeze-over-crack.wav"
     ],
-    "volume": 0.75,
+    "volume": 0.8,
     "cooldownMs": 40,
     "maxConcurrent": 3,
     "design": {
@@ -578,7 +611,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/effects/fireball-pass-by-crackle.wav"
     ],
-    "volume": 0.75,
+    "volume": 0.8,
     "cooldownMs": 40,
     "maxConcurrent": 3,
     "design": {
@@ -594,15 +627,19 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "effect.timer": {
     "key": "sfx-effect-timer",
     "sources": [
-      "assets/audio/sfx/effects/timer.wav"
+      "assets/audio/sfx/effects/knufds__clock_03.wav"
     ],
     "volume": 0.75,
+    "trim": {
+      "startMs": 0,
+      "endMs": 1500
+    },
     "cooldownMs": 80,
     "maxConcurrent": 1,
     "design": {
       "durationMs": [
-        150,
-        300
+        0,
+        1000
       ],
       "character": "Single clock-like pressure pulse; no continuous ticking.",
       "intensity": 2,
@@ -612,11 +649,15 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "effect.corruption": {
     "key": "sfx-effect-corruption",
     "sources": [
-      "assets/audio/sfx/effects/corruption.wav"
+      "assets/audio/sfx/effects/sinusglitches_7.wav"
     ],
     "volume": 0.75,
+        "trim": {
+      "startMs": 0,
+      "endMs": 2500
+    },
     "cooldownMs": 60,
-    "maxConcurrent": 2,
+    "maxConcurrent": 1,
     "design": {
       "durationMs": [
         400,

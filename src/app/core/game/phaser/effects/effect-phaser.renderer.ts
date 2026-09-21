@@ -2,7 +2,7 @@ import * as Phaser from "phaser";
 import { AreaEffectType, EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects.models";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
-import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive } from "./effect-presentation.config";
+import { effectAssetFrame, effectAssetTexture, gemEffectExecutionPriority, isEffectVisuallyActive, shouldPresentEffectEvent, willGemEffectApplyOnNextImpulse } from "./effect-presentation.config";
 
 export interface EffectGemPosition { x: number; y: number; radius: number; }
 
@@ -24,16 +24,20 @@ export class EffectPhaserRenderer {
     this.flowLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.flowDepth);
     this.dischargeLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.impulseDischarge.depth);
   }
-  renderPersistent(effects: readonly ResolvedEffect[], runtime?: EffectRuntimeState, values: readonly number[] = []): void {
+  renderPersistent(effects: readonly ResolvedEffect[], runtime?: EffectRuntimeState, values: readonly number[] = [], previewEvents: readonly EffectEngineEvent[] = []): void {
     for (const effect of effects) {
       if (!isEffectVisuallyActive(effect, values, runtime)) continue;
       if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) {
         const geometry = this.linkGeometry(effect); if (!geometry) continue;
         const view = new LinkEffectView(this.scene, effect, geometry, this.onLinkInfo); this.linkLayer.add(view); this.links.set(effect.id, view);
       }
-      if (effect.config.scope === EffectScope.GEM && effect.target.type === EffectScope.GEM) this.drawGemEffect(effect, runtime, values);
       if (effect.config.scope === EffectScope.AREA && effect.target.type === EffectScope.AREA) this.drawAreaEffect(effect);
     }
+    const gemEffects = effects.filter((effect): effect is ResolvedEffect & { target: Extract<ResolvedEffect["target"], { type: EffectScope.GEM }> } => effect.config.scope === EffectScope.GEM && effect.target.type === EffectScope.GEM)
+      // Marker slots are placed right-to-left by the established layout. Draw
+      // in reverse so the player reads the execution order left-to-right.
+      .sort((left, right) => left.target.gem.index - right.target.gem.index || gemEffectExecutionPriority(right.config.type as GemEffectType) - gemEffectExecutionPriority(left.config.type as GemEffectType) || (right.config.priority ?? 0) - (left.config.priority ?? 0) || right.id.localeCompare(left.id));
+    for (const effect of gemEffects) if (isEffectVisuallyActive(effect, values, runtime)) this.drawGemEffect(effect, runtime, values, previewEvents);
     this.drawAppliedAreaIceEffects(runtime, values);
   }
   /** Mirrors the engine's pre-impulse traversal on the static link visuals. */
@@ -54,8 +58,8 @@ export class EffectPhaserRenderer {
       case "SHIELD_DEPLETED": this.breakWall(event.gemId, 0x72dfff); break;
       case "WALL_HIT": this.flashGem(event.gemId, 0xbca477); break;
       case "WALL_BROKEN": this.breakWall(event.gemId); break;
-      case "MIRROR_APPLIED": this.flashGem(event.gemId, 0xdba0ff); break;
-      case "GEM_AMPLIFIER_APPLIED": this.pulseGem(event.gemId, 0xffcd62, 1.65); break;
+      case "MIRROR_APPLIED": if (shouldPresentEffectEvent(event)) this.flashGem(event.gemId, 0xdba0ff); break;
+      case "GEM_AMPLIFIER_APPLIED": if (shouldPresentEffectEvent(event)) this.pulseGem(event.gemId, 0xffcd62, 1.65); break;
       case "GEM_INVERTER_APPLIED": this.flashGem(event.gemId, 0xc890ff); break;
       case "ICE_HIT": this.flashGem(event.gemId, 0x9cf5ff); break;
       case "ICE_BROKEN": this.breakWall(event.gemId, 0x9cf5ff); break;
@@ -112,7 +116,7 @@ export class EffectPhaserRenderer {
     graphics.lineStyle(gem.radius * visual.linkCoreWidthRadiusRatio, visual.color, visual.alpha * visual.linkCoreAlpha); graphics.strokeCircle(gem.x, gem.y, ringRadius);
     this.previewGemLayer.add(graphics);
   }
-  private drawGemEffect(effect: ResolvedEffect, runtime?: EffectRuntimeState, values: readonly number[] = []): void {
+  private drawGemEffect(effect: ResolvedEffect, runtime?: EffectRuntimeState, values: readonly number[] = [], previewEvents: readonly EffectEngineEvent[] = []): void {
     if (effect.target.type !== EffectScope.GEM || effect.config.scope !== EffectScope.GEM) return; const gem = this.gems.get(effect.target.gem.id); if (!gem) return;
     // Persistent gem effects are represented only by their atlas icon and optional value badge.
     // Borders, shield rings, wall cracks and ice lines would compete with the gem numeral.
@@ -125,7 +129,7 @@ export class EffectPhaserRenderer {
               : effect.config.type === GemEffectType.CORRUPTION ? `+${effect.config.amount}` : "";
     if (typeof value === "number" && value <= 0) return;
     if (effect.config.type === GemEffectType.CORRUPTION && values[effect.target.gem.index] === 0) return;
-    this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value), "top-right", effectAssetTexture(effect));
+    this.drawEffectMarker(effect.target.gem.id, this.iconFrame(effect), this.iconColor(effect), value === "" ? "" : String(value), "top-right", effectAssetTexture(effect), !willGemEffectApplyOnNextImpulse(effect, previewEvents));
   }
   private drawAreaEffect(effect: ResolvedEffect): void { if (effect.target.type !== EffectScope.AREA || effect.config.scope !== EffectScope.AREA) return; const value = effect.config.type === AreaEffectType.BOMB && effect.config.value !== undefined ? `${effect.config.value > 0 ? "+" : ""}${effect.config.value}` : ""; this.drawEffectMarker(effect.target.sourceGem.id, this.iconFrame(effect), this.iconColor(effect), value, "bottom-right"); }
   /** Area ice is a runtime barrier on each target, not a declarative GEM effect. */
@@ -143,7 +147,7 @@ export class EffectPhaserRenderer {
     return effect.config.type === AreaEffectType.ICE ? 0x8cecff : effect.config.type === AreaEffectType.INVERTER ? 0xc890ff : 0xff9378;
   }
   /** Gem effects sit top-right; area effects reserve the bottom-right corner. */
-  private drawEffectMarker(gemId: string, frame: string, color: number, value = "", placement: "top-right" | "bottom-right" = "top-right", texture = "rdn-effects"): void {
+  private drawEffectMarker(gemId: string, frame: string, color: number, value = "", placement: "top-right" | "bottom-right" = "top-right", texture = "rdn-effects", disabled = false): void {
     const gem = this.gems.get(gemId); if (!gem) return;
     const markerKey = `${gemId}:${placement}`;
     const count = this.markerCounts.get(markerKey) ?? 0; this.markerCounts.set(markerKey, count + 1);
@@ -157,7 +161,9 @@ export class EffectPhaserRenderer {
       ? this.scene.add.image(x, y, texture, frame).setDisplaySize(size, size)
       : this.scene.add.circle(x, y, size * .38, color, .72);
     const children: Phaser.GameObjects.GameObject[] = [background, markerContent];
-    if (value) children.push(this.badge(x + size * .44, y - size * .44, value).setScale(.82));
+    const valueBadge = value ? this.badge(x + size * .44, y - size * .44, value).setScale(.82) : undefined;
+    if (valueBadge) children.push(valueBadge);
+    if (disabled) { background.setAlpha(.32); markerContent.setAlpha(.32); valueBadge?.setAlpha(.32); }
     this.markerLayer.add(children);
   }
   private animateFlow(event: EffectEngineEvent): void { const link = event.linkId ? this.links.get(event.linkId) : undefined; if (!link || !event.gemId || link.effect.target.type !== EffectScope.LINK) return; const reverse = link.effect.target.fromGem.id === event.gemId; const from = reverse ? link.geometry.to : link.geometry.from; const visual = EFFECT_PHASER_VISUAL.links; const stageDelay = event.generation * visual.propagationStageDelayMs; link.animatePropagation(stageDelay); for (let index = 0; index < visual.propagationParticleCount; index += 1) { const particle = this.scene.add.circle(from.x, from.y, visual.propagationParticleRadius, visual.propagationParticleColor, visual.propagationParticleAlpha); this.flowLayer.add(particle); const progress = { value: 0 }; this.scene.tweens.add({ targets: progress, value: 1, delay: stageDelay + index * visual.propagationParticleStaggerMs, duration: visual.propagationDurationMs, ease: "Sine.InOut", onUpdate: () => { const point = link.pointAt(reverse ? 1 - progress.value : progress.value); particle.setPosition(point.x, point.y).setScale(1 + progress.value * (visual.propagationParticleScale - 1)); }, onComplete: () => particle.destroy() }); } }

@@ -12,12 +12,12 @@ import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, Elemen
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
 import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs } from "./effects/effect-phaser-visual.config";
 import { EffectTutorialDefinition } from "./effects/effect-tutorial.config";
-import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
+import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, shouldPresentEffectEvent, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
 
 export interface RdnHudAction { icon: string; label: string; description: string; charges: number; disabled: boolean; }
 export interface RdnHudAudio { musicMuted: boolean; sfxMuted: boolean; musicVolume: number; sfxVolume: number; activePackId: string; packs: readonly { id: string; label: string }[]; }
-export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; levelReward?: { coins: number; bonusClaimed: boolean; adUnavailable: boolean }; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; showSettings: boolean; audio: RdnHudAudio; }
-export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
+export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { group: string; groupIndex: number; groupTotal: number; scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; levelReward?: { coins: number; bonusClaimed: boolean; adUnavailable: boolean }; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; showSettings: boolean; audio: RdnHudAudio; }
+export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; nextPlaygroundGroup?(): void; previousPlaygroundGroup?(): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value);
 const VISUAL_SET_COUNT = 3;
 const format = (value: number | null): string => value === null ? "—" : value > 0 ? `+${value}` : String(value);
@@ -194,7 +194,7 @@ export class RdnPhaserScene extends Phaser.Scene {
         (delayMs) => this.time.delayedCall(delayMs, () => this.actions.audioCue("link.travel")),
         (cue) => this.actions.audioCue(cue),
       );
-      this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues);
+      this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues, m.effectPreviewEvents);
       this.effectRenderer.setActiveLinkPreview(m.effectPreviewEvents);
       const visualKey = `${m.level.id}-${m.state.impulses}`;
       if (m.state.lastEffectEvents?.length && visualKey !== this.lastEffectVisualKey) { this.effectRenderer.play(m.state.lastEffectEvents); this.lastEffectVisualKey = visualKey; }
@@ -250,8 +250,12 @@ export class RdnPhaserScene extends Phaser.Scene {
   /** Blocks the board while keeping dismissal discoverable: tap anywhere outside the card. */
   private infoBackdrop(cx: number, cy: number, width: number, height: number): void { const backdrop = this.add.rectangle(cx, cy, width, height, 0x020907, .46).setDepth(19).setInteractive(); backdrop.on("pointerup", () => this.closeInfoFromPointer()); }
   private closeInfoFromPointer(): void { this.consumeNextPointerUp = true; this.suppressBoardTapUntil = performance.now() + 120; this.dragging = false; this.infoScrollDragY = null; this.pointerDownAt = null; if (this.model?.showSettings) this.actions.closeSettings(); else this.actions.closeInfo(); }
-  /** Delay the modal until the HUD tap has finished, so its backdrop cannot consume that same release. */
-  private openSettingsFromHud(): void { this.time.delayedCall(0, () => this.actions.openSettings()); }
+  /**
+   * Open only after the HUD tap has fully completed.  Scheduling a zero-delay
+   * timer from `pointerdown` can create the backdrop before that same tap's
+   * `pointerup`; the backdrop then immediately closes the settings modal.
+   */
+  private openSettingsFromHud(): void { this.input.once("pointerup", () => this.actions.openSettings()); }
   private scrollInfo(delta: number): void { if (!this.model || this.model.selectedGemIndex === null || this.infoScrollMax <= 0) return; const next = Phaser.Math.Clamp(this.infoScrollOffset + delta, 0, this.infoScrollMax); if (next === this.infoScrollOffset) return; this.infoScrollOffset = next; this.render(); }
   private setWheelAngle(angle: number): void { if (!this.wheel) return; this.visualAngle = angle; this.wheel.setAngle(((angle + this.layout.gear.angle + this.gearThemeAngleOffset + 180) % 360 + 360) % 360 - 180); this.keepLabelsUpright(); }
   /** A quiet visual cue that keeps the central action discoverable without distracting from the board. */
@@ -373,9 +377,10 @@ export class RdnPhaserScene extends Phaser.Scene {
     const gemId = `target-${impact.targetId}`;
     const eventsForGem = events.filter((event) => event.gemId === gemId && event.generation === impact.generation);
     const presentations: ImpactEffectPresentation[] = eventsForGem.flatMap((event) => {
+      if (!shouldPresentEffectEvent(event)) return [];
       const frame = this.effectFrameForEvent(event);
       if (!frame) return [];
-      const breakingType = event.type === "WALL_HIT" ? "WALL_BROKEN" : event.type === "ICE_HIT" ? "ICE_BROKEN" : event.type === "SHIELD_ABSORBED" ? "SHIELD_DEPLETED" : undefined;
+      const breakingType = event.type === "WALL_HIT" ? "WALL_BROKEN" : event.type === "ICE_HIT" ? "ICE_BROKEN" : event.type === "FIRE_HIT" ? "FIRE_BROKEN" : event.type === "SHIELD_ABSORBED" ? "SHIELD_DEPLETED" : undefined;
       const audioCue = event.type === "ELEMENTAL_BLOCKED"
         ? event.elementalAffinity === "ice" ? "effect.iceResist" : "effect.fireResist"
         : event.type === "ELEMENTAL_BYPASSED"
@@ -389,13 +394,13 @@ export class RdnPhaserScene extends Phaser.Scene {
       const inverter = this.effectResolver.resolve(this.model.level.effectConfiguration, this.model.level.positions).effects.find((effect) => effect.config.type === GemEffectType.INVERTER && effect.target.type === EffectScope.GEM && effect.target.gem.id === gemId);
       if (inverter && impact.resultValue !== impact.previousValue) presentations.push({ frame: "effect-inverter", breaks: false });
     }
-    if (eventsForGem.some((event) => event.type === "FIRE_HIT")) presentations.push({ frame: "", breaks: false, audioCue: "effect.fire" });
     return presentations;
   }
   private effectFrameForEvent(event: EffectEngineEvent): string | undefined {
     if (event.type === "SHIELD_ABSORBED") return "effect-shield";
     if (event.type === "WALL_HIT") return "effect-wall";
     if (event.type === "ICE_HIT") return "effect-ice";
+    if (event.type === "FIRE_HIT") return "fire";
     if (event.type === "MIRROR_APPLIED") return "effect-mirror-sign";
     if (event.type === "GEM_AMPLIFIER_APPLIED") return "effect-amplifier";
     if (event.type === "GEM_INVERTER_APPLIED") return "effect-inverter";
@@ -426,6 +431,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       : presentation.frame.includes("area-bomb") ? "effect.area.bombs"
       : presentation.frame.includes("wall") ? "effect.wall"
       : presentation.frame.includes("ice") ? "effect.freeze"
+      : presentation.frame === "fire" ? "effect.fire"
       : presentation.frame.includes("mirror") ? "effect.mirror"
       : presentation.frame.includes("amplifier") ? "effect.amplifier"
       : presentation.frame.includes("inverter") ? "effect.inverter"
@@ -438,7 +444,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     const icon = this.trackImpact(this.add.image(x, y - radius * config.offsetYRatio, texture, frame).setDisplaySize(radius * config.sizeRatio, radius * config.sizeRatio).setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + config.depthOffset).setAlpha(0).setScale(config.initialScale));
     const fadeIn = reduced ? 0 : config.fadeInMs; const hold = reduced ? 0 : config.holdMs; const fadeOut = reduced ? 120 : config.fadeOutMs;
     this.tweens.add({ targets: icon, alpha: config.alpha, scaleX: config.finalScale, scaleY: config.finalScale, delay, duration: fadeIn, ease: "Sine.Out", onComplete: () => {
-      if (breaks && config.shatter.enabled && !reduced) this.tweens.add({ targets: icon, alpha: config.alpha, duration: Math.max(1, config.durationMs - fadeIn), ease: "Linear", onComplete: () => { this.shatterImage(texture, frame, x, y - radius * config.offsetYRatio, radius * config.sizeRatio * config.finalScale); this.releaseImpact(icon); } });
+      if (breaks && config.shatter.enabled && !reduced) this.tweens.add({ targets: icon, alpha: config.alpha, duration: Math.max(1, config.durationMs - fadeIn), ease: "Linear", onComplete: () => { this.actions.audioCue("effect.barrierBreak"); this.shatterImage(texture, frame, x, y - radius * config.offsetYRatio, radius * config.sizeRatio * config.finalScale); this.releaseImpact(icon); } });
       else this.tweens.add({ targets: icon, alpha: 0, delay: hold, duration: fadeOut, ease: "Sine.In", onComplete: () => this.releaseImpact(icon) });
     } });
   }
@@ -636,7 +642,18 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
   }
   private formatTime(seconds: number): string { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; }
-  private playgroundOverlay(width: number, height: number, playground: NonNullable<RdnSceneModel["playground"]>): void { const x = width * .5; const y = height - 42; this.add.rectangle(x, y, Math.min(width - 20, 360), 58, 0x101c18, .9).setStrokeStyle(1, 0x6edfff).setDepth(30); this.label(x, y - 14, `EFFECT PLAYGROUND · ${playground.scenario}`, 11, 0x9cf5ff).setDepth(31); this.label(x, y + 7, playground.lines.slice(0, 2).join("  |  "), 9, 0xe6dfc3).setDepth(31); this.button(x - 145, y, "‹", () => this.actions.previousPlaygroundScenario?.(), 32); this.button(x + 145, y, "›", () => this.actions.nextPlaygroundScenario?.(), 32); }
+  private playgroundOverlay(width: number, height: number, playground: NonNullable<RdnSceneModel["playground"]>): void {
+    const x = width * .5; const y = height - 62; const panelWidth = Math.min(width - 20, 360);
+    this.add.rectangle(x, y, panelWidth, 112, 0x101c18, .9).setStrokeStyle(1, 0x6edfff).setDepth(30);
+    this.label(x, y - 43, "EFFECT PLAYGROUND", 11, 0x9cf5ff).setDepth(31);
+    this.label(x, y - 22, `TIPO PRINCIPALE · ${playground.group} (${playground.groupIndex + 1}/${playground.groupTotal})`, 10, 0xf8dc8b).setDepth(31);
+    this.button(x - 145, y - 22, "‹", () => this.actions.previousPlaygroundGroup?.(), 32);
+    this.button(x + 145, y - 22, "›", () => this.actions.nextPlaygroundGroup?.(), 32);
+    this.label(x, y + 5, `COMBINAZIONE · ${playground.scenario} (${playground.index + 1}/${playground.total})`, 10, 0x9cf5ff).setDepth(31);
+    this.button(x - 145, y + 5, "‹", () => this.actions.previousPlaygroundScenario?.(), 32);
+    this.button(x + 145, y + 5, "›", () => this.actions.nextPlaygroundScenario?.(), 32);
+    this.label(x, y + 29, playground.lines.slice(0, 2).join("  |  "), 9, 0xe6dfc3).setDepth(31);
+  }
   /** Development-only visual key for the declarative effect scenarios. */
   private playgroundInfoDialog(cx: number, cy: number): void {
     const depth = 20;

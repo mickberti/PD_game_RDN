@@ -166,6 +166,8 @@ export class GameplayPageComponent implements AfterViewInit {
       dismissTutorial: (id) => this.effectTutorial.markSeen(id),
       gemInfo: (index, source = "ring") => { this.showInfo.set(false); this.selectedLinkEffectId.set(null); this.selectedGemIndex.set(source === "ring" ? index : null); this.selectedGearGemIndex.set(source === "gear" ? index : null); },
       linkInfo: (effectId) => { this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(effectId); },
+      nextPlaygroundGroup: () => this.changePlaygroundGroup(1),
+      previousPlaygroundGroup: () => this.changePlaygroundGroup(-1),
       nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
       previousPlaygroundScenario: () => this.changePlaygroundScenario(-1),
       audioCue: (cue) => this.audio.playSfx(cue as import("../../core/audio/audio.models").AudioCue),
@@ -198,7 +200,7 @@ export class GameplayPageComponent implements AfterViewInit {
           actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, label: RDN_ACTION_CATALOG[instance.id].label, description: RDN_ACTION_CATALOG[instance.id].description, charges: instance.charges, disabled: instance.charges <= 0 })),
           modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
           freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4, effectsEnabled: this.gameplaySession.getLaunchOverrides()?.freeEffectsEnabled ?? false, theme: this.gameplaySession.getLaunchOverrides()?.freeTheme ?? 3 } : undefined,
-          playground: this.session.variant === "effect-playground" ? { scenario: this.playground.scenario(), index: this.playground.index() + 1, total: 7, lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
+          playground: this.session.variant === "effect-playground" ? { group: this.playground.groupLabel(), groupIndex: this.playground.groupIndex(), groupTotal: this.playground.groupTotal, scenario: this.playground.scenario(), index: this.playground.index(), total: this.playground.total(), lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
           tutorial: this.session.variant === "effect-playground" ? null : this.effectTutorial.tutorialForLevel(this.puzzle.level()),
           selectedGemIndex: this.selectedGemIndex(),
           selectedGearGemIndex: this.selectedGearGemIndex(),
@@ -460,6 +462,14 @@ export class GameplayPageComponent implements AfterViewInit {
   private changePlaygroundScenario(direction: -1 | 1): void {
     if (this.session.variant !== "effect-playground") return;
     if (direction > 0) this.playground.next(); else this.playground.previous();
+    this.reloadPlaygroundLevel();
+  }
+  private changePlaygroundGroup(direction: -1 | 1): void {
+    if (this.session.variant !== "effect-playground") return;
+    if (direction > 0) this.playground.nextGroup(); else this.playground.previousGroup();
+    this.reloadPlaygroundLevel();
+  }
+  private reloadPlaygroundLevel(): void {
     this.puzzle.loadDebugLevel(this.playground.level());
     this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null);
   }
