@@ -465,7 +465,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "effect.amplifier": {
     "key": "sfx-effect-amplifier",
     "sources": [
-      "assets/audio/sfx/effects/amplifier.wav"
+      "assets/audio/sfx/effects/explode-boom-bubble-in-the-water.wav"
     ],
     "volume": 0.5,
     "cooldownMs": 60,

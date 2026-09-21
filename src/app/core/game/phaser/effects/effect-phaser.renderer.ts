@@ -163,7 +163,7 @@ export class EffectPhaserRenderer {
     const children: Phaser.GameObjects.GameObject[] = [background, markerContent];
     const valueBadge = value ? this.badge(x + size * .44, y - size * .44, value).setScale(.82) : undefined;
     if (valueBadge) children.push(valueBadge);
-    if (disabled) { background.setAlpha(.32); markerContent.setAlpha(.32); valueBadge?.setAlpha(.32); }
+    if (disabled) { background.setAlpha(.52); markerContent.setAlpha(.52); valueBadge?.setAlpha(.52); }
     this.markerLayer.add(children);
   }
   private animateFlow(event: EffectEngineEvent): void { const link = event.linkId ? this.links.get(event.linkId) : undefined; if (!link || !event.gemId || link.effect.target.type !== EffectScope.LINK) return; const reverse = link.effect.target.fromGem.id === event.gemId; const from = reverse ? link.geometry.to : link.geometry.from; const visual = EFFECT_PHASER_VISUAL.links; const stageDelay = event.generation * visual.propagationStageDelayMs; link.animatePropagation(stageDelay); for (let index = 0; index < visual.propagationParticleCount; index += 1) { const particle = this.scene.add.circle(from.x, from.y, visual.propagationParticleRadius, visual.propagationParticleColor, visual.propagationParticleAlpha); this.flowLayer.add(particle); const progress = { value: 0 }; this.scene.tweens.add({ targets: progress, value: 1, delay: stageDelay + index * visual.propagationParticleStaggerMs, duration: visual.propagationDurationMs, ease: "Sine.InOut", onUpdate: () => { const point = link.pointAt(reverse ? 1 - progress.value : progress.value); particle.setPosition(point.x, point.y).setScale(1 + progress.value * (visual.propagationParticleScale - 1)); }, onComplete: () => particle.destroy() }); } }
