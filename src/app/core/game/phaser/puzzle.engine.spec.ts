@@ -92,4 +92,14 @@ describe("PuzzleEngine", () => {
     expect(first.finalValues).toEqual([2, 4, 1, 1]);
     expect(first.impacts).toEqual(jasmine.arrayContaining([jasmine.objectContaining({ targetId: 0, resultValue: 2, generation: 0 }), jasmine.objectContaining({ targetId: 1, resultValue: 4, generation: 1, linkId: "ECHO_LINK-0" })]));
   });
+
+  it("keeps an amplified Link contribution when the destination inverts its resulting value", () => {
+    const definition: LevelDefinition = { ...level([10, 10, 1, 1], [-1, 1, 1, 1]), effectConfiguration: { enabled: true, effects: [
+      { preset: "AMPLIFIER_X2", target: { type: EffectScope.GEM, gemIndex: 0 } },
+      { preset: "ECHO_LINK", target: { type: EffectScope.LINK, fromGemIndex: 0, toGemIndex: 1 } },
+      { preset: "INVERTER_1", target: { type: EffectScope.GEM, gemIndex: 1 } },
+    ] } };
+    const linkedImpact = engine.planImpulse(definition, engine.createInitialState(definition)).impacts.find((impact) => impact.targetId === 1 && impact.generation === 1);
+    expect(linkedImpact).toEqual(jasmine.objectContaining({ appliedValue: -2, resultValue: -8 }));
+  });
 });

@@ -174,6 +174,8 @@ export interface EffectRuntimeState {
 export type EffectEngineEventType = "FLOW_STARTED" | "FLOW_PROPAGATED" | "FLOW_ARRIVED" | "FLOW_MERGED" | "CHAIN_BLOCKED" | "SHIELD_ABSORBED" | "SHIELD_DEPLETED" | "WALL_HIT" | "WALL_BROKEN" | "MIRROR_APPLIED" | "GEM_AMPLIFIER_APPLIED" | "GEM_INVERTER_APPLIED" | "ICE_HIT" | "ICE_BROKEN" | "FIRE_HIT" | "FIRE_BROKEN" | "ELEMENTAL_BYPASSED" | "ELEMENTAL_BLOCKED" | "TIMER_TICK" | "TIMER_EXPIRED" | "TIMER_COMPLETED" | "CORRUPTION_APPLIED" | "AREA_TRIGGERED" | "BOMB_TRIGGERED" | "AREA_ICE_TRIGGERED" | "AREA_ICE_APPLIED" | "AREA_INVERTER_TRIGGERED" | "AREA_INVERTER_APPLIED" | "GEM_VALUE_CHANGED";
 export interface EffectEngineEvent {
   type: EffectEngineEventType;
+  /** Identifies the originating declarative effect when an area event fans out. */
+  effectId?: string;
   flowId?: string;
   gemId?: string;
   linkId?: string;

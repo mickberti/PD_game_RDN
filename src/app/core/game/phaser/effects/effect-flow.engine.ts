@@ -52,15 +52,15 @@ export class EffectFlowEngine {
       }
       for (const areaEffect of areaEffects) {
         if (areaEffect.target.type !== EffectScope.AREA) continue; const sourceIndex = gemIndex.get(areaEffect.target.sourceGem.id); if (triggeredAreaEffects.has(areaEffect.id) || sourceIndex === undefined || values[sourceIndex] === 0 || nextValues[sourceIndex] !== 0) continue;
-        triggeredAreaEffects.add(areaEffect.id); const targets = this.areaTargets(sourceIndex, values.length, areaEffect.config); const triggerType = areaEffect.config.type === AreaEffectType.BOMB ? "BOMB_TRIGGERED" : areaEffect.config.type === AreaEffectType.ICE ? "AREA_ICE_TRIGGERED" : "AREA_INVERTER_TRIGGERED"; events.push({ type: triggerType, gemId: areaEffect.target.sourceGem.id, generation });
+        triggeredAreaEffects.add(areaEffect.id); const targets = this.areaTargets(sourceIndex, values.length, areaEffect.config); const triggerType = areaEffect.config.type === AreaEffectType.BOMB ? "BOMB_TRIGGERED" : areaEffect.config.type === AreaEffectType.ICE ? "AREA_ICE_TRIGGERED" : "AREA_INVERTER_TRIGGERED"; events.push({ type: triggerType, effectId: areaEffect.id, gemId: areaEffect.target.sourceGem.id, generation });
         if (areaEffect.config.type === AreaEffectType.BOMB) {
           const areaValue = areaEffect.config.value ?? -Math.abs(areaEffect.config.strength ?? 1);
-          for (const target of targets) { const id = `area-${areaEffect.id}-${generation}-${target}`; queue.push({ id, rootFlowId: id, originGemId: areaEffect.target.sourceGem.id, currentGemId: `target-${target}`, value: areaValue, generation: generation + 1, sourceType: "AREA", visitedLinks: new Set<string>() }); events.push({ type: "AREA_TRIGGERED", flowId: id, gemId: `target-${target}`, value: areaValue, generation: generation + 1 }); }
+          for (const target of targets) { const id = `area-${areaEffect.id}-${generation}-${target}`; queue.push({ id, rootFlowId: id, originGemId: areaEffect.target.sourceGem.id, currentGemId: `target-${target}`, value: areaValue, generation: generation + 1, sourceType: "AREA", visitedLinks: new Set<string>() }); events.push({ type: "AREA_TRIGGERED", effectId: areaEffect.id, flowId: id, gemId: `target-${target}`, value: areaValue, generation: generation + 1 }); }
         } else if (areaEffect.config.type === AreaEffectType.ICE) {
           const strength = Math.max(1, Math.abs(areaEffect.config.strength ?? 1));
-          for (const target of targets) { const gemId = `target-${target}`; const remaining = Math.max(nextRuntime.areaIceRemainingStrength[gemId] ?? 0, strength); nextRuntime.areaIceRemainingStrength = { ...nextRuntime.areaIceRemainingStrength, [gemId]: remaining }; events.push({ type: "AREA_ICE_APPLIED", gemId, generation, remainingStrength: remaining, initialStrength: strength }); }
+          for (const target of targets) { const gemId = `target-${target}`; const remaining = Math.max(nextRuntime.areaIceRemainingStrength[gemId] ?? 0, strength); nextRuntime.areaIceRemainingStrength = { ...nextRuntime.areaIceRemainingStrength, [gemId]: remaining }; events.push({ type: "AREA_ICE_APPLIED", effectId: areaEffect.id, gemId, generation, remainingStrength: remaining, initialStrength: strength }); }
         } else {
-          for (const target of targets) { const gemId = `target-${target}`; const previousValue = nextValues[target]; const newValue = this.normalizeZero(-previousValue); nextValues[target] = newValue; events.push({ type: "AREA_INVERTER_APPLIED", gemId, generation, previousValue, newValue }); }
+          for (const target of targets) { const gemId = `target-${target}`; const previousValue = nextValues[target]; const newValue = this.normalizeZero(-previousValue); nextValues[target] = newValue; events.push({ type: "AREA_INVERTER_APPLIED", effectId: areaEffect.id, gemId, generation, previousValue, newValue }); }
         }
       }
     }

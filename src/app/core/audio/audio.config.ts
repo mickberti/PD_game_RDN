@@ -255,6 +255,25 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "priority": 2
     }
   },
+  "gem.noChange": {
+    "key": "sfx-gem-no-change",
+    "sources": [
+      "assets/audio/sfx/gem/no-change.wav"
+    ],
+    "volume": 0.55,
+    "cooldownMs": 35,
+    "maxConcurrent": 3,
+    "pitchVariation": 0.08,
+    "design": {
+      "durationMs": [
+        70,
+        150
+      ],
+      "character": "Soft neutral contact: a zero-value flow arrived but did not alter the gem.",
+      "intensity": 1,
+      "priority": 2
+    }
+  },
   "gem.break": {
     "key": "sfx-gem-break",
     "sources": [
@@ -331,6 +350,43 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "intensity": 2,
       "priority": 2
     }
+  },
+  "effect.link.echo": {
+    "key": "sfx-effect-link-echo",
+    "sources": ["assets/audio/sfx/pulse/travel1.wav"],
+    "volume": 0.42,
+    "cooldownMs": 35,
+    "maxConcurrent": 4,
+    "pitchVariation": 0.12,
+    "design": { "durationMs": [80, 180], "character": "Short bright echo confirmation when a link duplicates the incoming flow at its destination.", "intensity": 2, "priority": 3 }
+  },
+  "effect.link.amplify": {
+    "key": "sfx-effect-link-amplify",
+    "sources": ["assets/audio/sfx/effects/explode-boom-bubble-in-the-water.wav"],
+    "volume": 0.48,
+    "cooldownMs": 45,
+    "maxConcurrent": 4,
+    "pitchVariation": 0.14,
+    "design": { "durationMs": [250, 500], "character": "Rising energy confirmation when a link amplifies the carried value.", "intensity": 3, "priority": 3 }
+  },
+  "effect.link.invert": {
+    "key": "sfx-effect-link-invert",
+    "sources": ["assets/audio/sfx/effects/sfx-sci-fi-user-interface-robot-sci-fi.wav"],
+    "volume": 0.48,
+    "trim": { "startMs": 930, "endMs": 2670 },
+    "cooldownMs": 45,
+    "maxConcurrent": 4,
+    "pitchVariation": 0.14,
+    "design": { "durationMs": [250, 450], "character": "Concise reverse tonal flip when a link inverts the carried value.", "intensity": 3, "priority": 3 }
+  },
+  "effect.link.chain": {
+    "key": "sfx-effect-link-chain",
+    "sources": ["assets/audio/sfx/effects/small-metal-hit-08.wav"],
+    "volume": 0.58,
+    "cooldownMs": 50,
+    "maxConcurrent": 3,
+    "pitchVariation": 0.1,
+    "design": { "durationMs": [180, 380], "character": "Firm mechanical lock confirmation when a Chain link blocks its destination.", "intensity": 3, "priority": 3 }
   },
   "bonus.activate": {
     "key": "sfx-bonus-activate",

@@ -93,7 +93,10 @@ export class PuzzleEngine {
       }
       if (event.type === "GEM_INVERTER_APPLIED" && event.gemId && event.valueAfterInversion !== undefined) {
         const impact = impactByGemAndGeneration.get(`${event.gemId}:${event.generation}`); if (!impact) continue;
-        impact.resultValue = event.valueAfterInversion; impact.appliedValue = impact.resultValue - impact.previousValue; values[impact.targetId] = impact.resultValue;
+        // `appliedValue` describes the flow that reached this gem.  An
+        // inverter changes the resulting gem value afterwards, but must not
+        // rewrite that incoming contribution in the visual transaction.
+        impact.resultValue = event.valueAfterInversion; values[impact.targetId] = impact.resultValue;
       }
     }
     for (const result of next.lastOperationResults) if (result.valid && !impacts.some((impact) => impact.targetId === result.outerIndex && impact.generation === 0)) impacts.push({ targetId: result.outerIndex, sourceId: this.getInnerIndex(level, result.outerIndex, state.rotation), previousValue: state.outerValues[result.outerIndex], operation: result.operator, appliedValue: result.nextValue - result.previousValue, resultValue: result.nextValue, generation: 0, relativeImpactMs: 0 });

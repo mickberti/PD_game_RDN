@@ -1,6 +1,6 @@
 import * as Phaser from "phaser";
 import { AreaEffectType, EffectEngineEvent, EffectRuntimeState, EffectScope, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects.models";
-import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
+import { EFFECT_PHASER_VISUAL, impulseLinkStartDelayMs } from "./effect-phaser-visual.config";
 import { LinkEffectGeometry, LinkEffectView } from "./link-effect.view";
 import { effectAssetFrame, effectAssetTexture, gemEffectExecutionPriority, isEffectVisuallyActive, shouldPresentEffectEvent, willGemEffectApplyOnNextImpulse } from "./effect-presentation.config";
 
@@ -16,7 +16,7 @@ export class EffectPhaserRenderer {
   private readonly dischargeLayer: Phaser.GameObjects.Container;
   private readonly links = new Map<string, LinkEffectView>();
   private readonly markerCounts = new Map<string, number>();
-  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void, private readonly onLinkFlowStart?: (delayMs: number) => void, private readonly onEffectCue?: (cue: string) => void) {
+  constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void, private readonly onLinkFlowStart?: (delayMs: number) => void, private readonly onEffectCue?: (cue: string, delayMs?: number) => void) {
     this.linkLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     this.previewGemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth + 2);
     this.gemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.gemDepth);
@@ -77,25 +77,62 @@ export class EffectPhaserRenderer {
       case "AREA_INVERTER_APPLIED": this.onEffectCue?.("effect.inverter"); this.flashGem(event.gemId, 0xc890ff); break;
     }
   }
+  /** Local effect particles are driven by the scene's real impact timeline. */
+  playImpactEffects(events: readonly EffectEngineEvent[]): void {
+    for (const event of events) switch (event.type) {
+      case "CHAIN_BLOCKED": this.flashGem(event.gemId, 0xff6c67); break;
+      case "SHIELD_ABSORBED": this.flashGem(event.gemId, 0x72dfff); break;
+      case "SHIELD_DEPLETED": this.breakWall(event.gemId, 0x72dfff); break;
+      case "WALL_HIT": this.flashGem(event.gemId, 0xbca477); break;
+      case "WALL_BROKEN": this.breakWall(event.gemId); break;
+      case "MIRROR_APPLIED": if (shouldPresentEffectEvent(event)) this.flashGem(event.gemId, 0xdba0ff); break;
+      case "GEM_AMPLIFIER_APPLIED": if (shouldPresentEffectEvent(event)) this.pulseGem(event.gemId, 0xffcd62, 1.65); break;
+      case "GEM_INVERTER_APPLIED": this.flashGem(event.gemId, 0xc890ff); break;
+      case "ICE_HIT": this.flashGem(event.gemId, 0x9cf5ff); break;
+      case "ICE_BROKEN": this.breakWall(event.gemId, 0x9cf5ff); break;
+      case "FIRE_HIT": this.flashGem(event.gemId, 0xff6558); break;
+      case "FIRE_BROKEN": this.breakWall(event.gemId, 0xff6558); break;
+      case "ELEMENTAL_BYPASSED": this.pulseGem(event.gemId, event.elementalAffinity === "ice" ? 0x8cecff : 0xff6558, 1.6); break;
+      case "ELEMENTAL_BLOCKED": this.flashGem(event.gemId, event.elementalAffinity === "ice" ? 0x8cecff : 0xff6558); break;
+      case "TIMER_TICK": this.pulseGem(event.gemId, event.remainingTurns !== undefined && event.remainingTurns <= 2 ? 0xff8d76 : 0xffdf70, 1.18); break;
+      case "TIMER_EXPIRED": this.flashGem(event.gemId, 0xff675d); break;
+      case "TIMER_COMPLETED": this.pulseGem(event.gemId, 0xffdf70, 1.18); break;
+      case "CORRUPTION_APPLIED": this.pulseGem(event.gemId, 0xb35cff, 1.48); break;
+      case "BOMB_TRIGGERED": this.bombBurst(event.gemId); break;
+      case "AREA_ICE_TRIGGERED": this.flashGem(event.gemId, 0x8cecff); break;
+      case "AREA_ICE_APPLIED": this.flashGem(event.gemId, 0x8cecff); break;
+      case "AREA_INVERTER_TRIGGERED": this.flashGem(event.gemId, 0xc890ff); break;
+      case "AREA_INVERTER_APPLIED": this.flashGem(event.gemId, 0xc890ff); break;
+    }
+  }
   /**
    * Continues the central impulse through the already-previewed effect links.
    * It runs before the engine commits the move, keeping the scenic current
    * visible even when a gem is consumed by that same impulse.
    */
-  playImpulseDischarge(events: readonly EffectEngineEvent[]): void {
+  playImpulseDischarge(events: readonly EffectEngineEvent[], linkStartDelays: ReadonlyMap<string, number> = new Map()): void {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge;
     for (const event of events) {
       if (event.type !== "FLOW_PROPAGATED" || !event.linkId || !event.gemId) continue;
       const link = this.links.get(event.linkId);
       if (!link || link.effect.target.type !== EffectScope.LINK) continue;
       const reverse = link.effect.target.fromGem.id === event.gemId;
-      const delay = impulseLinkStartDelayMs(event.generation);
+      const delay = linkStartDelays.get(event.flowId ?? "") ?? impulseLinkStartDelayMs(event.generation);
       this.onLinkFlowStart?.(delay);
       this.animateDischargeLink(link, reverse, delay);
       const destinationId = reverse ? link.effect.target.fromGem.id : link.effect.target.toGem.id;
-      // Do not delay the logical impact until every decorative tail has completed.
-      this.dischargeArrival(destinationId, impulseImpactDelayMs(event.generation));
+      const cue = link.effect.config.scope === EffectScope.LINK ? this.linkEffectCue(link.effect.config.type) : undefined;
+      // The effect is understood when the current reaches the destination, not
+      // while it is merely travelling along the conduit.
+      if (cue) this.onEffectCue?.(cue, delay + visual.linkSegmentDurationMs);
+      // This is a visual arrival only; the puzzle result was already resolved.
+      this.dischargeArrival(destinationId, delay + visual.linkSegmentDurationMs);
     }
+  }
+  private linkEffectCue(type: LinkEffectType): string | undefined {
+    return type === LinkEffectType.ECHO ? "effect.link.echo"
+      : type === LinkEffectType.AMPLIFY ? "effect.link.amplify"
+        : type === LinkEffectType.INVERT ? "effect.link.invert" : undefined;
   }
   destroy(): void { this.links.clear(); this.markerCounts.clear(); this.linkLayer.destroy(true); this.previewGemLayer.destroy(true); this.gemLayer.destroy(true); this.markerLayer.destroy(true); this.flowLayer.destroy(true); this.dischargeLayer.destroy(true); }
   private linkGeometry(effect: ResolvedEffect): LinkEffectGeometry | null {

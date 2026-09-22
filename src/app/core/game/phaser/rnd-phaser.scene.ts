@@ -192,12 +192,12 @@ export class RdnPhaserScene extends Phaser.Scene {
         new Phaser.Math.Vector2(ringX, ringY),
         (effectId, pointer) => this.openLinkInfoFromTap(pointer, effectId),
         (delayMs) => this.time.delayedCall(delayMs, () => this.actions.audioCue("link.travel")),
-        (cue) => this.actions.audioCue(cue),
+        (cue, delayMs = 0) => this.time.delayedCall(delayMs, () => this.actions.audioCue(cue)),
       );
       this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues, m.effectPreviewEvents);
       this.effectRenderer.setActiveLinkPreview(m.effectPreviewEvents);
-      const visualKey = `${m.level.id}-${m.state.impulses}`;
-      if (m.state.lastEffectEvents?.length && visualKey !== this.lastEffectVisualKey) { this.effectRenderer.play(m.state.lastEffectEvents); this.lastEffectVisualKey = visualKey; }
+      // One-shot particles are dispatched from the actual impact callbacks;
+      // replaying all engine events after the board rebuild would desync them.
     }
     this.targetEffectsHud(width, m, resolvedEffects);
     const rejectedOperation = m.state.lastOperationResults.find((result) => !result.valid);
@@ -276,18 +276,83 @@ export class RdnPhaserScene extends Phaser.Scene {
       const destination = this.outerSlotPoint(ringX, ringY, outerRadius, flow.targetId, model.level.positions, layout.outerSlots.angleOffset, this.visualSet(model));
       this.animateImpulseDischargeSegment(startX, startY, destination.x, destination.y, 0, `target-${flow.targetId}`);
     }
-    this.effectRenderer?.playImpulseDischarge(model.effectPreviewEvents);
+    const effectPresentations = new Map<string, readonly ImpactEffectPresentation[]>();
+    for (const impact of plan.impacts) effectPresentations.set(this.impactTimingKey(impact.targetId, impact.generation), this.effectPresentationsForImpact(plan.effectEvents, impact));
+    const schedule = this.impulsePresentationSchedule(model, plan, effectPresentations);
+    this.effectRenderer?.playImpulseDischarge(model.effectPreviewEvents, schedule.linkStartDelays);
     if (model.effectPreviewEvents.length) {
       this.skipOperationFloatKey = `${model.level.id}-${model.state.impulses + 1}`;
     }
     let end = 0;
     for (const impact of plan.impacts) {
-      const delay = impulseImpactDelayMs(impact.generation);
-      const effectPresentations = this.effectPresentationsForImpact(plan.effectEvents, impact);
-      end = Math.max(end, delay + this.impactTimelineDurationMs(impact, effectPresentations));
-      this.time.delayedCall(delay, () => this.presentImpulseImpact(impact, effectPresentations));
+      const delay = schedule.impactDelays.get(this.impactTimingKey(impact.targetId, impact.generation)) ?? impulseImpactDelayMs(impact.generation);
+      const presentations = effectPresentations.get(this.impactTimingKey(impact.targetId, impact.generation)) ?? [];
+      end = Math.max(end, delay + this.impactTimelineDurationMs(impact, presentations));
+      this.time.delayedCall(delay, () => this.presentImpulseImpact(impact, presentations, this.effectEventsForImpact(plan.effectEvents, impact)));
+    }
+    const impactKeys = new Set(plan.impacts.map((impact) => this.impactTimingKey(impact.targetId, impact.generation)));
+    for (const event of plan.effectEvents) if ((event.type === "AREA_ICE_APPLIED" || event.type === "AREA_INVERTER_APPLIED") && event.gemId && event.effectId) {
+      const targetId = Number(event.gemId.replace("target-", "")); if (!Number.isInteger(targetId) || model.state.outerValues[targetId] === 0 || impactKeys.has(this.impactTimingKey(targetId, event.generation))) continue;
+      const triggerType = event.type === "AREA_ICE_APPLIED" ? "AREA_ICE_TRIGGERED" : "AREA_INVERTER_TRIGGERED";
+      const trigger = plan.effectEvents.find((candidate) => candidate.type === triggerType && candidate.effectId === event.effectId && candidate.generation === event.generation);
+      if (!trigger?.gemId) continue;
+      const sourceId = Number(trigger.gemId.replace("target-", "")); if (!Number.isInteger(sourceId)) continue;
+      const sourceKey = this.impactTimingKey(sourceId, event.generation); const sourceImpact = plan.impacts.find((impact) => this.impactTimingKey(impact.targetId, impact.generation) === sourceKey);
+      const sourceDelay = schedule.impactDelays.get(sourceKey) ?? impulseImpactDelayMs(event.generation);
+      const delay = sourceDelay + (sourceImpact ? this.effectResolutionDurationMs(effectPresentations.get(sourceKey) ?? []) : 0);
+      end = Math.max(end, delay + this.effectIconTimelineDurationMs(false));
+      this.time.delayedCall(delay, () => this.presentAreaEffectApplication(event));
+    }
+    for (const event of plan.effectEvents) if (event.type === "CHAIN_BLOCKED" && event.gemId) {
+      const targetId = Number(event.gemId.replace("target-", ""));
+      if (!Number.isInteger(targetId)) continue;
+      const delay = schedule.impactDelays.get(this.impactTimingKey(targetId, event.generation)) ?? impulseImpactDelayMs(event.generation);
+      this.time.delayedCall(delay, () => this.actions.audioCue("effect.link.chain"));
     }
     return end;
+  }
+  /**
+   * Keeps the resolver atomic while making the visual current causal: a link
+   * leaves a gem immediately unless that exact arrival visibly resolves one of
+   * the gem's own effects. Branches calculate independently, then converge at
+   * the latest visual arrival.
+   */
+  private impulsePresentationSchedule(model: RdnSceneModel, plan: ImpulseResolutionPlan, presentationsByImpact: ReadonlyMap<string, readonly ImpactEffectPresentation[]>): { impactDelays: ReadonlyMap<string, number>; linkStartDelays: ReadonlyMap<string, number> } {
+    const impactDelays = new Map<string, number>(); const linkStartDelays = new Map<string, number>();
+    const impactsByKey = new Map(plan.impacts.map((impact) => [this.impactTimingKey(impact.targetId, impact.generation), impact]));
+    const linksById = new Map(this.effectResolver.resolve(model.level.effectConfiguration, model.level.positions).effects.filter((effect) => effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK).map((effect) => [effect.id, effect]));
+    const propagatedByImpact = new Map<string, EffectEngineEvent[]>();
+    for (const event of plan.effectEvents) if (event.type === "FLOW_PROPAGATED" && event.linkId && event.gemId) {
+      const targetId = Number(event.gemId.replace("target-", "")); if (!Number.isInteger(targetId)) continue;
+      const key = this.impactTimingKey(targetId, event.generation); const list = propagatedByImpact.get(key) ?? []; list.push(event); propagatedByImpact.set(key, list);
+    }
+    for (const impact of [...plan.impacts].sort((left, right) => left.generation - right.generation || left.targetId - right.targetId)) {
+      const key = this.impactTimingKey(impact.targetId, impact.generation); let delay = impulseImpactDelayMs(impact.generation);
+      for (const event of propagatedByImpact.get(key) ?? []) {
+        const link = event.linkId ? linksById.get(event.linkId) : undefined;
+        if (!link || link.target.type !== EffectScope.LINK) continue;
+        const source = link.target.fromGem.id === event.gemId ? link.target.toGem : link.target.fromGem;
+        const sourceKey = this.impactTimingKey(source.index, event.generation - 1);
+        const sourceImpact = impactsByKey.get(sourceKey);
+        const sourceDelay = impactDelays.get(sourceKey) ?? impulseImpactDelayMs(Math.max(0, event.generation - 1));
+        const sourcePresentations = presentationsByImpact.get(sourceKey) ?? [];
+        const resolvesVisibleGemEffect = sourceImpact !== undefined && this.hasVisibleGemEffectResolution(plan.effectEvents, source.index, event.generation - 1);
+        // The next Link may leave as soon as the local effects have revealed
+        // their outcome and the gem value is committed. Decorative impact
+        // particles are intentionally not a gate for the following branch.
+        const linkStart = sourceDelay + (resolvesVisibleGemEffect && sourceImpact ? this.effectResolutionDurationMs(sourcePresentations) : 0);
+        if (event.flowId) linkStartDelays.set(event.flowId, linkStart);
+        delay = Math.max(delay, linkStart + EFFECT_PHASER_VISUAL.impulseDischarge.linkSegmentDurationMs);
+      }
+      impactDelays.set(key, delay);
+    }
+    return { impactDelays, linkStartDelays };
+  }
+  private impactTimingKey(targetId: number, generation: number): string { return `${targetId}:${generation}`; }
+  private hasVisibleGemEffectResolution(events: readonly EffectEngineEvent[], targetId: number, generation: number): boolean {
+    const gemId = `target-${targetId}`;
+    const visibleGemEvents: readonly EffectEngineEvent["type"][] = ["SHIELD_ABSORBED", "WALL_HIT", "ICE_HIT", "FIRE_HIT", "MIRROR_APPLIED", "GEM_AMPLIFIER_APPLIED", "GEM_INVERTER_APPLIED", "ELEMENTAL_BYPASSED", "ELEMENTAL_BLOCKED", "TIMER_TICK", "TIMER_EXPIRED", "TIMER_COMPLETED", "CORRUPTION_APPLIED"];
+    return events.some((event) => event.gemId === gemId && event.generation === generation && visibleGemEvents.includes(event.type) && shouldPresentEffectEvent(event));
   }
   private animateImpulseDischargeSegment(startX: number, startY: number, endX: number, endY: number, delay: number, destinationGemId: string): void {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const dx = endX - startX; const dy = endY - startY; const length = Math.max(1, Math.hypot(dx, dy));
@@ -328,33 +393,41 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: text, y: y - radius * .9 - 10 - visual.valueFloatRise, alpha: 0, scaleX, scaleY, delay, duration: visual.valueFloatDurationMs, ease: "Cubic.Out", onStart: () => text.setAlpha(1), onComplete: () => text.destroy() });
   }
   /** Presentation-only commit: the plan is already calculated, this only reveals it at impact. */
-  private presentImpulseImpact(impact: ImpulseResolutionPlan["impacts"][number], effectPresentations: readonly ImpactEffectPresentation[] = []): void {
+  private presentImpulseImpact(impact: ImpulseResolutionPlan["impacts"][number], effectPresentations: readonly ImpactEffectPresentation[] = [], effectEvents: readonly EffectEngineEvent[] = []): void {
     const slot = this.outerSlots.get(impact.targetId); if (!slot) return;
     this.events.emit("IMPULSE_GEM_IMPACT", impact);
-    // A blocked or neutralized flow has no value-change cue; its barrier/effect
-    // cue is emitted separately from the presentations below.
-    const valueChanged = impact.resultValue !== impact.previousValue;
-    const zero = valueChanged && impact.resultValue === 0;
-    if (valueChanged) this.actions.audioCue(zero ? "gem.zero" : "gem.change");
-    // Effects with a visual icon emit from its own timeline below. Cues without
-    // an icon retain their immediate renderer-driven feedback.
+    this.effectRenderer?.playImpactEffects(effectEvents);
+    // Effects explain the incoming value before the board shows its resulting
+    // number. Cues without an icon still belong to that same first phase.
     for (const presentation of effectPresentations.filter((item) => !item.frame)) {
       const cue = this.effectCue(presentation);
       if (cue) this.actions.audioCue(cue);
     }
-    const gemTintBeforeImpact = slot.gem.tintTopLeft;
-    slot.text.setText(format(impact.resultValue)).setColor(impact.resultValue === 0 ? "#e6e6e6" : "#ffffff");
-    if (impact.resultValue === 0) slot.gem.setTint(0x909090);
-    const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
-    const absorbed = !zero && impact.resultValue === impact.previousValue;
-    if (zero) this.lastZeroBurstKey = `${this.model?.level.id}-${this.model?.state.impulses}`;
-    this.playImpactFeedback(slot.gem, slot.text, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", effectPresentations, gemTintBeforeImpact);
-    const blockedByBarrier = effectPresentations.some((effect) => effect.frame === "effect-wall" || effect.frame === "effect-ice" || effect.frame === "fire");
-    const absorbedByShield = effectPresentations.some((effect) => effect.frame === "effect-shield");
-    const displayedOperation = blockedByBarrier || absorbedByShield || impact.operation === null ? format(impact.appliedValue) : formatOperator(impact.operation);
-    this.showImpactLabel(impact.targetId, slot.text.x, slot.text.y, radius, displayedOperation, zero);
+    const resolveValue = () => {
+      const valueChanged = impact.resultValue !== impact.previousValue;
+      const zero = valueChanged && impact.resultValue === 0;
+      if (valueChanged) this.actions.audioCue(zero ? "gem.zero" : "gem.change");
+      else if (impact.appliedValue === 0) this.actions.audioCue("gem.noChange");
+      const gemTintBeforeImpact = slot.gem.tintTopLeft;
+      slot.text.setText(format(impact.resultValue)).setColor(impact.resultValue === 0 ? "#e6e6e6" : "#ffffff");
+      if (impact.resultValue === 0) slot.gem.setTint(0x909090);
+      const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
+      const absorbed = !zero && impact.resultValue === impact.previousValue;
+      if (zero) this.lastZeroBurstKey = `${this.model?.level.id}-${this.model?.state.impulses}`;
+      this.pulseImpactGem(slot.gem, zero ? "zero" : absorbed ? "absorbed" : "normal");
+      this.playImpactFeedback(slot.gem, slot.text, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", gemTintBeforeImpact);
+      const blockedByBarrier = effectPresentations.some((effect) => effect.frame === "effect-wall" || effect.frame === "effect-ice" || effect.frame === "fire");
+      const absorbedByShield = effectPresentations.some((effect) => effect.frame === "effect-shield");
+      const displayedOperation = blockedByBarrier || absorbedByShield || impact.operation === null ? format(impact.appliedValue) : formatOperator(impact.operation);
+      this.showImpactLabel(impact.targetId, slot.text.x, slot.text.y, radius, displayedOperation, zero);
+    };
+    if (effectPresentations.some((effect) => !!effect.frame)) {
+      const reduce = EFFECT_PHASER_VISUAL.impactFeedback.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
+      this.showImpactEffectIcons(slot.gem.x, slot.gem.y, radius, effectPresentations, reduce, resolveValue);
+    } else resolveValue();
   }
-  private playImpactFeedback(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, targetId: number, radius: number, variant: "normal" | "absorbed" | "zero", effectPresentations: readonly ImpactEffectPresentation[] = [], gemTintBeforeImpact?: number): void {
+  private playImpactFeedback(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, targetId: number, radius: number, variant: "normal" | "absorbed" | "zero", gemTintBeforeImpact?: number): void {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback; const style = visual[variant]; const reduce = visual.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     const x = gem.x; const y = gem.y; const count = reduce ? Math.max(2, Math.ceil(style.particles / 3)) : style.particles;
     if (variant !== "zero") {
@@ -367,15 +440,20 @@ export class RdnPhaserScene extends Phaser.Scene {
       this.tweens.add({ targets: contactRing, scale: ring.targetScale, alpha: ring.alpha, duration: reduce ? 110 : ring.durationMs, yoyo: true, hold: ring.holdMs, ease: "Sine.Out", onComplete: () => this.releaseImpact(contactRing) });
     }
     for (let index = 0; index < count; index += 1) { const angle = Math.PI * 2 * index / count + targetId * .43; const distance = radius * style.distanceRatio * (.9 + (index % 3) * .2); const color = index % 6 === 4 ? style.secondaryParticleColor : index % 6 === 5 ? style.tertiaryParticleColor : style.particleColor; const spark = this.acquireImpactCircle(x, y, Math.max(9.6, radius * style.particleRadiusRatio), color, 1, visual.depth + 2); this.tweens.add({ targets: spark, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance, scale: .12, alpha: 0, duration: reduce ? 140 : style.durationMs, delay: reduce ? 0 : index * 12, ease: "Cubic.Out", onComplete: () => this.releaseImpact(spark) }); }
-    this.showImpactEffectIcons(x, y, radius, effectPresentations, reduce);
     if (variant === "zero" && !reduce) this.showZeroGemShatter(gem, gemValue, gemTintBeforeImpact ?? 0xffffff);
     else if (variant === "zero") this.time.delayedCall(0, () => this.actions.audioCue("gem.break"));
     this.events.emit("IMPULSE_FEEDBACK_SOUND", { variant });
     this.triggerImpactHaptic(variant === "zero");
   }
+  /** The value commit is a physical response of the gem, not merely a ring around it. */
+  private pulseImpactGem(gem: Phaser.GameObjects.Image, variant: "normal" | "absorbed" | "zero"): void {
+    if (EFFECT_PHASER_VISUAL.impactFeedback.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) return;
+    const style = EFFECT_PHASER_VISUAL.impactFeedback[variant]; const scaleX = gem.scaleX; const scaleY = gem.scaleY;
+    this.tweens.add({ targets: gem, scaleX: scaleX * style.pulseScale, scaleY: scaleY * style.pulseScale, duration: 115, yoyo: true, ease: "Sine.Out" });
+  }
   private effectPresentationsForImpact(events: readonly EffectEngineEvent[], impact: ImpulseResolutionPlan["impacts"][number]): readonly ImpactEffectPresentation[] {
     const gemId = `target-${impact.targetId}`;
-    const eventsForGem = events.filter((event) => event.gemId === gemId && event.generation === impact.generation);
+    const eventsForGem = this.effectEventsForImpact(events, impact);
     const presentations: ImpactEffectPresentation[] = eventsForGem.flatMap((event) => {
       if (!shouldPresentEffectEvent(event)) return [];
       const frame = this.effectFrameForEvent(event);
@@ -396,6 +474,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     return presentations;
   }
+  private effectEventsForImpact(events: readonly EffectEngineEvent[], impact: ImpulseResolutionPlan["impacts"][number]): readonly EffectEngineEvent[] { return events.filter((event) => event.gemId === `target-${impact.targetId}` && event.generation === impact.generation); }
   private effectFrameForEvent(event: EffectEngineEvent): string | undefined {
     if (event.type === "SHIELD_ABSORBED") return "effect-shield";
     if (event.type === "WALL_HIT") return "effect-wall";
@@ -410,20 +489,33 @@ export class RdnPhaserScene extends Phaser.Scene {
     if (event.type === "BOMB_TRIGGERED" || event.type === "AREA_TRIGGERED") return "effect-area-bomb";
     if (event.type === "AREA_ICE_TRIGGERED") return "effect-ice";
     if (event.type === "AREA_INVERTER_TRIGGERED") return "effect-inverter";
+    if (event.type === "AREA_ICE_APPLIED") return "effect-ice";
+    if (event.type === "AREA_INVERTER_APPLIED") return "effect-inverter";
     if (event.type === "FLOW_PROPAGATED" && event.linkId && this.model) {
       const effect = this.effectResolver.resolve(this.model.level.effectConfiguration, this.model.level.positions).effects.find((item) => item.id === event.linkId);
       return effect ? effectAssetFrame(effect) : undefined;
     }
     return undefined;
   }
-  private showImpactEffectIcons(x: number, y: number, radius: number, effects: readonly ImpactEffectPresentation[], reduced: boolean): void {
-    let delay = 0;
-    for (const effect of effects.filter((item) => !!item.frame)) {
-      const cue = this.effectCue(effect);
-      if (cue) this.time.delayedCall(delay, () => this.actions.audioCue(cue));
-      this.showAbsorbedEffectIcon(x, y, radius, effect.frame, effect.breaks, reduced, delay);
-      delay += this.effectIconTimelineDurationMs(effect.breaks);
-    }
+  /** Area ICE and INVERTER alter target state without a numeric impact; present them explicitly on every affected gem. */
+  private presentAreaEffectApplication(event: EffectEngineEvent): void {
+    const targetId = event.gemId ? Number(event.gemId.replace("target-", "")) : Number.NaN; const slot = this.outerSlots.get(targetId); if (!slot) return;
+    const frame = event.type === "AREA_ICE_APPLIED" ? "effect-ice" : event.type === "AREA_INVERTER_APPLIED" ? "effect-inverter" : undefined; if (!frame) return;
+    this.effectRenderer?.playImpactEffects([event]);
+    const reduce = EFFECT_PHASER_VISUAL.impactFeedback.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
+    this.showImpactEffectIcons(slot.gem.x, slot.gem.y, radius, [{ frame, breaks: false }], reduce, () => undefined);
+  }
+  /** Advances only when the preceding icon animation actually completes. */
+  private showImpactEffectIcons(x: number, y: number, radius: number, effects: readonly ImpactEffectPresentation[], reduced: boolean, onComplete: () => void): void {
+    const sequence = effects.filter((item) => !!item.frame); let index = 0;
+    const next = () => {
+      const effect = sequence[index++];
+      if (!effect) { onComplete(); return; }
+      const cue = this.effectCue(effect); if (cue) this.actions.audioCue(cue);
+      this.showAbsorbedEffectIcon(x, y, radius, effect.frame, effect.breaks, reduced, next);
+    };
+    next();
   }
   /** Maps the semantic presentation to its independently configurable audio cue. */
   private effectCue(presentation: ImpactEffectPresentation): string | undefined {
@@ -438,14 +530,14 @@ export class RdnPhaserScene extends Phaser.Scene {
       : presentation.frame.includes("timer") ? "effect.timer"
       : presentation.frame.includes("corruption") ? "effect.corruption" : undefined);
   }
-  private showAbsorbedEffectIcon(x: number, y: number, radius: number, frame: string, breaks: boolean, reduced: boolean, delay = 0): void {
+  private showAbsorbedEffectIcon(x: number, y: number, radius: number, frame: string, breaks: boolean, reduced: boolean, onComplete: () => void): void {
     const config = EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon;
     const texture = frame === "fire" ? "rdn-effect-actions" : "rdn-effects";
     const icon = this.trackImpact(this.add.image(x, y - radius * config.offsetYRatio, texture, frame).setDisplaySize(radius * config.sizeRatio, radius * config.sizeRatio).setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + config.depthOffset).setAlpha(0).setScale(config.initialScale));
     const fadeIn = reduced ? 0 : config.fadeInMs; const hold = reduced ? 0 : config.holdMs; const fadeOut = reduced ? 120 : config.fadeOutMs;
-    this.tweens.add({ targets: icon, alpha: config.alpha, scaleX: config.finalScale, scaleY: config.finalScale, delay, duration: fadeIn, ease: "Sine.Out", onComplete: () => {
-      if (breaks && config.shatter.enabled && !reduced) this.tweens.add({ targets: icon, alpha: config.alpha, duration: Math.max(1, config.durationMs - fadeIn), ease: "Linear", onComplete: () => { this.actions.audioCue("effect.barrierBreak"); this.shatterImage(texture, frame, x, y - radius * config.offsetYRatio, radius * config.sizeRatio * config.finalScale); this.releaseImpact(icon); } });
-      else this.tweens.add({ targets: icon, alpha: 0, delay: hold, duration: fadeOut, ease: "Sine.In", onComplete: () => this.releaseImpact(icon) });
+    this.tweens.add({ targets: icon, alpha: config.alpha, scaleX: config.finalScale, scaleY: config.finalScale, duration: fadeIn, ease: "Sine.Out", onComplete: () => {
+      if (breaks && config.shatter.enabled && !reduced) this.tweens.add({ targets: icon, alpha: config.alpha, duration: Math.max(1, config.durationMs - fadeIn), ease: "Linear", onComplete: () => { this.actions.audioCue("effect.barrierBreak"); this.shatterImage(texture, frame, x, y - radius * config.offsetYRatio, radius * config.sizeRatio * config.finalScale, undefined, false, onComplete); this.releaseImpact(icon); } });
+      else this.tweens.add({ targets: icon, alpha: 0, delay: hold, duration: fadeOut, ease: "Sine.In", onComplete: () => { this.releaseImpact(icon); onComplete(); } });
     } });
   }
   /** Keep the original coloured gem visible for the icon phase, then break that sprite apart. */
@@ -480,28 +572,30 @@ export class RdnPhaserScene extends Phaser.Scene {
       }
     } });
   }
-  private shatterImage(textureKey: string, frame: string | number, x: number, y: number, size: number, tint?: number, zeroGem = false): void {
+  private shatterImage(textureKey: string, frame: string | number, x: number, y: number, size: number, tint?: number, zeroGem = false, onComplete?: () => void): void {
     const config = zeroGem ? EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon.shatter : EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon.shatter;
-    const textureFrame = this.textures.getFrame(textureKey, frame); if (!textureFrame) return;
+    const textureFrame = this.textures.getFrame(textureKey, frame); if (!textureFrame) { onComplete?.(); return; }
     const columns = 4; const rows = Math.ceil(config.fragments / columns); const cropWidth = textureFrame.width / columns; const cropHeight = textureFrame.height / rows;
+    let remaining = config.fragments;
     for (let index = 0; index < config.fragments; index += 1) {
       const column = index % columns; const row = Math.floor(index / columns); const angle = Math.PI * 2 * index / config.fragments + .18;
       const fragment = this.trackImpact(this.add.image(x + (column - (columns - 1) / 2) * size / columns, y + (row - (rows - 1) / 2) * size / rows, textureKey, frame).setCrop(column * cropWidth, row * cropHeight, cropWidth, cropHeight).setDisplaySize(size / columns, size / rows).setAlpha(config.alpha).setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon.depthOffset));
       if (tint !== undefined) fragment.setTint(tint);
       const distance = size * config.distanceRatio * (.7 + (index % 3) * .17);
-      this.tweens.add({ targets: fragment, x: fragment.x + Math.cos(angle) * distance, y: fragment.y + Math.sin(angle) * distance, angle: (index % 2 ? -1 : 1) * 360 * config.rotation, alpha: 0, scaleX: config.finalScale, scaleY: config.finalScale, duration: config.durationMs, ease: "Cubic.Out", onComplete: () => this.releaseImpact(fragment) });
+      this.tweens.add({ targets: fragment, x: fragment.x + Math.cos(angle) * distance, y: fragment.y + Math.sin(angle) * distance, angle: (index % 2 ? -1 : 1) * 360 * config.rotation, alpha: 0, scaleX: config.finalScale, scaleY: config.finalScale, duration: config.durationMs, ease: "Cubic.Out", onComplete: () => { this.releaseImpact(fragment); remaining -= 1; if (remaining === 0) onComplete?.(); } });
     }
   }
-  /** Base impact overlaps its local effect sequence; only icons on one gem are serial. */
+  /** Effects explain the hit first; the resulting gem feedback follows them. */
   private impactTimelineDurationMs(impact: ImpulseResolutionPlan["impacts"][number], effects: readonly ImpactEffectPresentation[]): number {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback;
     const base = impact.resultValue === 0 && impact.previousValue !== 0 ? Math.max(visual.zero.durationMs, this.zeroGemShatterTimelineDurationMs()) : visual.settleMs;
-    const effectSequence = effects.filter((effect) => !!effect.frame).reduce((total, effect) => total + this.effectIconTimelineDurationMs(effect.breaks), 0);
-    return Math.max(base, effectSequence);
+    return this.effectResolutionDurationMs(effects) + base;
   }
+  private effectResolutionDurationMs(effects: readonly ImpactEffectPresentation[]): number { return effects.filter((effect) => !!effect.frame).reduce((total, effect) => total + this.effectIconTimelineDurationMs(effect.breaks), 0); }
   private effectIconTimelineDurationMs(breaks: boolean): number {
     const icon = EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon;
-    return icon.durationMs + (breaks && icon.shatter.enabled ? icon.shatter.durationMs : 0);
+    const visibleDuration = breaks && icon.shatter.enabled ? icon.durationMs : icon.fadeInMs + icon.holdMs + icon.fadeOutMs;
+    return visibleDuration + (breaks && icon.shatter.enabled ? icon.shatter.durationMs : 0);
   }
   private zeroGemShatterTimelineDurationMs(): number {
     const gem = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon;
