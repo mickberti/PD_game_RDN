@@ -29,7 +29,7 @@ export class EffectPhaserRenderer {
       if (!isEffectVisuallyActive(effect, values, runtime)) continue;
       if (effect.config.scope === EffectScope.LINK && effect.target.type === EffectScope.LINK) {
         const geometry = this.linkGeometry(effect); if (!geometry) continue;
-        const view = new LinkEffectView(this.scene, effect, geometry, this.onLinkInfo); this.linkLayer.add(view); this.links.set(effect.id, view);
+        const view = new LinkEffectView(this.scene, effect, geometry, this.onLinkInfo, this.markerLayer); this.linkLayer.add(view); this.links.set(effect.id, view);
       }
       if (effect.config.scope === EffectScope.AREA && effect.target.type === EffectScope.AREA) this.drawAreaEffect(effect);
     }
