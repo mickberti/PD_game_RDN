@@ -32,7 +32,7 @@ export class AudioService {
     if (this.initialized) return;
     this.initialized = true;
     this.restore();
-    void this.preloadActivePack();
+    void this.preloadSharedSfx();
     document.addEventListener("visibilitychange", () => document.hidden ? this.onBackground() : this.onForeground());
     document.addEventListener("pointerdown", () => this.resumeAudioFromGesture(), { passive: true });
     document.addEventListener("keydown", () => this.resumeAudioFromGesture());
@@ -72,14 +72,15 @@ export class AudioService {
   duckMusic(target: number = AUDIO_SETTINGS.ducking.targetVolume, fadeMs: number = AUDIO_SETTINGS.ducking.fadeMs): void { if (this.currentMusic) this.fade(this.currentMusic.element, clamp(target), fadeMs); }
   restoreMusic(fadeMs = AUDIO_SETTINGS.ducking.fadeMs): void { if (this.currentMusic) this.fade(this.currentMusic.element, this.finalMusicVolume(MUSIC_CONFIG[this.currentMusic.cue]), fadeMs); }
   setTimeAttackIntensity(state: "NORMAL" | "WARNING" | "CRITICAL"): void { if (this.currentMusic?.cue === "game.timeAttack") this.currentMusic.element.playbackRate = state === "CRITICAL" ? 1.05 : state === "WARNING" ? 1.02 : 1; }
-  resetSettings(): void { const music = this.currentMusic?.cue; const packChanged = this.activeAudioPack() !== defaults.audioPack; this.masterVolume.set(defaults.masterVolume); this.musicVolume.set(defaults.musicVolume); this.sfxVolume.set(defaults.sfxVolume); this.masterMuted.set(false); this.musicMuted.set(false); this.sfxMuted.set(false); this.activeAudioPack.set(defaults.audioPack); this.persist(); this.refreshVolumes(); if (packChanged) { this.resetSfxPack(); if (music) { this.stopMusic(); this.playMusic(music); } } }
-  setAudioPack(packId: string): void { if (!AUDIO_PACKS.some((pack) => pack.id === packId) || packId === this.activeAudioPack()) return; const music = this.currentMusic?.cue; this.activeAudioPack.set(packId); this.persist(); this.resetSfxPack(); if (music) { this.stopMusic(); this.playMusic(music); } }
+  resetSettings(): void { const music = this.currentMusic?.cue; const packChanged = this.activeAudioPack() !== defaults.audioPack; this.masterVolume.set(defaults.masterVolume); this.musicVolume.set(defaults.musicVolume); this.sfxVolume.set(defaults.sfxVolume); this.masterMuted.set(false); this.musicMuted.set(false); this.sfxMuted.set(false); this.activeAudioPack.set(defaults.audioPack); this.persist(); this.refreshVolumes(); if (packChanged && music) { this.stopMusic(); this.playMusic(music); } }
+  setAudioPack(packId: string): void { if (!AUDIO_PACKS.some((pack) => pack.id === packId) || packId === this.activeAudioPack()) return; const music = this.currentMusic?.cue; this.activeAudioPack.set(packId); this.persist(); if (music) { this.stopMusic(); this.playMusic(music); } }
   stopAllSfx(): void { for (const elements of this.activeSfx.values()) for (const element of elements) element.stop(); this.activeSfx.clear(); }
   stopAllAudio(): void { this.stopAllSfx(); this.stopMusic(); }
   handleAppBackground(): void { this.onBackground(); } handleAppForeground(): void { this.onForeground(); }
   clearDebugStats(): void { this.debugCounters.set({}); this.debugEvents.set([]); }
   activeSounds(): Readonly<Record<string, number>> { return Object.fromEntries([...this.activeSfx].map(([cue, values]) => [cue, values.size])); }
-  resolveActivePackSource(source: string): string { const pack = AUDIO_PACKS.find((item) => item.id === this.activeAudioPack()) ?? AUDIO_PACKS[0]; return source.replace(/^assets\/audio(?=\/)/, pack.assetRoot); }
+  /** Only music is theme-specific. SFX paths deliberately remain under assets/audio/sfx. */
+  resolveActivePackSource(source: string): string { const pack = AUDIO_PACKS.find((item) => item.id === this.activeAudioPack()) ?? AUDIO_PACKS[0]; return source.replace(/^assets\/audio\/music(?=\/)/, `${pack.assetRoot}/music`); }
   sfxConfig(cue: AudioCue): AudioCueConfig { return { ...SFX_CONFIG[cue], ...this.sfxRuntimeTunings()[cue] }; }
   setSfxRuntimeTuning(cue: AudioCue, tuning: SfxRuntimeTuning): void {
     const normalized: SfxRuntimeTuning = {};
@@ -94,16 +95,15 @@ export class AudioService {
   resetSfxRuntimeTunings(): void { this.sfxRuntimeTunings.set({}); this.refreshVolumes(); }
   calibratedSfxCatalog(): Readonly<Record<AudioCue, AudioCueConfig>> { return Object.fromEntries((Object.keys(SFX_CONFIG) as AudioCue[]).map((cue) => [cue, this.sfxConfig(cue)])) as Readonly<Record<AudioCue, AudioCueConfig>>; }
 
-  private resetSfxPack(): void { this.stopAllSfx(); this.sfxBuffers.clear(); this.sfxBufferLoads.clear(); this.assetStatuses.set({}); void this.preloadActivePack(); }
-  private async preloadActivePack(): Promise<void> {
-    const generation = ++this.preloadGeneration; const packId = this.activeAudioPack();
+  private async preloadSharedSfx(): Promise<void> {
+    const generation = ++this.preloadGeneration;
     const entries = (Object.keys(SFX_CONFIG) as AudioCue[]).map((cue) => [cue, this.sfxConfig(cue)] as [AudioCue, AudioCueConfig]);
     entries.forEach(([cue]) => this.setAssetStatus(cue, "LOADING"));
     if (!this.getSfxContext()) return;
     await Promise.all(entries.map(async ([cue, config]) => {
       const groups = config.variants ?? [config.sources];
       const buffers = await Promise.all(groups.map((sources) => this.loadFirstDecodableBuffer(sources.map((source) => this.resolveActivePackSource(source)))));
-      if (generation !== this.preloadGeneration || packId !== this.activeAudioPack()) return;
+      if (generation !== this.preloadGeneration) return;
       if (buffers.some(Boolean)) this.setAssetStatus(cue, "LOADED");
       else { this.setAssetStatus(cue, "MISSING"); this.warn(`Unable to preload audio cue: ${cue}`); }
     }));

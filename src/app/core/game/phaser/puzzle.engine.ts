@@ -86,10 +86,25 @@ export class PuzzleEngine {
     for (const event of next.lastEffectEvents ?? []) if (event.type === "FLOW_PROPAGATED" && event.gemId && event.linkId) linkByTargetAndGeneration.set(`${event.gemId}:${event.generation}`, event.linkId);
     const values = [...state.outerValues]; const impacts: Array<ImpulseResolutionPlan["impacts"][number]> = []; const impactByGemAndGeneration = new Map<string, ImpulseResolutionPlan["impacts"][number]>();
     for (const event of next.lastEffectEvents ?? []) {
+      // A barrier can consume a propagated Link contribution before a value
+      // change exists. It still needs an impact entry so Phaser can present the
+      // hit and, on the final strength, the wall-breaking sequence.
+      if (event.type === "FLOW_ARRIVED" && event.gemId) {
+        const targetId = Number(event.gemId.replace("target-", "")); const key = `${event.gemId}:${event.generation}`; const linkId = linkByTargetAndGeneration.get(key);
+        if (Number.isInteger(targetId) && linkId && !impactByGemAndGeneration.has(key)) {
+          const previousValue = values[targetId]; const impact: ImpulseResolutionPlan["impacts"][number] = { targetId, linkId, previousValue, operation: null, appliedValue: event.value ?? 0, resultValue: previousValue, generation: event.generation, relativeImpactMs: 0 };
+          impacts.push(impact); impactByGemAndGeneration.set(key, impact);
+        }
+      }
       if (event.type === "GEM_VALUE_CHANGED" && event.gemId && event.value !== undefined) {
         const targetId = Number(event.gemId.replace("target-", "")); if (!Number.isInteger(targetId)) continue;
         const direct = directByTarget.get(targetId); const previousValue = values[targetId]; const resultValue = event.value; values[targetId] = resultValue;
-        const impact = { targetId, sourceId: direct ? this.getInnerIndex(level, targetId, state.rotation) : undefined, linkId: linkByTargetAndGeneration.get(`${event.gemId}:${event.generation}`), previousValue, operation: direct?.operator ?? null, appliedValue: resultValue - previousValue, resultValue, generation: event.generation, relativeImpactMs: 0 }; impacts.push(impact); impactByGemAndGeneration.set(`${event.gemId}:${event.generation}`, impact);
+        const key = `${event.gemId}:${event.generation}`; const existingImpact = impactByGemAndGeneration.get(key);
+        if (existingImpact) { existingImpact.appliedValue = resultValue - existingImpact.previousValue; existingImpact.resultValue = resultValue; }
+        else {
+          const impact: ImpulseResolutionPlan["impacts"][number] = { targetId, sourceId: direct ? this.getInnerIndex(level, targetId, state.rotation) : undefined, linkId: linkByTargetAndGeneration.get(key), previousValue, operation: direct?.operator ?? null, appliedValue: resultValue - previousValue, resultValue, generation: event.generation, relativeImpactMs: 0 };
+          impacts.push(impact); impactByGemAndGeneration.set(key, impact);
+        }
       }
       if (event.type === "GEM_INVERTER_APPLIED" && event.gemId && event.valueAfterInversion !== undefined) {
         const impact = impactByGemAndGeneration.get(`${event.gemId}:${event.generation}`); if (!impact) continue;

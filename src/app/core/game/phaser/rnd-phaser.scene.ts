@@ -10,7 +10,7 @@ import { RDN_BOARD_LAYOUTS, RDN_GEM_NUMERAL_CONFIG, RDN_MOTION, RDN_PHASER_VISUA
 import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolver";
 import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, ElementalAffinity, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
-import { EFFECT_PHASER_VISUAL, impulseImpactDelayMs } from "./effects/effect-phaser-visual.config";
+import { EFFECT_PHASER_VISUAL, LinkFlowPolicy, impulseImpactDelayMs } from "./effects/effect-phaser-visual.config";
 import { EffectTutorialDefinition } from "./effects/effect-tutorial.config";
 import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, shouldPresentEffectEvent, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
 
@@ -312,9 +312,8 @@ export class RdnPhaserScene extends Phaser.Scene {
     return end;
   }
   /**
-   * Keeps the resolver atomic while making the visual current causal: a link
-   * leaves a gem immediately unless that exact arrival visibly resolves one of
-   * the gem's own effects. Branches calculate independently, then converge at
+   * Keeps the resolver atomic while allowing the visual Link hand-off to be
+   * tuned independently. Branches calculate independently, then converge at
    * the latest visual arrival.
    */
   private impulsePresentationSchedule(model: RdnSceneModel, plan: ImpulseResolutionPlan, presentationsByImpact: ReadonlyMap<string, readonly ImpactEffectPresentation[]>): { impactDelays: ReadonlyMap<string, number>; linkStartDelays: ReadonlyMap<string, number> } {
@@ -336,11 +335,7 @@ export class RdnPhaserScene extends Phaser.Scene {
         const sourceImpact = impactsByKey.get(sourceKey);
         const sourceDelay = impactDelays.get(sourceKey) ?? impulseImpactDelayMs(Math.max(0, event.generation - 1));
         const sourcePresentations = presentationsByImpact.get(sourceKey) ?? [];
-        const resolvesVisibleGemEffect = sourceImpact !== undefined && this.hasVisibleGemEffectResolution(plan.effectEvents, source.index, event.generation - 1);
-        // The next Link may leave as soon as the local effects have revealed
-        // their outcome and the gem value is committed. Decorative impact
-        // particles are intentionally not a gate for the following branch.
-        const linkStart = sourceDelay + (resolvesVisibleGemEffect && sourceImpact ? this.effectResolutionDurationMs(sourcePresentations) : 0);
+        const linkStart = sourceDelay + (sourceImpact ? this.linkFlowPresentationDelayMs(plan.effectEvents, source.index, event.generation - 1, sourcePresentations) : 0);
         if (event.flowId) linkStartDelays.set(event.flowId, linkStart);
         delay = Math.max(delay, linkStart + EFFECT_PHASER_VISUAL.impulseDischarge.linkSegmentDurationMs);
       }
@@ -353,6 +348,23 @@ export class RdnPhaserScene extends Phaser.Scene {
     const gemId = `target-${targetId}`;
     const visibleGemEvents: readonly EffectEngineEvent["type"][] = ["SHIELD_ABSORBED", "WALL_HIT", "ICE_HIT", "FIRE_HIT", "MIRROR_APPLIED", "GEM_AMPLIFIER_APPLIED", "GEM_INVERTER_APPLIED", "ELEMENTAL_BYPASSED", "ELEMENTAL_BLOCKED", "TIMER_TICK", "TIMER_EXPIRED", "TIMER_COMPLETED", "CORRUPTION_APPLIED"];
     return events.some((event) => event.gemId === gemId && event.generation === generation && visibleGemEvents.includes(event.type) && shouldPresentEffectEvent(event));
+  }
+  /** Chooses the visual gate without ever altering the already-resolved flow value. */
+  private linkFlowPresentationDelayMs(events: readonly EffectEngineEvent[], targetId: number, generation: number, presentations: readonly ImpactEffectPresentation[]): number {
+    const policy: LinkFlowPolicy = EFFECT_PHASER_VISUAL.impulseDischarge.linkFlowPolicy;
+    if (policy === "continue-immediately") return 0;
+    if (policy === "wait-for-resolution") return this.hasVisibleGemEffectResolution(events, targetId, generation) ? this.effectResolutionDurationMs(presentations) : 0;
+    return this.causalGemEffectResolutionDurationMs(events, targetId, generation, presentations);
+  }
+  /** Only these pre-operation effects can alter the value carried by an outgoing Link. */
+  private causalGemEffectResolutionDurationMs(events: readonly EffectEngineEvent[], targetId: number, generation: number, presentations: readonly ImpactEffectPresentation[]): number {
+    const gemId = `target-${targetId}`;
+    const causalFrames = new Set(events
+      .filter((event) => event.gemId === gemId && event.generation === generation && shouldPresentEffectEvent(event)
+        && (event.type === "SHIELD_ABSORBED" || event.type === "MIRROR_APPLIED" || event.type === "GEM_AMPLIFIER_APPLIED"))
+      .map((event) => this.effectFrameForEvent(event))
+      .filter((frame): frame is string => !!frame));
+    return this.effectResolutionDurationMs(presentations.filter((presentation) => causalFrames.has(presentation.frame)));
   }
   private animateImpulseDischargeSegment(startX: number, startY: number, endX: number, endY: number, delay: number, destinationGemId: string): void {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const dx = endX - startX; const dy = endY - startY; const length = Math.max(1, Math.hypot(dx, dy));

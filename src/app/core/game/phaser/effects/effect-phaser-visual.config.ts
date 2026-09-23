@@ -1,4 +1,10 @@
 /** Presentation-only tuning for all flows and effects. */
+/**
+ * Controls only the visual hand-off between a gem and its outgoing Links.
+ * Puzzle resolution always remains atomic and independent from this setting.
+ */
+export type LinkFlowPolicy = "wait-for-resolution" | "handoff-after-causal-effects" | "continue-immediately";
+
 export const EFFECT_PHASER_VISUAL = {
   /** Green conduits from the gear to gems whose operation is currently usable. */
   activeFlows: {
@@ -112,6 +118,14 @@ export const EFFECT_PHASER_VISUAL = {
    * can be tuned without changing the board's readable state.
    */
   impulseDischarge: {
+    /**
+     * `wait-for-resolution`: preserve the fully sequential presentation.
+     * `handoff-after-causal-effects`: wait only for effects that transform the
+     * outgoing value (shield, mirror, amplifier).
+     * `continue-immediately`: keep the old flowing rhythm; local effects finish
+     * independently in the background.
+     */
+    linkFlowPolicy: "continue-immediately" as LinkFlowPolicy,
     /** Bright white core used by every particle tail. */
     color: 0xffffff,
     particleStrokeColor: 0xffffff,

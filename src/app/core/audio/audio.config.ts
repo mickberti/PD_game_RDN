@@ -10,11 +10,11 @@ const variants = (...paths: string[]): readonly (readonly string[])[] => paths.m
 
 export const AUDIO_SETTINGS = { music: { defaultVolume: .55, crossfadeMs: 500 }, sfx: { defaultVolume: .85 }, ducking: { enabled: true, targetVolume: .25, fadeMs: 100 } } as const;
 
-/** Asset roots are the only pack-specific concern; cue semantics and mixer rules stay shared. */
+/** Themes select music only; all gameplay and interface SFX live in the shared audio root. */
 export const AUDIO_PACKS: readonly AudioPackConfig[] = [
-  { id: "classic", label: "Dark Classic", assetRoot: "assets/audio/packs/dark-classic", description: "Set Classic attuale incluso nell'app." },
-  { id: "arcane-crystal", label: "Arcane Crystal", assetRoot: "assets/audio/packs/arcane-crystal", description: "Nuovo set Mechanical + Arcane + Crystal." },
-  { id: "tribal-deluxe", label: "Tribal Deluxe", assetRoot: "assets/audio/packs/tribal-deluxe", description: "Set tribale completo con musica e effetti dedicati." },
+  { id: "classic", label: "Dark Classic", assetRoot: "assets/audio/packs/dark-classic", description: "Tema musicale Dark Classic." },
+  { id: "arcane-crystal", label: "Arcane Crystal", assetRoot: "assets/audio/packs/arcane-crystal", description: "Tema musicale Mechanical + Arcane + Crystal." },
+  { id: "tribal-deluxe", label: "Tribal Deluxe", assetRoot: "assets/audio/packs/tribal-deluxe", description: "Tema musicale tribale." },
 ];
 
 /** Runtime catalog and asset-production brief. Paths follow Sound Design Specification §43. */
@@ -258,9 +258,9 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "gem.noChange": {
     "key": "sfx-gem-no-change",
     "sources": [
-      "assets/audio/sfx/gem/no-change.wav"
+      "assets/audio/sfx/gem/jalastram__fx314.wav"
     ],
-    "volume": 0.55,
+    "volume": 0.15,
     "cooldownMs": 35,
     "maxConcurrent": 3,
     "pitchVariation": 0.08,

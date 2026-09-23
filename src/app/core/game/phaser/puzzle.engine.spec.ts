@@ -93,6 +93,16 @@ describe("PuzzleEngine", () => {
     expect(first.impacts).toEqual(jasmine.arrayContaining([jasmine.objectContaining({ targetId: 0, resultValue: 2, generation: 0 }), jasmine.objectContaining({ targetId: 1, resultValue: 4, generation: 1, linkId: "ECHO_LINK-0" })]));
   });
 
+  it("keeps an impact presentation when a Link breaks its destination wall", () => {
+    const definition: LevelDefinition = { ...level([3, 5, 1, 1], [-1, 1, 1, 1]), effectConfiguration: { enabled: true, effects: [
+      { preset: "ECHO_LINK", target: { type: EffectScope.LINK, fromGemIndex: 0, toGemIndex: 1 } },
+      { preset: "WALL_1", target: { type: EffectScope.GEM, gemIndex: 1 } },
+    ] } };
+    const plan = engine.planImpulse(definition, engine.createInitialState(definition));
+    expect(plan.effectEvents.some((event) => event.type === "WALL_BROKEN" && event.gemId === "target-1")).toBeTrue();
+    expect(plan.impacts).toEqual(jasmine.arrayContaining([jasmine.objectContaining({ targetId: 1, linkId: "ECHO_LINK-0", previousValue: 5, appliedValue: 0, resultValue: 5, generation: 1 })]));
+  });
+
   it("keeps an amplified Link contribution when the destination inverts its resulting value", () => {
     const definition: LevelDefinition = { ...level([10, 10, 1, 1], [-1, 1, 1, 1]), effectConfiguration: { enabled: true, effects: [
       { preset: "AMPLIFIER_X2", target: { type: EffectScope.GEM, gemIndex: 0 } },
