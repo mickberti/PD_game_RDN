@@ -17,7 +17,7 @@ import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, shouldPre
 export interface RdnHudAction { icon: string; label: string; description: string; charges: number; disabled: boolean; }
 export interface RdnHudAudio { musicMuted: boolean; sfxMuted: boolean; musicVolume: number; sfxVolume: number; activePackId: string; packs: readonly { id: string; label: string }[]; }
 export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { group: string; groupIndex: number; groupTotal: number; scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; levelReward?: { coins: number; bonusClaimed: boolean; adUnavailable: boolean }; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; showSettings: boolean; audio: RdnHudAudio; }
-export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; nextPlaygroundGroup?(): void; previousPlaygroundGroup?(): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
+export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; stopSfx(): void; nextPlaygroundGroup?(): void; previousPlaygroundGroup?(): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value);
 const VISUAL_SET_COUNT = 3;
 const format = (value: number | null): string => value === null ? "—" : value > 0 ? `+${value}` : String(value);
@@ -90,6 +90,10 @@ export class RdnPhaserScene extends Phaser.Scene {
   private actionPanelTransitionFrom?: number;
   private actionHoldTimer?: Phaser.Time.TimerEvent;
   private actionHoldTriggered = false;
+  /** Invalidates every delayed visual callback belonging to an interrupted impulse. */
+  private impulsePresentationEpoch = 0;
+  private activeImpulsePlan?: ImpulseResolutionPlan;
+  private impulseCompletionTimer?: Phaser.Time.TimerEvent;
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
@@ -191,8 +195,8 @@ export class RdnPhaserScene extends Phaser.Scene {
         effectGemPositions,
         new Phaser.Math.Vector2(ringX, ringY),
         (effectId, pointer) => this.openLinkInfoFromTap(pointer, effectId),
-        (delayMs) => this.time.delayedCall(delayMs, () => this.actions.audioCue("link.travel")),
-        (cue, delayMs = 0) => this.time.delayedCall(delayMs, () => this.actions.audioCue(cue)),
+        (delayMs) => this.scheduleImpulseTask(delayMs, () => this.actions.audioCue("link.travel")),
+        (cue, delayMs = 0) => this.scheduleImpulseTask(delayMs, () => this.actions.audioCue(cue)),
       );
       this.effectRenderer.renderPersistent(resolvedEffects, m.state.effectRuntime, m.state.outerValues, m.effectPreviewEvents);
       this.effectRenderer.setActiveLinkPreview(m.effectPreviewEvents);
@@ -264,7 +268,32 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: impulseIcon, scaleX: impulseIcon.scaleX * 1.035, scaleY: impulseIcon.scaleY * 1.035, alpha: .92, duration: 1250, ease: "Sine.InOut", yoyo: true, repeat: -1 });
   }
   private keepLabelsUpright(): void { if (!this.wheel) return; const angle = this.wheel.rotation; const cos = Math.cos(angle); const sin = Math.sin(angle); for (const slot of this.innerSlots) { const x = this.wheel.x + slot.localX * cos - slot.localY * sin; const y = this.wheel.y + slot.localX * sin + slot.localY * cos; slot.sphere.setPosition(x, y); slot.text.setPosition(x, y).setAngle(0); slot.badge?.setPosition(x + slot.sphere.displayWidth * .33, y + slot.sphere.displayHeight * .33).setAngle(0); } }
-  private fireImpulse(core: Phaser.GameObjects.Arc): void { if (this.busy || !this.model || this.model.state.won || this.model.outcome || this.hasInfoOverlay(this.model) || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return; const before = this.model; this.busy = true; const plan = this.actions.impulse(); if (!plan) { this.busy = false; return; } this.actions.audioCue("pulse.start"); this.fadeFlowsAfterImpulse = true; this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 }); this.cameras.main.flash(110, 90, 235, 150); const transactionDuration = this.playImpulseDischarge(before, plan); this.time.delayedCall(transactionDuration, () => { this.busy = false; this.flushPendingRender(); }); }
+  private fireImpulse(core: Phaser.GameObjects.Arc): void {
+    if (this.busy) this.interruptImpulsePresentation();
+    if (!this.model || this.model.state.won || this.model.outcome || this.hasInfoOverlay(this.model) || this.model.tutorial || this.model.flows.some((flow) => !flow.interactable)) return;
+    const before = this.model; this.busy = true; const plan = this.actions.impulse();
+    if (!plan) { this.busy = false; return; }
+    this.activeImpulsePlan = plan; this.impulsePresentationEpoch += 1;
+    this.actions.audioCue("pulse.start"); this.fadeFlowsAfterImpulse = true;
+    if (core.active) this.tweens.add({ targets: core, scaleX: 1.22, scaleY: 1.22, yoyo: true, duration: RDN_MOTION.impulseChargeMs, repeat: 1 });
+    this.cameras.main.flash(110, 90, 235, 150);
+    const transactionDuration = this.playImpulseDischarge(before, plan);
+    this.impulseCompletionTimer = this.scheduleImpulseTask(transactionDuration, () => { this.busy = false; this.activeImpulsePlan = undefined; this.impulseCompletionTimer = undefined; this.flushPendingRender(); });
+  }
+  /** Resolves the already-calculated move immediately, leaving its applied values readable for the next impulse. */
+  private interruptImpulsePresentation(): void {
+    const plan = this.activeImpulsePlan;
+    this.impulsePresentationEpoch += 1;
+    this.impulseCompletionTimer?.remove(false); this.impulseCompletionTimer = undefined;
+    this.activeImpulsePlan = undefined; this.busy = false; this.actions.stopSfx();
+    this.renderPending = false; this.render();
+    if (plan) this.showInterruptedImpulseResults(plan);
+  }
+  /** All delayed presentation work belongs to the current impulse epoch and becomes inert when skipped. */
+  private scheduleImpulseTask(delayMs: number, callback: () => void): Phaser.Time.TimerEvent {
+    const epoch = this.impulsePresentationEpoch;
+    return this.time.delayedCall(delayMs, () => { if (epoch === this.impulsePresentationEpoch) callback(); });
+  }
   /** One-shot, multi-particle current from the impulse to every currently active gem. */
   private playImpulseDischarge(model: RdnSceneModel, plan: ImpulseResolutionPlan): number {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const { width, height } = this.scale; const layout = this.layout;
@@ -287,8 +316,8 @@ export class RdnPhaserScene extends Phaser.Scene {
     for (const impact of plan.impacts) {
       const delay = schedule.impactDelays.get(this.impactTimingKey(impact.targetId, impact.generation)) ?? impulseImpactDelayMs(impact.generation);
       const presentations = effectPresentations.get(this.impactTimingKey(impact.targetId, impact.generation)) ?? [];
-      end = Math.max(end, delay + this.impactTimelineDurationMs(impact, presentations));
-      this.time.delayedCall(delay, () => this.presentImpulseImpact(impact, presentations, this.effectEventsForImpact(plan.effectEvents, impact)));
+      end = Math.max(end, delay + this.impactTimelineDurationMs(impact, presentations) + this.chainReleaseTimelineDurationMs(model, impact));
+      this.scheduleImpulseTask(delay, () => this.presentImpulseImpact(impact, presentations, this.effectEventsForImpact(plan.effectEvents, impact)));
     }
     const impactKeys = new Set(plan.impacts.map((impact) => this.impactTimingKey(impact.targetId, impact.generation)));
     for (const event of plan.effectEvents) if ((event.type === "AREA_ICE_APPLIED" || event.type === "AREA_INVERTER_APPLIED") && event.gemId && event.effectId) {
@@ -301,13 +330,13 @@ export class RdnPhaserScene extends Phaser.Scene {
       const sourceDelay = schedule.impactDelays.get(sourceKey) ?? impulseImpactDelayMs(event.generation);
       const delay = sourceDelay + (sourceImpact ? this.effectResolutionDurationMs(effectPresentations.get(sourceKey) ?? []) : 0);
       end = Math.max(end, delay + this.effectIconTimelineDurationMs(false));
-      this.time.delayedCall(delay, () => this.presentAreaEffectApplication(event));
+      this.scheduleImpulseTask(delay, () => this.presentAreaEffectApplication(event));
     }
     for (const event of plan.effectEvents) if (event.type === "CHAIN_BLOCKED" && event.gemId) {
       const targetId = Number(event.gemId.replace("target-", ""));
       if (!Number.isInteger(targetId)) continue;
       const delay = schedule.impactDelays.get(this.impactTimingKey(targetId, event.generation)) ?? impulseImpactDelayMs(event.generation);
-      this.time.delayedCall(delay, () => this.actions.audioCue("effect.link.chain"));
+      this.scheduleImpulseTask(delay, () => this.actions.audioCue("effect.link.chain"));
     }
     return end;
   }
@@ -418,20 +447,23 @@ export class RdnPhaserScene extends Phaser.Scene {
     const resolveValue = () => {
       const valueChanged = impact.resultValue !== impact.previousValue;
       const zero = valueChanged && impact.resultValue === 0;
+      const noChange = !valueChanged && impact.appliedValue === 0;
+      const showNoChangeFeedback = !noChange || EFFECT_PHASER_VISUAL.impactFeedback.noChange.enabled;
       if (valueChanged) this.actions.audioCue(zero ? "gem.zero" : "gem.change");
-      else if (impact.appliedValue === 0) this.actions.audioCue("gem.noChange");
+      else if (noChange && showNoChangeFeedback) this.actions.audioCue("gem.noChange");
       const gemTintBeforeImpact = slot.gem.tintTopLeft;
       slot.text.setText(format(impact.resultValue)).setColor(impact.resultValue === 0 ? "#e6e6e6" : "#ffffff");
       if (impact.resultValue === 0) slot.gem.setTint(0x909090);
       const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
       const absorbed = !zero && impact.resultValue === impact.previousValue;
       if (zero) this.lastZeroBurstKey = `${this.model?.level.id}-${this.model?.state.impulses}`;
-      this.pulseImpactGem(slot.gem, zero ? "zero" : absorbed ? "absorbed" : "normal");
-      this.playImpactFeedback(slot.gem, slot.text, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", gemTintBeforeImpact);
+      if (showNoChangeFeedback) this.pulseImpactGem(slot.gem, zero ? "zero" : absorbed ? "absorbed" : "normal");
+      if (zero) this.startChainRelease(`target-${impact.targetId}`);
+      if (showNoChangeFeedback) this.playImpactFeedback(slot.gem, slot.text, impact.targetId, radius, zero ? "zero" : absorbed ? "absorbed" : "normal", gemTintBeforeImpact);
       const blockedByBarrier = effectPresentations.some((effect) => effect.frame === "effect-wall" || effect.frame === "effect-ice" || effect.frame === "fire");
       const absorbedByShield = effectPresentations.some((effect) => effect.frame === "effect-shield");
       const displayedOperation = blockedByBarrier || absorbedByShield || impact.operation === null ? format(impact.appliedValue) : formatOperator(impact.operation);
-      this.showImpactLabel(impact.targetId, slot.text.x, slot.text.y, radius, displayedOperation, zero);
+      if (showNoChangeFeedback) this.showImpactLabel(impact.targetId, slot.text.x, slot.text.y, radius, displayedOperation, zero);
     };
     if (effectPresentations.some((effect) => !!effect.frame)) {
       const reduce = EFFECT_PHASER_VISUAL.impactFeedback.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
@@ -439,7 +471,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       this.showImpactEffectIcons(slot.gem.x, slot.gem.y, radius, effectPresentations, reduce, resolveValue);
     } else resolveValue();
   }
-  private playImpactFeedback(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, targetId: number, radius: number, variant: "normal" | "absorbed" | "zero", gemTintBeforeImpact?: number): void {
+  private playImpactFeedback(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, targetId: number, radius: number, variant: "normal" | "absorbed" | "zero", gemTintBeforeImpact?: number, onZeroBreakComplete?: () => void): void {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback; const style = visual[variant]; const reduce = visual.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
     const x = gem.x; const y = gem.y; const count = reduce ? Math.max(2, Math.ceil(style.particles / 3)) : style.particles;
     if (variant !== "zero") {
@@ -452,8 +484,8 @@ export class RdnPhaserScene extends Phaser.Scene {
       this.tweens.add({ targets: contactRing, scale: ring.targetScale, alpha: ring.alpha, duration: reduce ? 110 : ring.durationMs, yoyo: true, hold: ring.holdMs, ease: "Sine.Out", onComplete: () => this.releaseImpact(contactRing) });
     }
     for (let index = 0; index < count; index += 1) { const angle = Math.PI * 2 * index / count + targetId * .43; const distance = radius * style.distanceRatio * (.9 + (index % 3) * .2); const color = index % 6 === 4 ? style.secondaryParticleColor : index % 6 === 5 ? style.tertiaryParticleColor : style.particleColor; const spark = this.acquireImpactCircle(x, y, Math.max(9.6, radius * style.particleRadiusRatio), color, 1, visual.depth + 2); this.tweens.add({ targets: spark, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance, scale: .12, alpha: 0, duration: reduce ? 140 : style.durationMs, delay: reduce ? 0 : index * 12, ease: "Cubic.Out", onComplete: () => this.releaseImpact(spark) }); }
-    if (variant === "zero" && !reduce) this.showZeroGemShatter(gem, gemValue, gemTintBeforeImpact ?? 0xffffff);
-    else if (variant === "zero") this.time.delayedCall(0, () => this.actions.audioCue("gem.break"));
+    if (variant === "zero" && !reduce) this.showZeroGemShatter(gem, gemValue, gemTintBeforeImpact ?? 0xffffff, onZeroBreakComplete);
+    else if (variant === "zero") this.scheduleImpulseTask(0, () => { this.actions.audioCue("gem.break"); onZeroBreakComplete?.(); });
     this.events.emit("IMPULSE_FEEDBACK_SOUND", { variant });
     this.triggerImpactHaptic(variant === "zero");
   }
@@ -553,7 +585,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     } });
   }
   /** Keep the original coloured gem visible for the icon phase, then break that sprite apart. */
-  private showZeroGemShatter(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, tint: number): void {
+  private showZeroGemShatter(gem: Phaser.GameObjects.Image, gemValue: Phaser.GameObjects.Text, tint: number, onComplete?: () => void): void {
     const icon = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon;
     const size = Math.max(gem.displayWidth, gem.displayHeight);
     const shardGem = this.trackImpact(this.add.image(gem.x, gem.y, gem.texture.key, gem.frame.name)
@@ -574,13 +606,13 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.tweens.add({ targets: shardGem, alpha: icon.alpha, scaleX: icon.finalScale, scaleY: icon.finalScale, duration: icon.fadeInMs, ease: "Sine.Out", onComplete: () => {
       if (icon.shatter.enabled) this.tweens.add({ targets: shardGem, alpha: icon.alpha, duration: Math.max(1, icon.durationMs - icon.fadeInMs), ease: "Linear", onComplete: () => {
         this.actions.audioCue("gem.break");
-        this.shatterImage(gem.texture.key, gem.frame.name, gem.x, gem.y - size * icon.offsetYRatio, size * icon.sizeRatio, tint, true);
+        this.shatterImage(gem.texture.key, gem.frame.name, gem.x, gem.y - size * icon.offsetYRatio, size * icon.sizeRatio, tint, true, onComplete);
         this.releaseImpact(shardGem);
         this.releaseImpact(zeroValue);
       } });
       else {
         this.actions.audioCue("gem.break");
-        this.tweens.add({ targets: [shardGem, zeroValue], alpha: 0, delay: icon.holdMs, duration: icon.fadeOutMs, ease: "Sine.In", onComplete: () => { this.releaseImpact(shardGem); this.releaseImpact(zeroValue); } });
+        this.tweens.add({ targets: [shardGem, zeroValue], alpha: 0, delay: icon.holdMs, duration: icon.fadeOutMs, ease: "Sine.In", onComplete: () => { this.releaseImpact(shardGem); this.releaseImpact(zeroValue); onComplete?.(); } });
       }
     } });
   }
@@ -600,7 +632,8 @@ export class RdnPhaserScene extends Phaser.Scene {
   /** Effects explain the hit first; the resulting gem feedback follows them. */
   private impactTimelineDurationMs(impact: ImpulseResolutionPlan["impacts"][number], effects: readonly ImpactEffectPresentation[]): number {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback;
-    const base = impact.resultValue === 0 && impact.previousValue !== 0 ? Math.max(visual.zero.durationMs, this.zeroGemShatterTimelineDurationMs()) : visual.settleMs;
+    const noChange = impact.resultValue === impact.previousValue && impact.appliedValue === 0;
+    const base = noChange && !visual.noChange.enabled ? 0 : impact.resultValue === 0 && impact.previousValue !== 0 ? Math.max(visual.zero.durationMs, this.zeroGemShatterTimelineDurationMs()) : visual.settleMs;
     return this.effectResolutionDurationMs(effects) + base;
   }
   private effectResolutionDurationMs(effects: readonly ImpactEffectPresentation[]): number { return effects.filter((effect) => !!effect.frame).reduce((total, effect) => total + this.effectIconTimelineDurationMs(effect.breaks), 0); }
@@ -612,6 +645,35 @@ export class RdnPhaserScene extends Phaser.Scene {
   private zeroGemShatterTimelineDurationMs(): number {
     const gem = EFFECT_PHASER_VISUAL.impactFeedback.zeroGemIcon;
     return gem.durationMs + (gem.shatter.enabled ? gem.shatter.durationMs : 0);
+  }
+  /** Reserve time for the arrival, standard effect reveal and chain-emblem shatter. */
+  private chainReleaseTimelineDurationMs(model: RdnSceneModel, impact: ImpulseResolutionPlan["impacts"][number]): number {
+    if (impact.previousValue === 0 || impact.resultValue !== 0) return 0;
+    const sourceGemId = `target-${impact.targetId}`;
+    const releasesChain = this.effectResolver.resolve(model.level.effectConfiguration, model.level.positions).effects.some((effect) => effect.config.scope === EffectScope.LINK && effect.config.type === LinkEffectType.CHAIN && effect.target.type === EffectScope.LINK && effect.target.fromGem.id === sourceGemId);
+    const shatter = EFFECT_PHASER_VISUAL.links.chain.destinationIcon.shatter;
+    const flow = EFFECT_PHASER_VISUAL.impulseDischarge;
+    const reveal = EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon;
+    const chainTimeline = flow.linkSegmentDurationMs + reveal.durationMs + (shatter.enabled ? shatter.durationMs : 0);
+    return releasesChain ? Math.max(0, chainTimeline - this.zeroGemShatterTimelineDurationMs()) : 0;
+  }
+  /** The chain follows the normal flow timing: destruction begins at the destination arrival. */
+  private startChainRelease(sourceGemId: string): void {
+    this.effectRenderer?.propagateChainReleaseFrom(sourceGemId, () => this.effectRenderer?.releaseChainsFrom(sourceGemId));
+  }
+  /** A compact final overlay shown only when a player skips an in-flight presentation. */
+  private showInterruptedImpulseResults(plan: ImpulseResolutionPlan): void {
+    const finalImpactByTarget = new Map<number, ImpulseResolutionPlan["impacts"][number]>();
+    for (const impact of plan.impacts) finalImpactByTarget.set(impact.targetId, impact);
+    const visual = EFFECT_PHASER_VISUAL.impactFeedback;
+    for (const impact of finalImpactByTarget.values()) {
+      const slot = this.outerSlots.get(impact.targetId); if (!slot) continue;
+      const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
+      const label = this.trackImpact(this.sphereLabel(slot.text.x, slot.text.y - radius * 1.18, format(impact.appliedValue), radius * visual.label.sizeRatio, visual.label.color).setDepth(visual.depth + visual.label.depthOffset));
+      label.setShadow(0, 0, "#4fffa0", 9, true, true).setAlpha(0);
+      this.tweens.add({ targets: label, alpha: 1, duration: 70, ease: "Sine.Out" });
+      this.tweens.add({ targets: label, y: label.y - radius * visual.label.riseRatio, delay: visual.label.holdMs, duration: visual.label.durationMs, alpha: 0, ease: "Cubic.Out", onComplete: () => this.releaseImpact(label) });
+    }
   }
   private showImpactLabel(targetId: number, x: number, y: number, radius: number, value: string, zero: boolean): void {
     const visual = EFFECT_PHASER_VISUAL.impactFeedback; const slot = this.impactSlots.get(targetId) ?? 0; this.impactSlots.set(targetId, (slot + 1) % visual.label.maxSlots);

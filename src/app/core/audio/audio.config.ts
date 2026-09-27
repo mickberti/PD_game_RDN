@@ -260,7 +260,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
     "sources": [
       "assets/audio/sfx/gem/jalastram__fx314.wav"
     ],
-    "volume": 0.15,
+    "volume": 0.45,
     "cooldownMs": 35,
     "maxConcurrent": 3,
     "pitchVariation": 0.08,
@@ -381,12 +381,21 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   },
   "effect.link.chain": {
     "key": "sfx-effect-link-chain",
-    "sources": ["assets/audio/sfx/effects/small-metal-hit-08.wav"],
-    "volume": 0.58,
+    "sources": ["assets/audio/sfx/effects/chains_8drop.wav"],
+    "volume": 0,
     "cooldownMs": 50,
     "maxConcurrent": 3,
     "pitchVariation": 0.1,
     "design": { "durationMs": [180, 380], "character": "Firm mechanical lock confirmation when a Chain link blocks its destination.", "intensity": 3, "priority": 3 }
+  },
+  "effect.link.chainBreak": {
+    "key": "sfx-effect-link-chain-break",
+    "sources": ["assets/audio/sfx/effects/chains_8drop.wav"],
+    "volume": 0.9,
+    "cooldownMs": 90,
+    "maxConcurrent": 2,
+    "pitchVariation": 0.06,
+    "design": { "durationMs": [160, 320], "character": "Dedicated metallic snap when a released Chain shatters from its destination gem.", "intensity": 4, "priority": 4 }
   },
   "bonus.activate": {
     "key": "sfx-bonus-activate",

@@ -291,10 +291,12 @@ export class HubPage {
 
   openEvent(event: GameEvent): void {
     this.selectedEvent.set(event);
+    this.audio.playUi("open");
   }
 
   readonly closeEventDetail = (): void => {
     this.selectedEvent.set(null);
+    this.audio.playUi("close");
   };
 
   readonly activateEvent = async (event: GameEvent | null): Promise<void> => {
@@ -302,6 +304,7 @@ export class HubPage {
     const nextProgress = this.eventActivation.activate(event, this.state.progress());
     if (!nextProgress) return;
     this.state.updateProgress(nextProgress);
+    this.audio.playUi("confirm");
     await this.state.persistProgressNow().catch(() => undefined);
     this.selectedEvent.set(null);
   };

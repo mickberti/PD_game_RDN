@@ -26,7 +26,7 @@ export class ShopPage {
   readonly purchaseFeedback = signal<{ frame: FrameItem; text: string; variant: "gain" } | null>(null);
   constructor() { this.audio.playMusic("menu.main"); }
   quantity(id: RdnActionId): number { return this.state.inventoryActions()[id] ?? 0; }
-  open(action: RdnActionDefinition): void { this.selected.set(action); }
-  close(): void { this.selected.set(null); }
-  buy(id: RdnActionId): void { const action = RDN_ACTION_CATALOG[id]; if (this.state.coins() < action.price) return; this.state.mutateProgress((progress) => ({ ...progress, coins: progress.coins - action.price, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [id]: (progress.inventory.actions[id] ?? 0) + 1 } }, lastUpdatedAt: new Date().toISOString() })); this.purchaseFeedback.set({ frame: { name: action.icon, effect: "none" }, text: "ACQUISTATO", variant: "gain" }); void this.state.persistProgressNow().catch(() => undefined); }
+  open(action: RdnActionDefinition): void { this.selected.set(action); this.audio.playUi("open"); }
+  close(): void { this.selected.set(null); this.audio.playUi("close"); }
+  buy(id: RdnActionId): void { const action = RDN_ACTION_CATALOG[id]; if (this.state.coins() < action.price) return; this.state.mutateProgress((progress) => ({ ...progress, coins: progress.coins - action.price, inventory: { ...progress.inventory, actions: { ...progress.inventory.actions, [id]: (progress.inventory.actions[id] ?? 0) + 1 } }, lastUpdatedAt: new Date().toISOString() })); this.purchaseFeedback.set({ frame: { name: action.icon, effect: "none" }, text: "ACQUISTATO", variant: "gain" }); this.audio.playUi("confirm"); void this.state.persistProgressNow().catch(() => undefined); }
 }

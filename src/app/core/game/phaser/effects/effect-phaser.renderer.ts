@@ -16,6 +16,7 @@ export class EffectPhaserRenderer {
   private readonly dischargeLayer: Phaser.GameObjects.Container;
   private readonly links = new Map<string, LinkEffectView>();
   private readonly markerCounts = new Map<string, number>();
+  private destroyed = false;
   constructor(private readonly scene: Phaser.Scene, private readonly gems: ReadonlyMap<string, EffectGemPosition>, private readonly center: Phaser.Math.Vector2, private readonly onLinkInfo?: (effectId: string, pointer: Phaser.Input.Pointer) => void, private readonly onLinkFlowStart?: (delayMs: number) => void, private readonly onEffectCue?: (cue: string, delayMs?: number) => void) {
     this.linkLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth);
     this.previewGemLayer = scene.add.container().setDepth(EFFECT_PHASER_VISUAL.linkDepth + 2);
@@ -47,6 +48,24 @@ export class EffectPhaserRenderer {
     this.previewGemLayer.removeAll(true);
     const reachedGemIds = new Set(events.filter((event) => event.type === "FLOW_PROPAGATED" && event.gemId).map((event) => event.gemId!));
     for (const gemId of reachedGemIds) this.drawActiveTargetRing(gemId);
+  }
+  /** Sends the same one-shot current used by normal links through chains that are about to break. */
+  propagateChainReleaseFrom(sourceGemId: string, onArrived: () => void): boolean {
+    const chains = [...this.links.values()].filter((link) => link.effect.config.scope === EffectScope.LINK && link.effect.config.type === LinkEffectType.CHAIN && link.effect.target.type === EffectScope.LINK && link.effect.target.fromGem.id === sourceGemId);
+    if (!chains.length) return false;
+    let remaining = chains.length;
+    for (const link of chains) this.animateChainRelease(link, () => {
+      this.onEffectCue?.("effect.link.chain");
+      const complete = () => { remaining -= 1; if (remaining === 0) onArrived(); };
+      if (!link.presentDestinationEffect(complete)) complete();
+    });
+    return true;
+  }
+  /** Releases every visual Chain whose source has just reached zero. */
+  releaseChainsFrom(sourceGemId: string): void {
+    let released = false;
+    for (const link of this.links.values()) if (link.effect.config.scope === EffectScope.LINK && link.effect.config.type === LinkEffectType.CHAIN && link.effect.target.type === EffectScope.LINK && link.effect.target.fromGem.id === sourceGemId) released = link.breakDestinationIcon() || released;
+    if (released) this.onEffectCue?.("effect.link.chainBreak");
   }
   play(events: readonly EffectEngineEvent[]): void {
     for (const event of events) switch (event.type) {
@@ -134,7 +153,7 @@ export class EffectPhaserRenderer {
       : type === LinkEffectType.AMPLIFY ? "effect.link.amplify"
         : type === LinkEffectType.INVERT ? "effect.link.invert" : undefined;
   }
-  destroy(): void { this.links.clear(); this.markerCounts.clear(); this.linkLayer.destroy(true); this.previewGemLayer.destroy(true); this.gemLayer.destroy(true); this.markerLayer.destroy(true); this.flowLayer.destroy(true); this.dischargeLayer.destroy(true); }
+  destroy(): void { this.destroyed = true; this.links.clear(); this.markerCounts.clear(); this.linkLayer.destroy(true); this.previewGemLayer.destroy(true); this.gemLayer.destroy(true); this.markerLayer.destroy(true); this.flowLayer.destroy(true); this.dischargeLayer.destroy(true); }
   private linkGeometry(effect: ResolvedEffect): LinkEffectGeometry | null {
     if (effect.target.type !== EffectScope.LINK) return null; const from = this.gems.get(effect.target.fromGem.id); const to = this.gems.get(effect.target.toGem.id); if (!from || !to) return null;
     const start = new Phaser.Math.Vector2(from.x, from.y); const end = new Phaser.Math.Vector2(to.x, to.y); const midpoint = start.clone().add(end).scale(.5); let outward = midpoint.clone().subtract(this.center);
@@ -203,8 +222,37 @@ export class EffectPhaserRenderer {
     if (disabled) { background.setAlpha(.52); markerContent.setAlpha(.52); valueBadge?.setAlpha(.52); }
     this.markerLayer.add(children);
   }
-  private animateFlow(event: EffectEngineEvent): void { const link = event.linkId ? this.links.get(event.linkId) : undefined; if (!link || !event.gemId || link.effect.target.type !== EffectScope.LINK) return; const reverse = link.effect.target.fromGem.id === event.gemId; const from = reverse ? link.geometry.to : link.geometry.from; const visual = EFFECT_PHASER_VISUAL.links; const stageDelay = event.generation * visual.propagationStageDelayMs; link.animatePropagation(stageDelay); for (let index = 0; index < visual.propagationParticleCount; index += 1) { const particle = this.scene.add.circle(from.x, from.y, visual.propagationParticleRadius, visual.propagationParticleColor, visual.propagationParticleAlpha); this.flowLayer.add(particle); const progress = { value: 0 }; this.scene.tweens.add({ targets: progress, value: 1, delay: stageDelay + index * visual.propagationParticleStaggerMs, duration: visual.propagationDurationMs, ease: "Sine.InOut", onUpdate: () => { const point = link.pointAt(reverse ? 1 - progress.value : progress.value); particle.setPosition(point.x, point.y).setScale(1 + progress.value * (visual.propagationParticleScale - 1)); }, onComplete: () => particle.destroy() }); } }
-  private animateDischargeLink(link: LinkEffectView, reverse: boolean, delay: number): void {
+  private animateFlow(event: EffectEngineEvent): void { const link = event.linkId ? this.links.get(event.linkId) : undefined; if (!link || !event.gemId || link.effect.target.type !== EffectScope.LINK) return; const reverse = link.effect.target.fromGem.id === event.gemId; this.animateLinkFlow(link, reverse, event.generation * EFFECT_PHASER_VISUAL.links.propagationStageDelayMs); }
+  /** A Chain is not a gameplay conduit, but its release follows the familiar link-current language. */
+  private animateChainRelease(link: LinkEffectView, onArrived: () => void): void {
+    this.animateDischargeLink(link, false, 0, () => {
+      this.dischargeArrival(link.effect.target.type === EffectScope.LINK ? link.effect.target.toGem.id : "", 0);
+      onArrived();
+    });
+  }
+  /** Shared implementation: chain release and logical links must have identical particles and timing. */
+  private animateLinkFlow(link: LinkEffectView, reverse: boolean, delay: number, onLeadingParticleArrived?: () => void): void {
+    const visual = EFFECT_PHASER_VISUAL.links;
+    const from = reverse ? link.geometry.to : link.geometry.from;
+    link.animatePropagation(delay);
+    for (let index = 0; index < visual.propagationParticleCount; index += 1) {
+      const particle = this.scene.add.circle(from.x, from.y, visual.propagationParticleRadius, visual.propagationParticleColor, visual.propagationParticleAlpha);
+      this.flowLayer.add(particle);
+      const progress = { value: 0 };
+      this.scene.tweens.add({ targets: progress, value: 1, delay: delay + index * visual.propagationParticleStaggerMs, duration: visual.propagationDurationMs, ease: "Sine.InOut", onUpdate: () => {
+        const point = link.pointAt(reverse ? 1 - progress.value : progress.value);
+        particle.setPosition(point.x, point.y).setScale(1 + progress.value * (visual.propagationParticleScale - 1));
+      }, onComplete: () => {
+        particle.destroy();
+        // The leading particle defines the causal arrival; the tail remains scenic.
+        if (index === 0) {
+          this.pulseGem(link.effect.target.type === EffectScope.LINK ? link.effect.target.toGem.id : undefined, 0x7edbff, 1.34);
+          onLeadingParticleArrived?.();
+        }
+      } });
+    }
+  }
+  private animateDischargeLink(link: LinkEffectView, reverse: boolean, delay: number, onLeadingParticleArrived?: () => void): void {
     const visual = EFFECT_PHASER_VISUAL.impulseDischarge;
     for (let tail = 0; tail < visual.tailCount; tail += 1) for (let index = 0; index < visual.particleCount; index += 1) {
       const initial = link.pointAt(reverse ? 1 : 0);
@@ -221,6 +269,7 @@ export class EffectPhaserRenderer {
         particle.setPosition(point.x - deltaY / length * weave, point.y + deltaX / length * weave).setScale(visual.particleMinScale + intensity * visual.particleScaleRange).setAlpha(intensity * visual.particleAlpha);
       }, onComplete: () => { this.scene.tweens.add({ targets: [halo, particle], alpha: 0, scale: .3, duration: visual.arrivalBurstDurationMs, ease: "Cubic.Out", onComplete: () => { halo.destroy(); particle.destroy(); } }); } });
     }
+    if (onLeadingParticleArrived) this.scene.time.delayedCall(delay + visual.linkSegmentDurationMs, () => { if (!this.destroyed) onLeadingParticleArrived(); });
   }
   private dischargeArrival(gemId: string, delay: number): void {
     const gem = this.gems.get(gemId); if (!gem) return; const visual = EFFECT_PHASER_VISUAL.impulseDischarge;

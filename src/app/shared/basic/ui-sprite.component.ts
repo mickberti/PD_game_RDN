@@ -93,7 +93,7 @@ export class UiSpriteComponent implements AfterViewInit, OnDestroy{
 	 * Allow upscale
 	 */
 	@Input()
-	showScale = true;
+	showScale = false;
 		
 	/**
 	 * Allow upscale

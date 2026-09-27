@@ -115,9 +115,9 @@ export const EFFECT_PHASER_VISUAL = {
       edgeColor: 0xb9d7dc,
       energyColor: 0x7edbff,
       shadowColor: 0x071417,
-      linkSpacingRatio: 0.2,
-      linkWidthRatio: 0.5,
-      linkHeightRatio: 0.28,
+      linkSpacingRatio: 0.14,
+      linkWidthRatio: 0.54,
+      linkHeightRatio: 0.3,
       linkAlternatingAngleDeg: 34,
       linkStrokeRatio: 0.075,
       linkAlpha: 0.76,
@@ -131,18 +131,24 @@ export const EFFECT_PHASER_VISUAL = {
       haloAlpha: 0.24,
       particleOrbitRadiusRatio: 0.3,
       particleOrbitTurns: 3,
-      restraintWidthRatio: 2.38,
-      restraintHeightRatio: 0.72,
-      restraintStrokeRatio: 0.105,
-      restraintAngles: [-58, 0, 58],
-      restraintAlpha: 0.78,
-      restraintEdgeGlowAlpha: 0.13,
-      restraintGlowAlpha: 0.22,
-      restraintPulseMs: 720,
-      restraintPulseScale: 1.18,
-      restraintPulseAlpha: 0.92,
-      rivetRadiusRatio: 0.1,
-      rivetAlpha: 0.8,
+      destinationIcon: {
+        sizeRatio: 1.8,
+        alpha: 0.52,
+        pulseMs: 920,
+        pulseScale: 0.32,
+        pulseAlpha: 0.85,
+        shatter: {
+          /** Diagnostic switch: keep false while validating the base icon timeline. */
+          enabled: true,
+          fragments: 12,
+          distanceRatio: 1.5,
+          durationMs: 1000,
+          /** No spin: the radial separation must read as an icon breaking, not a rotating gem. */
+          rotation: 0,
+          alpha: 0.96,
+          finalScale: 0.82,
+        },
+      },
     },
     /** Position of a non-adjacent link icon along the curve, measured from its source. */
     nonAdjacentIconProgress: 0.2,
@@ -202,6 +208,8 @@ export const EFFECT_PHASER_VISUAL = {
   /** Contact feedback is presentation-only and is driven by IMPULSE_GEM_IMPACT. */
   impactFeedback: {
     reducedMotion: false,
+    /** A zero-value input that leaves its destination unchanged can resolve silently. */
+    noChange: { enabled: false },
     normal: {
       color: 0x9cf5ff,
       particleColor: 0xffff00,

@@ -12,6 +12,7 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
   private readonly previewObjects: Phaser.GameObjects.GameObject[] = [];
   private readonly baseParticles: Phaser.GameObjects.Arc[] = [];
   private readonly chainOverlayObjects: Phaser.GameObjects.GameObject[] = [];
+  private chainDestinationIcon?: Phaser.GameObjects.Image;
   private baseGraphic?: Phaser.GameObjects.Graphics;
   private direction = LinkDirection.BIDIRECTIONAL;
   private linkColor = 0xffffff;
@@ -65,6 +66,30 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     this.add(overlay);
     this.scene.tweens.add({ targets: overlay, alpha: 0, delay, duration: visual.propagationDurationMs + visual.propagationParticleStaggerMs * (visual.propagationParticleCount - 1), ease: "Sine.Out", onComplete: () => overlay.destroy() });
   }
+  /** Shatters the destination emblem before the resolved Chain is removed from the board. */
+  breakDestinationIcon(): boolean {
+    const icon = this.chainDestinationIcon; if (!icon?.active) return false;
+    this.scene.tweens.killTweensOf(icon); icon.setVisible(false);
+    const frame = this.scene.textures.getFrame(icon.texture.key, icon.frame.name); if (!frame) { icon.destroy(); return true; }
+    const config = EFFECT_PHASER_VISUAL.links.chain.destinationIcon.shatter; if (!config.enabled) { icon.destroy(); return true; }
+    const columns = 4; const rows = Math.ceil(config.fragments / columns); const cropWidth = frame.width / columns; const cropHeight = frame.height / rows; const parent = icon.parentContainer;
+    for (let index = 0; index < config.fragments; index += 1) { const column = index % columns; const row = Math.floor(index / columns); const angle = Math.PI * 2 * index / config.fragments + .2; const fragment = this.scene.add.image(icon.x + (column - (columns - 1) / 2) * icon.displayWidth / columns, icon.y + (row - (rows - 1) / 2) * icon.displayHeight / rows, icon.texture.key, icon.frame.name).setCrop(column * cropWidth, row * cropHeight, cropWidth, cropHeight).setDisplaySize(icon.displayWidth / columns, icon.displayHeight / rows).setAlpha(config.alpha); parent?.add(fragment); const distance = icon.displayWidth * config.distanceRatio * (.7 + (index % 3) * .17); this.scene.tweens.add({ targets: fragment, x: fragment.x + Math.cos(angle) * distance, y: fragment.y + Math.sin(angle) * distance, angle: (index % 2 ? -1 : 1) * 360 * config.rotation, alpha: 0, scaleX: config.finalScale, scaleY: config.finalScale, duration: config.durationMs, ease: "Cubic.Out", onComplete: () => fragment.destroy() }); }
+    icon.destroy(); return true;
+  }
+  /** Uses the standard resolved-effect reveal before the captive emblem is shattered. */
+  presentDestinationEffect(onComplete: () => void): boolean {
+    const persistentIcon = this.chainDestinationIcon; if (!persistentIcon?.active) return false;
+    const config = EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon;
+    const icon = this.scene.add.image(persistentIcon.x, persistentIcon.y - this.geometry.radius * config.offsetYRatio, persistentIcon.texture.key, persistentIcon.frame.name)
+      .setDisplaySize(this.geometry.radius * config.sizeRatio, this.geometry.radius * config.sizeRatio)
+      .setAlpha(0)
+      .setScale(config.initialScale);
+    persistentIcon.parentContainer?.add(icon);
+    this.scene.tweens.add({ targets: icon, alpha: config.alpha, scaleX: config.finalScale, scaleY: config.finalScale, duration: config.fadeInMs, ease: "Sine.Out", onComplete: () => {
+      this.scene.tweens.add({ targets: icon, alpha: config.alpha, duration: Math.max(1, config.durationMs - config.fadeInMs), ease: "Linear", onComplete: () => { icon.destroy(); onComplete(); } });
+    } });
+    return true;
+  }
   setHighlighted(value: boolean): void { this.setAlpha(value ? 1 : .5); }
   setDisabled(value: boolean): void { this.setAlpha(value ? .26 : 1); }
   override destroy(fromScene?: boolean): void { this.clearActiveFlowPreview(); for (const state of this.animationStates) this.scene.tweens.killTweensOf(state); for (const object of this.chainOverlayObjects) this.scene.tweens.killTweensOf(object); super.destroy(fromScene); }
@@ -76,7 +101,7 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
   /** Alternating oval links replace the conduit and make the dependency tangible. */
   private drawChainLinks(scene: Phaser.Scene, shadow: Phaser.GameObjects.Graphics): void {
     const config = EFFECT_PHASER_VISUAL.links.chain; const distance = Phaser.Math.Distance.Between(this.geometry.from.x, this.geometry.from.y, this.geometry.control.x, this.geometry.control.y) + Phaser.Math.Distance.Between(this.geometry.control.x, this.geometry.control.y, this.geometry.to.x, this.geometry.to.y);
-    const count = Phaser.Math.Clamp(Math.round(distance / Math.max(8, this.geometry.radius * config.linkSpacingRatio)), 10, 28); const width = Phaser.Math.Clamp(this.geometry.radius * config.linkWidthRatio, 11, 20); const height = Math.max(6, this.geometry.radius * config.linkHeightRatio); const stroke = Math.max(2, this.geometry.radius * config.linkStrokeRatio);
+    const count = Phaser.Math.Clamp(Math.round(distance / Math.max(8, this.geometry.radius * config.linkSpacingRatio)), 12, 36); const width = Phaser.Math.Clamp(this.geometry.radius * config.linkWidthRatio, 11, 22); const height = Math.max(6, this.geometry.radius * config.linkHeightRatio); const stroke = Math.max(2, this.geometry.radius * config.linkStrokeRatio);
     shadow.lineStyle(stroke + 8, config.energyColor, config.edgeGlowAlpha * .42); this.drawCurve(shadow);
     for (let index = 1; index < count; index += 1) { const t = index / count; const point = this.pointAt(t); const tangent = this.tangentAt(t); const angle = Phaser.Math.RadToDeg(Math.atan2(tangent.y, tangent.x)) + (index % 2 ? -config.linkAlternatingAngleDeg : config.linkAlternatingAngleDeg); const glowLink = scene.add.ellipse(point.x, point.y, width + 3, height + 3, config.energyColor, 0).setStrokeStyle(stroke + 5, config.energyColor, config.edgeGlowAlpha).setAngle(angle); const shadowLink = scene.add.ellipse(point.x + 1, point.y + 2, width, height, config.shadowColor, 0).setStrokeStyle(stroke + 3, config.shadowColor, .48).setAngle(angle); const link = scene.add.ellipse(point.x, point.y, width, height, config.metalColor, 0).setStrokeStyle(stroke, index % 2 ? config.edgeColor : config.metalColor, config.linkAlpha).setAngle(angle); this.add([glowLink, shadowLink, link]); }
   }
@@ -85,12 +110,10 @@ export class LinkEffectView extends Phaser.GameObjects.Container {
     const config = EFFECT_PHASER_VISUAL.links.chain;
     for (let index = 0; index < config.particleCount; index += 1) { const halo = scene.add.circle(0, 0, this.geometry.radius * config.haloRadiusRatio, config.energyColor, config.haloAlpha); const particle = scene.add.circle(0, 0, Math.max(2, this.geometry.radius * config.particleRadiusRatio), 0xf3fff6, .95).setStrokeStyle(2, config.energyColor, 1); this.baseParticles.push(halo, particle); this.add([halo, particle]); const state = { progress: 0 }; const phaseOffset = index * Math.PI * 2 / config.particleCount; this.animationStates.push(state); scene.tweens.add({ targets: state, progress: 1, delay: index * config.particleStaggerMs, duration: config.particleDurationMs, repeat: -1, repeatDelay: config.particleRepeatDelayMs, ease: "Sine.InOut", onUpdate: () => { const center = this.pointAt(state.progress); const tangent = this.tangentAt(state.progress); const normal = new Phaser.Math.Vector2(-tangent.y, tangent.x); const orbit = state.progress * Math.PI * 2 * config.particleOrbitTurns + phaseOffset; const offset = Math.sin(orbit) * this.geometry.radius * config.particleOrbitRadiusRatio; const depth = (Math.cos(orbit) + 1) / 2; const intensity = .28 + Math.sin(state.progress * Math.PI) * .72; const x = center.x + normal.x * offset; const y = center.y + normal.y * offset; halo.setPosition(x, y).setScale(.55 + intensity * .45 + depth * .25).setAlpha(intensity * config.haloAlpha * (.55 + depth * .45)); particle.setPosition(x, y).setScale(.62 + intensity * .3 + depth * .42).setAlpha(.3 + intensity * .35 + depth * .35); } }); }
   }
-  /** Crossed bands sit above the destination gem, visibly keeping it captive. */
+  /** A transparent chain emblem replaces the previous bands, marking the captive destination. */
   private drawChainRestraint(scene: Phaser.Scene, overlayLayer: Phaser.GameObjects.Container): void {
-    const config = EFFECT_PHASER_VISUAL.links.chain; const target = this.geometry.to; const radius = this.geometry.radius; const group = scene.add.container(); const glow = scene.add.circle(target.x, target.y, radius * 1.12, config.energyColor, 0).setStrokeStyle(Math.max(2, radius * .08), config.energyColor, config.restraintGlowAlpha); group.add(glow);
-    for (const angle of config.restraintAngles) { const edgeGlow = scene.add.ellipse(target.x, target.y, radius * config.restraintWidthRatio, radius * config.restraintHeightRatio, config.energyColor, 0).setStrokeStyle(Math.max(5, radius * config.restraintStrokeRatio + 7), config.energyColor, config.restraintEdgeGlowAlpha).setAngle(angle); const shadow = scene.add.ellipse(target.x + 1, target.y + 2, radius * config.restraintWidthRatio, radius * config.restraintHeightRatio, config.shadowColor, 0).setStrokeStyle(Math.max(3, radius * config.restraintStrokeRatio + 3), config.shadowColor, .48).setAngle(angle); const band = scene.add.ellipse(target.x, target.y, radius * config.restraintWidthRatio, radius * config.restraintHeightRatio, config.metalColor, 0).setStrokeStyle(Math.max(2, radius * config.restraintStrokeRatio), config.edgeColor, config.restraintAlpha).setAngle(angle); group.add([edgeGlow, shadow, band]); }
-    for (let index = 0; index < 4; index += 1) { const angle = index * Math.PI / 2 + Math.PI / 4; group.add(scene.add.circle(target.x + Math.cos(angle) * radius * 1.08, target.y + Math.sin(angle) * radius * 1.08, Math.max(2.5, radius * config.rivetRadiusRatio), config.energyColor, config.rivetAlpha).setStrokeStyle(1, 0xf3fff6, config.restraintAlpha)); }
-    overlayLayer.add(group); this.chainOverlayObjects.push(group, glow); scene.tweens.add({ targets: glow, alpha: config.restraintPulseAlpha, scale: config.restraintPulseScale, duration: config.restraintPulseMs, yoyo: true, repeat: -1, ease: "Sine.InOut" });
+    const config = EFFECT_PHASER_VISUAL.links.chain.destinationIcon; const target = this.geometry.to; const group = scene.add.container(); const icon = scene.add.image(target.x, target.y, "rdn-effects", "effect-chain-link").setDisplaySize(this.geometry.radius * config.sizeRatio, this.geometry.radius * config.sizeRatio).setAlpha(config.alpha); this.chainDestinationIcon = icon; group.add(icon);
+    overlayLayer.add(group); this.chainOverlayObjects.push(group, icon); scene.tweens.add({ targets: icon, alpha: config.pulseAlpha, scale: config.pulseScale, duration: config.pulseMs, yoyo: true, repeat: -1, ease: "Sine.InOut" });
   }
   private drawArrow(graphics: Phaser.GameObjects.Graphics, point: Phaser.Math.Vector2, tangent: Phaser.Math.Vector2, color: number): void { const normal = new Phaser.Math.Vector2(-tangent.y, tangent.x); const tail = point.clone().subtract(tangent.clone().scale(13)); const left = tail.clone().add(normal.clone().scale(7)); const right = tail.clone().subtract(normal.clone().scale(7)); graphics.fillStyle(color, 1); graphics.fillTriangle(point.x, point.y, left.x, left.y, right.x, right.y); }
   private drawCurve(graphics: Phaser.GameObjects.Graphics): void { const { from, control, to } = this.geometry; const path = new Phaser.Curves.Path(from.x, from.y); path.quadraticBezierTo(to.x, to.y, control.x, control.y); path.draw(graphics, 24); }

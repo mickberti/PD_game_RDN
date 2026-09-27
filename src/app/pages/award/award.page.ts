@@ -28,6 +28,7 @@ import { FloatingNavigationService } from "../../core/services/app/navigation/fl
 import { AwardProgressionService } from "../../core/services/progression/award-progression.service";
 import { DailyLoginAwardService } from "../../core/services/progression/daily-login-award.service";
 import { TimeService } from "../../core/services/utils/time.service";
+import { AudioService } from "../../core/audio/audio.service";
 
 @Component({
   selector: "app-award",
@@ -107,6 +108,7 @@ export class AwardPage implements OnInit {
   private readonly awardProgression = inject(AwardProgressionService);
   private readonly dailyLoginAwards = inject(DailyLoginAwardService);
   private readonly time = inject(TimeService);
+  private readonly audio = inject(AudioService);
 
   contextActions = this.floating.contextActions;
   readonly purchaseFeedback = signal<{
@@ -150,6 +152,7 @@ export class AwardPage implements OnInit {
           variant: "gain",
         });
       }
+      this.audio.playSfx("bonus.activate");
       await this.state.persistProgressNow().catch(() => undefined);
       return;
     }
@@ -163,6 +166,7 @@ export class AwardPage implements OnInit {
       });
     }
     this.state.updateProgress(this.awardProgression.claimAward(this.state.progress(), award));
+    this.audio.playSfx("bonus.activate");
     await this.state.persistProgressNow().catch(() => undefined);
   }
   private collectPrice(price: PriceItem): void {

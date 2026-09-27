@@ -2,7 +2,7 @@ export type AudioCue =
   | "ui.tap" | "ui.confirm" | "ui.cancel" | "ui.open" | "ui.close"
   | "gear.rotate" | "gear.snap" | "pulse.start" | "pulse.travel"
   | "gem.change" | "gem.zero" | "gem.noChange" | "gem.break" | "link.travel" | "link.hit" | "bonus.activate"
-  | "effect.link.echo" | "effect.link.amplify" | "effect.link.invert" | "effect.link.chain"
+  | "effect.link.echo" | "effect.link.amplify" | "effect.link.invert" | "effect.link.chain" | "effect.link.chainBreak"
   | "effect.shield" | "effect.wall" | "effect.barrierBreak" | "effect.fire" | "effect.mirror" | "effect.amplifier"
   | "effect.inverter" | "effect.freeze" | "effect.area.bombs" | "effect.timer" | "effect.corruption"
   | "effect.iceResist" | "effect.fireResist" | "effect.iceMelt" | "effect.fireExtinguish"

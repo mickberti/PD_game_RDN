@@ -171,6 +171,7 @@ export class GameplayPageComponent implements AfterViewInit {
       nextPlaygroundScenario: () => this.changePlaygroundScenario(1),
       previousPlaygroundScenario: () => this.changePlaygroundScenario(-1),
       audioCue: (cue) => this.audio.playSfx(cue as import("../../core/audio/audio.models").AudioCue),
+      stopSfx: () => this.audio.stopAllSfx(),
     });
     this.game = new Phaser.Game({
       type: Phaser.AUTO,
