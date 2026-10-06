@@ -1,9 +1,10 @@
 export type AudioCue =
   | "ui.tap" | "ui.confirm" | "ui.cancel" | "ui.open" | "ui.close"
+  | "action.start" | "action.particle.explosion" | "action.particle.travel"
   | "gear.rotate" | "gear.snap" | "pulse.start" | "pulse.travel"
   | "gem.change" | "gem.zero" | "gem.noChange" | "gem.break" | "link.travel" | "link.hit" | "bonus.activate"
   | "effect.link.echo" | "effect.link.amplify" | "effect.link.invert" | "effect.link.chain" | "effect.link.chainBreak"
-  | "effect.shield" | "effect.wall" | "effect.barrierBreak" | "effect.fire" | "effect.mirror" | "effect.amplifier"
+  | "effect.shield" | "effect.wall" | "effect.barrierBreak" | "effect.fire" | "effect.skip" | "effect.mirror" | "effect.amplifier"
   | "effect.inverter" | "effect.freeze" | "effect.area.bombs" | "effect.timer" | "effect.corruption"
   | "effect.iceResist" | "effect.fireResist" | "effect.iceMelt" | "effect.fireExtinguish"
   | "game.win" | "game.perfect" | "game.fail" | "time.warning" | "time.critical";

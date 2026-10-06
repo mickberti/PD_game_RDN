@@ -198,7 +198,7 @@ export class GameplayPageComponent implements AfterViewInit {
           flows: this.puzzle.flows(),
           effectPreviewEvents: this.puzzle.effectPreviewEvents(),
           queueStates: this.puzzle.queueStates(),
-          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ icon: RDN_ACTION_CATALOG[instance.id].icon, label: RDN_ACTION_CATALOG[instance.id].label, description: RDN_ACTION_CATALOG[instance.id].description, charges: instance.charges, disabled: instance.charges <= 0 })),
+          actions: this.session.variant === "effect-playground" ? [] : this.actionInstances().map((instance) => ({ id: instance.id, icon: RDN_ACTION_CATALOG[instance.id].icon, label: RDN_ACTION_CATALOG[instance.id].label, description: RDN_ACTION_CATALOG[instance.id].description, charges: instance.charges, disabled: instance.charges <= 0 })),
           modeLabel: this.session.variant === "effect-playground" ? "EFFECT PLAYGROUND" : this.session.variant === "free" ? "FREE" : this.session.variant === "time-attack" ? "TIME ATTACK" : "AVVENTURA",
           freeSettings: this.session.variant === "free" ? { difficulty: this.gameplaySession.getLaunchOverrides()?.freeDifficulty ?? "EASY", slotCount: this.gameplaySession.getLaunchOverrides()?.freeSlotCount ?? 4, effectsEnabled: this.gameplaySession.getLaunchOverrides()?.freeEffectsEnabled ?? false, theme: this.gameplaySession.getLaunchOverrides()?.freeTheme ?? 3 } : undefined,
           playground: this.session.variant === "effect-playground" ? { group: this.playground.groupLabel(), groupIndex: this.playground.groupIndex(), groupTotal: this.playground.groupTotal, scenario: this.playground.scenario(), index: this.playground.index(), total: this.playground.total(), lines: [`Valori: ${this.puzzle.state().outerValues.join(", ")}`, `Eventi: ${this.puzzle.state().lastEffectEvents?.length ?? 0}`] } : undefined,
@@ -365,12 +365,12 @@ export class GameplayPageComponent implements AfterViewInit {
     const inventory = this.state.inventoryActions();
     this.actionInstances.set(RDN_ACTION_IDS.map((id) => ({ id, charges: Math.max(0, inventory[id] ?? 0), cooldownUntil: 0 })));
   }
-  private useAction(slot: number): void {
-    if (this.session.variant === "effect-playground") return;
+  private useAction(slot: number): boolean {
+    if (this.session.variant === "effect-playground") return false;
     const instance = this.actionInstances()[slot];
-    if (!instance || instance.charges <= 0) return;
+    if (!instance || instance.charges <= 0) return false;
     const definition = RDN_ACTION_CATALOG[instance.id];
-    if (!definition.modes.includes(this.session.variant) || this.outcome() || !this.canUseAction(instance.id)) return;
+    if (!definition.modes.includes(this.session.variant) || this.outcome() || !this.canUseAction(instance.id)) return false;
     let applied = false;
     if (instance.id === "zero") applied = this.puzzle.zeroActiveTarget();
     if (instance.id === "invert") applied = this.puzzle.invertActiveTarget();
@@ -380,7 +380,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (instance.id === "destroy-stone-walls") applied = this.puzzle.destroyStoneWalls();
     if (instance.id === "cleanse-corruption") applied = this.puzzle.cleanseCorruption();
     if (instance.id === "break-chains") applied = this.puzzle.breakChains();
-    if (!applied) return;
+    if (!applied) return false;
     const actionStatistics: Partial<Record<StatisticType, number>> = { actionsUsed: 1 };
     if (instance.id === "zero") actionStatistics.gemsReset = 1;
     if (instance.id === "invert") actionStatistics.signsInverted = 1;
@@ -397,6 +397,7 @@ export class GameplayPageComponent implements AfterViewInit {
     void this.state.persistProgressNow().catch(() => undefined);
     this.saveCurrentRun();
     if (this.completeWonLevel()) this.outcome.set("win");
+    return true;
   }
   /** User actions do not dispatch an impulse, so they must finalize victory themselves. */
   private completeWonLevel(): boolean {

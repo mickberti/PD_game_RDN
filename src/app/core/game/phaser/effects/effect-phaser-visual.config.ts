@@ -5,7 +5,68 @@
  */
 export type LinkFlowPolicy = "wait-for-resolution" | "handoff-after-causal-effects" | "continue-immediately";
 
+import { ParticleAttractionVisualConfig } from "./particle-attraction.effect";
+
 export const EFFECT_PHASER_VISUAL = {
+  /** One-shot presentation for consumable player actions fired from the bottom tray. */
+  userActions: {
+    charge: {
+      enabled: true,
+      durationMs: 260,
+      scale: 1.34,
+      /** Short hit confirmation on the tray icon before its energy burst. */
+      shakeDurationMs: 150,
+      shakeDistance: 4,
+      shakeOscillations: 5,
+      burstCount: 14,
+      burstDistance: 34,
+      burstDurationMs: 240,
+      burstRadius: 3.2,
+      burstColor: 0xffee9a,
+      burstAlpha: 0.94,
+    },
+    /** Generic fountain-to-target effect; it can be reused outside the action tray. */
+    travel: {
+      particleCount: 64,
+      particleRadius: 3.2,
+      particleColor: 0xffee9a,
+      particleAlpha: 0.96,
+      finalAlpha: 0.7,
+      particleStrokeWidth: 1,
+      particleStrokeColor: 0xffffff,
+      /** Twelve-particle waves preserve one shared burst, with a subtle individual offset inside each wave. */
+      launchGroupSize: 6,
+      groupStartDelayMs: 14,
+      maxStartDelayMs: 12,
+      /** Once at the apex, twelve particles at a time begin the visible pull to the target. */
+      attractionGroupSize: 6,
+      attractionGroupDelayMs: 24,
+      maxArrivalDelayMs: 64,
+      durationMs: 720,
+      explosionDurationMs: 468,
+      apexPauseMs: 32,
+      minJumpHeight: 58,
+      maxJumpHeight: 208,
+      horizontalSpread: 162,
+      minScale: .48,
+      maxScale: 1.06,
+      rotationDeg: 230,
+      trailRadius: 7,
+      trailAlpha: 0.54,
+      /** A short drawn trace makes the curved attraction phase visible from a distance. */
+      trajectoryTrailWidth: 2.4,
+      trajectoryTrailAlpha: 0.52,
+      trajectoryTrailSize: 2,
+      trajectoryTrailSegments: 10,
+      targetMode: "STATIC_TARGET",
+      randomSeed: 731,
+      reducedMotion: false,
+      arrivalBurstCount: 8,
+      arrivalBurstDistance: 26,
+      arrivalBurstDurationMs: 410,
+      depth: 25,
+    } satisfies ParticleAttractionVisualConfig & { arrivalBurstCount: number; arrivalBurstDistance: number; arrivalBurstDurationMs: number; },
+  },
   /** Green conduits from the gear to gems whose operation is currently usable. */
   activeFlows: {
     color: 0x59e77c,

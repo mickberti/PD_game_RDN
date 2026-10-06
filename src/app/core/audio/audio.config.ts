@@ -176,6 +176,31 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       "priority": 3
     }
   },
+  "action.start": {
+    "key": "sfx-action-start",
+    "sources": ["assets/audio/sfx/effects/jump-05.wav"],
+    "volume": 0.58,
+    "cooldownMs": 80,
+    "maxConcurrent": 1,
+    "design": { "durationMs": [120, 260], "character": "Concise action arming cue, distinct from a normal impulse.", "intensity": 2, "priority": 3 }
+  },
+  "action.particle.explosion": {
+    "key": "sfx-action-particle-explosion",
+    "sources": ["assets/audio/sfx/effects/027-fireworks-wind.wav"],
+    "volume": 0,
+    "cooldownMs": 80,
+    "maxConcurrent": 1,
+    "design": { "durationMs": [120, 320], "character": "Soft energetic burst for the action particle fountain.", "intensity": 2, "priority": 2 }
+  },
+  "action.particle.travel": {
+    "key": "sfx-action-particle-travel",
+    "sources": ["assets/audio/sfx/effects/teleport-08.wav"],
+    "volume": 0.58,
+    "cooldownMs": 80,
+    "maxConcurrent": 1,
+    "pitchVariation": 0.08,
+    "design": { "durationMs": [180, 420], "character": "Bright controlled attraction sweep from the action to its targets.", "intensity": 2, "priority": 2 }
+  },
   "pulse.travel": {
     "key": "sfx-pulse-travel",
     "sources": [
@@ -501,6 +526,24 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
       ],
       "character": "Temporary fire barrier cue using the wall asset.",
       "intensity": 3,
+      "priority": 3
+    }
+  },
+  "effect.skip": {
+    "key": "sfx-effect-skip",
+    "sources": [
+      "assets/audio/sfx/effects/jump-04.wav"
+    ],
+    "volume": 0.58,
+    "cooldownMs": 80,
+    "maxConcurrent": 1,
+    "design": {
+      "durationMs": [
+        120,
+        320
+      ],
+      "character": "Quick, controlled bypass cue for an intentionally skipped flow.",
+      "intensity": 2,
       "priority": 3
     }
   },

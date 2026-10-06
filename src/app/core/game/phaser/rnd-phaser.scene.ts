@@ -11,13 +11,15 @@ import { LevelEffectConfigResolver } from "./effects/level-effect-config.resolve
 import { AreaEffectRange, AreaEffectType, EffectEngineEvent, EffectScope, ElementalAffinity, GemEffectType, LinkEffectType, ResolvedEffect } from "./effects/effects.models";
 import { EffectPhaserRenderer, EffectGemPosition } from "./effects/effect-phaser.renderer";
 import { EFFECT_PHASER_VISUAL, LinkFlowPolicy, impulseImpactDelayMs } from "./effects/effect-phaser-visual.config";
+import { ParticleAttractionEffect } from "./effects/particle-attraction.effect";
 import { EffectTutorialDefinition } from "./effects/effect-tutorial.config";
 import { effectAssetFrame, effectAssetTexture, isEffectVisuallyActive, shouldPresentEffectEvent, TIMER_PRESENTATION, timerUnitOf } from "./effects/effect-presentation.config";
+import { RdnActionId } from "./config/rdn-actions.config";
 
-export interface RdnHudAction { icon: string; label: string; description: string; charges: number; disabled: boolean; }
+export interface RdnHudAction { id: RdnActionId; icon: string; label: string; description: string; charges: number; disabled: boolean; }
 export interface RdnHudAudio { musicMuted: boolean; sfxMuted: boolean; musicVolume: number; sfxVolume: number; activePackId: string; packs: readonly { id: string; label: string }[]; }
 export interface RdnSceneModel { level: LevelDefinition; state: PuzzleState; previews: AlignmentPreview[]; nextPreviews: AlignmentPreview[]; flows: FlowState[]; effectPreviewEvents: readonly EffectEngineEvent[]; queueStates: readonly QueueState[]; actions: readonly RdnHudAction[]; modeLabel: string; freeSettings?: { difficulty: "EASY" | "NORMAL" | "HARD" | "EXPERT"; slotCount: number; effectsEnabled: boolean; theme: 1 | 2 | 3; }; playground?: { group: string; groupIndex: number; groupTotal: number; scenario: string; index: number; total: number; lines: readonly string[] }; tutorial: EffectTutorialDefinition | null; selectedGemIndex: number | null; selectedGearGemIndex: number | null; selectedLinkEffectId: string | null; outcome: "win" | "lose" | null; levelReward?: { coins: number; bonusClaimed: boolean; adUnavailable: boolean }; timeRemaining: number | null; timeRemainingMs?: number | null; timeTotalSeconds?: number; showInfo: boolean; showSettings: boolean; audio: RdnHudAudio; }
-export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): void; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; stopSfx(): void; nextPlaygroundGroup?(): void; previousPlaygroundGroup?(): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
+export interface RdnSceneActions { rotate(direction: "CW" | "CCW", steps: number): void; impulse(): ImpulseResolutionPlan | null; action(slot: number): boolean; restart(): void; undo(): void; continue(): void; retry(): void; exit(): void; claimDoubleReward(): void; info(): void; closeInfo(): void; openSettings(): void; closeSettings(): void; toggleMusicMute(): void; toggleSfxMute(): void; adjustMusicVolume(delta: number): void; adjustSfxVolume(delta: number): void; shiftAudioPack(direction: -1 | 1): void; dismissTutorial(id: string): void; gemInfo(index: number, source?: "ring" | "gear"): void; linkInfo(effectId: string): void; /** Presentation emits semantic cues; Angular owns playback. */ audioCue(cue: string): void; stopSfx(): void; nextPlaygroundGroup?(): void; previousPlaygroundGroup?(): void; nextPlaygroundScenario?(): void; previousPlaygroundScenario?(): void; }
 const formatOperator = (value: PuzzleOperator | null): string => value === null ? "—" : value === "divide2" ? "÷2" : value === "divide3" ? "÷3" : value === "zero" ? "0" : value === "invert" ? "±" : value === "skip" ? "≫" : value > 0 ? `+${value}` : String(value);
 const VISUAL_SET_COUNT = 3;
 const format = (value: number | null): string => value === null ? "—" : value > 0 ? `+${value}` : String(value);
@@ -28,6 +30,8 @@ const GEM_THEME_CONFIG = {
 } as const;
 const UI_ICON_BY_BUTTON_LABEL: Readonly<Record<string, string>> = { "⌂": "icon-home", "↻": "icon-reload", "SETTINGS": "icon-settings", "▶": "icon-forward", "›": "icon-forward", "‹": "icon-backward", "×": "icon-close", "x": "icon-close", "X": "icon-close", "OK": "icon-confirm" };
 type ImpactEffectPresentation = { frame: string; breaks: boolean; audioCue?: string };
+type UserActionTarget = { id: number; position: Phaser.Math.Vector2; previousValue: number };
+type UserActionEffectPresentation = { frame: string; texture: "rdn-effects" | "rdn-effect-actions"; cue: string };
 
 /** Phaser-only presentation layer. It never calculates puzzle rules. */
 export class RdnPhaserScene extends Phaser.Scene {
@@ -90,10 +94,13 @@ export class RdnPhaserScene extends Phaser.Scene {
   private actionPanelTransitionFrom?: number;
   private actionHoldTimer?: Phaser.Time.TimerEvent;
   private actionHoldTriggered = false;
+  /** Generic visual used by tray actions; it stays deliberately independent from action rules. */
+  private userActionParticleEffect?: ParticleAttractionEffect;
   /** Invalidates every delayed visual callback belonging to an interrupted impulse. */
   private impulsePresentationEpoch = 0;
   private activeImpulsePlan?: ImpulseResolutionPlan;
   private impulseCompletionTimer?: Phaser.Time.TimerEvent;
+  private userActionPresentationTimer?: Phaser.Time.TimerEvent;
   constructor(private readonly actions: RdnSceneActions) { super("rdn-board"); }
   preload(): void {
     this.load.atlas("rdn-actions", "assets/game/fantasy_bg/game-action-set1.png", gameActionAtlas);
@@ -115,7 +122,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.input.on("pointermove", (pointer: Phaser.Input.Pointer) => this.drag(pointer));
     this.input.on("pointerup", () => { if (this.consumeNextPointerUp) { this.consumeNextPointerUp = false; return; } this.release(); if (this.actionHoldTriggered) this.render(); });
     this.input.on("wheel", (_pointer: Phaser.Input.Pointer, _objects: Phaser.GameObjects.GameObject[], _deltaX: number, deltaY: number) => this.scrollInfo(deltaY));
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.clearImpactFeedback());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => { this.clearImpactFeedback(); this.userActionParticleEffect?.destroy(); this.userActionParticleEffect = undefined; });
     this.render();
   }
   setModel(model: RdnSceneModel): void {
@@ -170,6 +177,8 @@ export class RdnPhaserScene extends Phaser.Scene {
     this.countdownCaption = undefined;
     this.countdownValue = undefined;
     this.clearImpactFeedback();
+    this.userActionParticleEffect?.destroy();
+    this.userActionParticleEffect = undefined;
     this.impactParticlePool = [];
     this.children.removeAll(true);
     this.innerSlots = [];
@@ -450,7 +459,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       const noChange = !valueChanged && impact.appliedValue === 0;
       const showNoChangeFeedback = !noChange || EFFECT_PHASER_VISUAL.impactFeedback.noChange.enabled;
       if (valueChanged) this.actions.audioCue(zero ? "gem.zero" : "gem.change");
-      else if (noChange && showNoChangeFeedback) this.actions.audioCue("gem.noChange");
+      else if (noChange && showNoChangeFeedback) this.actions.audioCue(impact.operation === "skip" ? "effect.skip" : "gem.noChange");
       const gemTintBeforeImpact = slot.gem.tintTopLeft;
       slot.text.setText(format(impact.resultValue)).setColor(impact.resultValue === 0 ? "#e6e6e6" : "#ffffff");
       if (impact.resultValue === 0) slot.gem.setTint(0x909090);
@@ -574,9 +583,9 @@ export class RdnPhaserScene extends Phaser.Scene {
       : presentation.frame.includes("timer") ? "effect.timer"
       : presentation.frame.includes("corruption") ? "effect.corruption" : undefined);
   }
-  private showAbsorbedEffectIcon(x: number, y: number, radius: number, frame: string, breaks: boolean, reduced: boolean, onComplete: () => void): void {
+  private showAbsorbedEffectIcon(x: number, y: number, radius: number, frame: string, breaks: boolean, reduced: boolean, onComplete: () => void, textureOverride?: "rdn-effects" | "rdn-effect-actions"): void {
     const config = EFFECT_PHASER_VISUAL.impactFeedback.absorbedIcon;
-    const texture = frame === "fire" ? "rdn-effect-actions" : "rdn-effects";
+    const texture = textureOverride ?? (frame === "fire" ? "rdn-effect-actions" : "rdn-effects");
     const icon = this.trackImpact(this.add.image(x, y - radius * config.offsetYRatio, texture, frame).setDisplaySize(radius * config.sizeRatio, radius * config.sizeRatio).setDepth(EFFECT_PHASER_VISUAL.impactFeedback.depth + config.depthOffset).setAlpha(0).setScale(config.initialScale));
     const fadeIn = reduced ? 0 : config.fadeInMs; const hold = reduced ? 0 : config.holdMs; const fadeOut = reduced ? 120 : config.fadeOutMs;
     this.tweens.add({ targets: icon, alpha: config.alpha, scaleX: config.finalScale, scaleY: config.finalScale, duration: fadeIn, ease: "Sine.Out", onComplete: () => {
@@ -1067,7 +1076,7 @@ export class RdnPhaserScene extends Phaser.Scene {
       const actionIndex = index; const column = actionIndex % 4; const x = cx + (column - 1.5) * 96; const y = actionIndex < 4 ? primaryY : extraY; const alpha = action.disabled ? .34 : 1;
       const button = this.add.circle(x, y, 31, action.disabled ? 0x4c4c4c : 0x245438, .98).setStrokeStyle(1, action.disabled ? 0x777777 : 0xd6af58, .9).setAlpha(alpha).setInteractive({ useHandCursor: !action.disabled });
       button.on("pointerdown", () => { if (action.disabled) return; this.actionHoldTriggered = false; this.actionHoldTimer = this.time.delayedCall(420, () => { if (!this.input.activePointer.isDown) return; this.actionHoldTriggered = true; this.showActionInfo(cx, height, action); }); });
-      button.on("pointerup", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; if (this.actionHoldTriggered) { this.render(); return; } if (!action.disabled) this.actions.action(actionIndex); });
+      button.on("pointerup", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; if (this.actionHoldTriggered) { this.render(); return; } if (!action.disabled) this.triggerUserAction(action, actionIndex, icon); });
       button.on("pointerout", () => { this.actionHoldTimer?.remove(false); this.actionHoldTimer = undefined; });
       const icon = this.userActionIcon(x, y, 82, action.icon).setAlpha(alpha);
       const chargeBackground = this.add.circle(x + 23, y + 23, 12, 0x241b12, .96).setStrokeStyle(1, 0xb18b48, .9).setAlpha(alpha);
@@ -1089,6 +1098,130 @@ export class RdnPhaserScene extends Phaser.Scene {
       this.tweens.add({ targets: panel, y: targetPanelY, duration: 260, ease: "Cubic.Out", onUpdate: () => drawPanelMask(panel.y, viewport.height) });
       this.tweens.add({ targets: viewport, height: targetPanelHeight, duration: 260, ease: "Cubic.Out", onUpdate: () => drawPanelMask(panel.y, viewport.height) });
       this.tweens.add({ targets: [handle, handleLabel], y: targetHandleY, duration: 260, ease: "Cubic.Out" });
+    }
+  }
+  /** Player actions resolve atomically, then reveal their reach before the board redraws. */
+  private triggerUserAction(action: RdnHudAction, slot: number, icon: Phaser.GameObjects.Image): void {
+    if (this.busy || !this.model) return;
+    // Snapshot both identity and screen position before the action can update model/render state.
+    const targets = this.userActionTargetPoints(action.id);
+    this.busy = true;
+    if (!this.actions.action(slot)) { this.busy = false; this.flushPendingRender(); return; }
+    this.actions.audioCue("action.start");
+    const bounds = icon.getBounds(); const sourceX = bounds.centerX; const sourceY = bounds.centerY;
+    this.chargeUserActionIcon(icon, sourceX, sourceY, () => this.emitUserActionParticles(sourceX, sourceY, targets, action.id));
+    const visual = EFFECT_PHASER_VISUAL.userActions;
+    const groupDelay = Math.max(0, Math.ceil(visual.travel.particleCount / visual.travel.launchGroupSize) - 1) * visual.travel.groupStartDelayMs;
+    const attractionGroupDelay = Math.max(0, Math.ceil(visual.travel.particleCount / visual.travel.attractionGroupSize) - 1) * visual.travel.attractionGroupDelayMs;
+    const duration = visual.charge.durationMs + groupDelay + attractionGroupDelay + visual.travel.maxStartDelayMs + visual.travel.durationMs + visual.travel.maxArrivalDelayMs + visual.travel.arrivalBurstDurationMs + this.userActionResolutionDurationMs(action.id);
+    this.userActionPresentationTimer?.remove(false);
+    this.userActionPresentationTimer = this.time.delayedCall(duration, () => { this.userActionPresentationTimer = undefined; this.busy = false; this.flushPendingRender(); });
+  }
+  private userActionTargetIds(id: RdnActionId): readonly number[] {
+    const model = this.model; if (!model) return [];
+    if (id === "zero" || id === "invert" || id === "skip") {
+      const target = model.flows.find((flow) => flow.interactable)?.targetId;
+      return target === undefined ? [] : [target];
+    }
+    const type = id === "cleanse-corruption" ? GemEffectType.CORRUPTION
+      : id === "destroy-fire-walls" ? GemEffectType.FIRE
+        : id === "destroy-ice-walls" ? GemEffectType.ICE
+          : id === "destroy-stone-walls" ? GemEffectType.WALL : undefined;
+    const effects = this.effectResolver.resolve(model.level.effectConfiguration, model.level.positions).effects;
+    if (type) return effects.filter((effect): effect is ResolvedEffect & { target: Extract<ResolvedEffect["target"], { type: EffectScope.GEM }> } => effect.config.scope === EffectScope.GEM && effect.config.type === type && effect.target.type === EffectScope.GEM).map((effect) => effect.target.gem.index);
+    if (id === "break-chains") return [...new Set(effects.filter((effect): effect is ResolvedEffect & { target: Extract<ResolvedEffect["target"], { type: EffectScope.LINK }> } => effect.config.scope === EffectScope.LINK && effect.config.type === LinkEffectType.CHAIN && effect.target.type === EffectScope.LINK).flatMap((effect) => [effect.target.fromGem.index, effect.target.toGem.index]))];
+    return [];
+  }
+  /** A tray action owns the visual target selected at click time, never a later rebuilt slot. */
+  private userActionTargetPoints(id: RdnActionId): readonly UserActionTarget[] {
+    return this.userActionTargetIds(id)
+      .map((targetId) => {
+        const slot = this.outerSlots.get(targetId); const previousValue = this.model?.state.outerValues[targetId];
+        return slot && previousValue !== undefined ? { id: targetId, position: new Phaser.Math.Vector2(slot.gem.x, slot.gem.y), previousValue } : undefined;
+      })
+      .filter((target): target is UserActionTarget => !!target);
+  }
+  private chargeUserActionIcon(icon: Phaser.GameObjects.Image, x: number, y: number, onCharged: () => void): void {
+    const config = EFFECT_PHASER_VISUAL.userActions.charge;
+    if (!config.enabled) { onCharged(); return; }
+    const iconX = icon.x; const iconY = icon.y; const shake = { value: 0 };
+    this.tweens.add({ targets: shake, value: 1, duration: config.shakeDurationMs, ease: "Sine.Out", onUpdate: () => {
+      const decay = 1 - shake.value;
+      icon.setPosition(iconX + Math.sin(shake.value * Math.PI * 2 * config.shakeOscillations) * config.shakeDistance * decay, iconY);
+    }, onComplete: () => icon.setPosition(iconX, iconY) });
+    const scaleX = icon.scaleX; const scaleY = icon.scaleY;
+    this.tweens.add({ targets: icon, scaleX: scaleX * config.scale, scaleY: scaleY * config.scale, duration: config.durationMs / 2, yoyo: true, ease: "Back.Out", onComplete: () => {
+      this.actions.audioCue("action.particle.explosion");
+      for (let index = 0; index < config.burstCount; index += 1) {
+        const angle = index * Math.PI * 2 / config.burstCount + .16;
+        const spark = this.add.circle(x, y, config.burstRadius, config.burstColor, config.burstAlpha).setDepth(EFFECT_PHASER_VISUAL.userActions.travel.depth + 1);
+        this.tweens.add({ targets: spark, x: x + Math.cos(angle) * config.burstDistance, y: y + Math.sin(angle) * config.burstDistance, alpha: 0, scale: .25, duration: config.burstDurationMs, ease: "Cubic.Out", onComplete: () => spark.destroy() });
+      }
+      onCharged();
+    } });
+  }
+  private emitUserActionParticles(startX: number, startY: number, targets: readonly UserActionTarget[], actionId: RdnActionId): void {
+    const visual = EFFECT_PHASER_VISUAL.userActions.travel;
+    this.userActionParticleEffect ??= new ParticleAttractionEffect(this);
+    if (targets.length) this.actions.audioCue("action.particle.travel");
+    for (const target of targets) {
+      this.userActionParticleEffect.play(visual, {
+        origin: { x: startX, y: startY },
+        target: { x: target.position.x, y: target.position.y },
+        accentColor: this.userActionParticleColor(actionId),
+        onComplete: () => this.presentUserActionArrival(target, actionId),
+      });
+    }
+  }
+  /** Semantic accent used only by the presentation effect; action mechanics remain unchanged. */
+  private userActionParticleColor(id: RdnActionId): number {
+    if (id === "zero") return 0x8defff;
+    if (id === "invert") return 0xdca8ff;
+    if (id === "cleanse-corruption") return 0x8fffb0;
+    if (id === "break-chains") return 0xb7d8ff;
+    if (id === "destroy-fire-walls") return 0xff9b4a;
+    if (id === "destroy-ice-walls") return 0x9defff;
+    if (id === "destroy-stone-walls") return 0xd1b07c;
+    return 0xc9d1d5;
+  }
+  /** Each arrival uses the same icon timeline and semantic cue as a normal effect impact. */
+  private userActionEffectPresentation(id: RdnActionId): UserActionEffectPresentation {
+    if (id === "zero") return { frame: "reset-zero", texture: "rdn-effect-actions", cue: "gem.zero" };
+    if (id === "invert") return { frame: "effect-mirror-sign", texture: "rdn-effects", cue: "effect.inverter" };
+    if (id === "skip") return { frame: "skip-flow", texture: "rdn-effect-actions", cue: "effect.skip" };
+    if (id === "cleanse-corruption") return { frame: "effect-corruption", texture: "rdn-effects", cue: "effect.corruption" };
+    if (id === "break-chains") return { frame: "effect-chain-link", texture: "rdn-effects", cue: "effect.link.chainBreak" };
+    if (id === "destroy-fire-walls") return { frame: "fire", texture: "rdn-effect-actions", cue: "effect.fire" };
+    if (id === "destroy-ice-walls") return { frame: "effect-ice", texture: "rdn-effects", cue: "effect.freeze" };
+    return { frame: "effect-wall", texture: "rdn-effects", cue: "effect.wall" };
+  }
+  private userActionResolutionDurationMs(id: RdnActionId): number {
+    const zeroDuration = id === "zero" ? Math.max(EFFECT_PHASER_VISUAL.impactFeedback.zero.durationMs, this.zeroGemShatterTimelineDurationMs()) : 0;
+    return this.effectIconTimelineDurationMs(false) + zeroDuration;
+  }
+  private presentUserActionArrival(target: UserActionTarget, actionId: RdnActionId): void {
+    this.userActionArrival(target.position.x, target.position.y);
+    const slot = this.outerSlots.get(target.id); if (!slot) return;
+    const effect = this.userActionEffectPresentation(actionId);
+    const reduced = EFFECT_PHASER_VISUAL.impactFeedback.reducedMotion || globalThis.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    const radius = Math.max(slot.gem.displayWidth, slot.gem.displayHeight) / 2;
+    this.actions.audioCue(effect.cue);
+    this.showAbsorbedEffectIcon(slot.gem.x, slot.gem.y, radius, effect.frame, false, reduced, () => {
+      if (actionId !== "zero" || target.previousValue === 0) return;
+      const tint = slot.gem.tintTopLeft;
+      slot.text.setText("0").setColor("#e6e6e6");
+      slot.gem.setTint(0x909090);
+      this.pulseImpactGem(slot.gem, "zero");
+      this.startChainRelease(`target-${target.id}`);
+      this.playImpactFeedback(slot.gem, slot.text, target.id, radius, "zero", tint);
+    }, effect.texture);
+  }
+  private userActionArrival(x: number, y: number): void {
+    const visual = EFFECT_PHASER_VISUAL.userActions.travel;
+    for (let index = 0; index < visual.arrivalBurstCount; index += 1) {
+      const angle = index * Math.PI * 2 / visual.arrivalBurstCount;
+      const spark = this.add.circle(x, y, Math.max(1.5, visual.particleRadius * .7), visual.particleColor, visual.particleAlpha).setDepth(visual.depth + 1);
+      this.tweens.add({ targets: spark, x: x + Math.cos(angle) * visual.arrivalBurstDistance, y: y + Math.sin(angle) * visual.arrivalBurstDistance, alpha: 0, scale: .25, duration: visual.arrivalBurstDurationMs, ease: "Cubic.Out", onComplete: () => spark.destroy() });
     }
   }
   /** Long press action help: same panel asset and visual language used by game information dialogs. */
