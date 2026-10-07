@@ -4,6 +4,7 @@ import { GameStateService } from '../../core/services/state/game-state.service';
 import { LoggerService } from '../../core/services/infrastructure/logging/logger.service';
 import { ProgressLoginComponent } from "../../shared/basic/ui-progress-login.component";
 import { IonContent } from '@ionic/angular/standalone';
+import { BOOT_SCREEN_MINIMUM_DURATION_MS } from '../../core/config/startup-splash.config';
 
 
 
@@ -99,6 +100,7 @@ export class BootPage implements OnInit {
   readonly loading = this.gameState.loading;
   readonly error = this.gameState.error;
   readonly bootstrapSteps = this.gameState.bootstrapSteps;
+  readonly minimumDisplayElapsed = signal(false);
 
   constructor() {
     this.handleAuthRouting();
@@ -106,6 +108,7 @@ export class BootPage implements OnInit {
   
   ngOnInit(): void {
 	this.logger.log('[BootPage] initialized, starting loading sequence');
+    window.setTimeout(() => this.minimumDisplayElapsed.set(true), BOOT_SCREEN_MINIMUM_DURATION_MS);
     const timer = window.setInterval(() => {
       const next = Math.min(100, this.loadingProgress() + 8);
       this.loadingProgress.set(next);
@@ -123,11 +126,12 @@ export class BootPage implements OnInit {
   private handleAuthRouting() {
 	effect(() => {
 	  const loadingCompleted = this.loadingProgress() >= 100;
+	  const minimumDisplayElapsed = this.minimumDisplayElapsed();
 	  const initialized = this.initialized();
 	  const loading = this.loading();
 	  const user = this.user();
 
-	  if (!loadingCompleted || !initialized || loading || this.error()) {
+	  if (!minimumDisplayElapsed || !loadingCompleted || !initialized || loading || this.error()) {
 		return;
 	  }
 

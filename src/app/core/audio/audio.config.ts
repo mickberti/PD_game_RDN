@@ -425,9 +425,13 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "bonus.activate": {
     "key": "sfx-bonus-activate",
     "sources": [
-      "assets/audio/sfx/gameplay/bonus-activate.wav"
+      "assets/audio/sfx/gameplay/coin-payment.mp3"
     ],
     "volume": 0.75,
+    "trim": {
+      "startMs": 1500,
+      "endMs": 2000
+    },
     "cooldownMs": 80,
     "maxConcurrent": 1,
     "design": {
@@ -779,7 +783,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "game.win": {
     "key": "sfx-game-win",
     "sources": [
-      "assets/audio/sfx/gameplay/game-win.wav"
+      "assets/audio/sfx/gameplay/loop_nothing_can_stop_progress_02.wav"
     ],
     "volume": 1,
     "cooldownMs": 500,
@@ -797,7 +801,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "game.perfect": {
     "key": "sfx-game-perfect",
     "sources": [
-      "assets/audio/sfx/gameplay/game-perfect.wav"
+      "assets/audio/sfx/gameplay/loop_the_seven_seas_01.wav"
     ],
     "volume": 1,
     "cooldownMs": 500,
@@ -815,7 +819,7 @@ export const SFX_CONFIG: Readonly<Record<AudioCue, AudioCueConfig>> = {
   "game.fail": {
     "key": "sfx-game-fail",
     "sources": [
-      "assets/audio/sfx/gameplay/game-fail.wav"
+      "assets/audio/sfx/gameplay/loop_fighting_evil_mummies_04.wav"
     ],
     "volume": 0.75,
     "cooldownMs": 500,
