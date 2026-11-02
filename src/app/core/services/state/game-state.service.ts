@@ -34,6 +34,7 @@ import { DirectRouteAccessService } from "../app/navigation/direct-route-access.
 import { ProgressStoreService } from "./progress-store.service";
 import { calculatePlayerStarProgression } from "../progression/player-star-progression.service";
 import { DailyLoginAwardService } from "../progression/daily-login-award.service";
+import { environment } from '../../../../environments/environment';
 
 export type GameDataSourceMode = "mock" | "remote";
 export type BootstrapStepId = "theme" | "serverTime" | "firebaseAuth" | "playerProfile" | "gameData" | "routing";
@@ -148,6 +149,7 @@ export class GameStateService {
   }
 
   setDataSourceMode(mode: GameDataSourceMode): void {
+    if (environment.production && mode === "mock") return;
     this.logger.logDebug("DataSourceMode", mode);
     if (mode === this.dataSourceMode()) {
       return;
@@ -167,6 +169,7 @@ export class GameStateService {
   }
 
   private loadDataSourceMode(): GameDataSourceMode {
+    if (environment.production) return "remote";
     try {
       const value = localStorage.getItem(GAME_DATA_SOURCE_MODE_STORAGE_KEY);
       return value === "mock" || value === "remote"

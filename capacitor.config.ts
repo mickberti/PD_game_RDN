@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.mberti.tec.pdGameRDN',
-  appName: 'pd-game-rdn',
+  appName: 'GEARITHM',
   webDir: 'www',
   server: {
     androidScheme: 'https'

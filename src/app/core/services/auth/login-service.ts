@@ -13,6 +13,7 @@ export class LoginService {
     loginResponse: any;
     refresh_Access_token: any;
 	googleUserEmail: any;
+    lastError: string | null = null;
     constructor() {
         this.firebase = initializeApp(environment.firebase);
     }
@@ -30,11 +31,11 @@ export class LoginService {
 		console.log('[LoginService] Setting up token refresh listener');
         onAuthStateChanged(auth, async (currenUser: User | null) => {
             if (currenUser) {
-                const idToken = await currenUser.getIdToken(true);
+				await currenUser.getIdToken(true);
 				console.log('[LoginService] Current user detected: ', currenUser.email);
 				this.googleUserEmail = currenUser.email;
-                console.log('[LoginService] Token refreshed: ', idToken);
-                this.refresh_Access_token = idToken;
+				// Never log authentication tokens, including in development builds.
+				this.refresh_Access_token = true;
             } else {
 				console.log('[LoginService] User signed out, clearing token');
                 this.logout();
@@ -44,16 +45,18 @@ export class LoginService {
 
     async initialize() {
 		console.log('[LoginService] Initializing Social Login');
-        await SocialLogin.initialize({
-            google: {
-                webClientId: environment.webClientId,
-                mode: 'online'
-            }
-        });
+        try {
+            await SocialLogin.initialize({ google: { webClientId: environment.webClientId, mode: 'online' } });
+            this.lastError = null;
+        } catch {
+            this.lastError = 'Accesso Google non disponibile. Riprova più tardi.';
+        }
     }
 
     async loginViaGoogle() {
 		console.log('[LoginService] Starting Google login');
+        this.lastError = null;
+        try {
         const user: any = await SocialLogin.login({
             provider: 'google',
             options: {
@@ -61,11 +64,11 @@ export class LoginService {
                 forceRefreshToken: true
             }
         });
-		console.log('[LoginService] Google login response: ', user);
         if (user) {
-            this.loginResponse = JSON.stringify(user.result, null, 2);
-            console.log(this.loginResponse);
-			this.signInWithGoogle(user.result.idToken);
+			await this.signInWithGoogle(user.result.idToken);
+        }
+        } catch {
+            this.lastError = 'Accesso Google non riuscito. Riprova.';
         }
     }
 	
@@ -79,7 +82,6 @@ export class LoginService {
 		const googleUser = await signInWithCredential(getAuth(this.firebase), GoogleAuthProvider.credential(idToken));
 		console.log('[LoginService] Firebase sign-in successful: ', googleUser.user.email);
 		this.googleUserEmail = googleUser.user.email;
-		this.refresh_Access_token = await googleUser.user.getIdToken();
-		console.log('[LoginService] Access token obtained: ', this.refresh_Access_token);
+		this.refresh_Access_token = true;
 	}
 }

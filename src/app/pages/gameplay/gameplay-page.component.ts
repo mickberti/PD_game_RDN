@@ -29,6 +29,7 @@ import { RdnRewardedAdService } from "../../core/services/gameplay/rdn-rewarded-
 import { StatisticType } from "../../core/models/remote/progress.models";
 import { AudioService } from "../../core/audio/audio.service";
 import { MODE_AUDIO_CONFIG } from "../../core/audio/audio.config";
+import { AudioCue } from "../../core/audio/audio.models";
 
 @Component({
   selector: "app-gameplay",
@@ -107,6 +108,7 @@ export class GameplayPageComponent implements AfterViewInit {
   private timeAttackDurationSeconds?: number;
   private readonly timeAttackAudioMarkers = new Set<number>();
   private readonly outcome = signal<"win" | "lose" | null>(null);
+  private outcomeCue: AudioCue | null = null;
   private readonly timeRemaining = signal<number | null>(null);
   private readonly timeRemainingMs = signal<number | null>(null);
   private readonly showInfo = signal(false);
@@ -127,6 +129,7 @@ export class GameplayPageComponent implements AfterViewInit {
       this.session = nextSession;
       this.loadSessionPuzzle(nextSession);
       this.resetActionInstances();
+      this.stopOutcomeAudio();
       this.outcome.set(null);
       this.levelReward.set(null);
       this.showInfo.set(false);
@@ -138,6 +141,7 @@ export class GameplayPageComponent implements AfterViewInit {
       this.hostResizeObserver?.disconnect();
       if (this.resizeFrame !== undefined) cancelAnimationFrame(this.resizeFrame);
       this.stopTimeAttackTimer();
+      this.stopOutcomeAudio();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       this.game?.destroy(true);
     });
@@ -285,6 +289,7 @@ export class GameplayPageComponent implements AfterViewInit {
     return plan;
   }
   private restart(): void {
+    this.stopOutcomeAudio();
     this.puzzle.dispatch({ type: "RESTART" });
     this.puzzle.saveAdventureRun();
     this.saveCurrentRun();
@@ -300,6 +305,7 @@ export class GameplayPageComponent implements AfterViewInit {
     if (this.session.variant !== "effect-playground") this.incrementStatistics({ gamesPlayed: 1 });
   }
   private continue(): void {
+    this.stopOutcomeAudio();
     if (this.session.variant === "effect-playground") { this.changePlaygroundScenario(1); return; }
     if (this.session.variant === "free") {
       const overrides = this.gameplaySession.getLaunchOverrides();
@@ -472,11 +478,13 @@ export class GameplayPageComponent implements AfterViewInit {
     this.reloadPlaygroundLevel();
   }
   private reloadPlaygroundLevel(): void {
+    this.stopOutcomeAudio();
     this.puzzle.loadDebugLevel(this.playground.level());
     this.outcome.set(null); this.showInfo.set(false); this.selectedGemIndex.set(null); this.selectedGearGemIndex.set(null); this.selectedLinkEffectId.set(null);
   }
   private exitGameplay(): void {
     // Do not depend solely on Ionic's cached-view lifecycle for this transition.
+    this.stopOutcomeAudio();
     this.audio.playMusic("menu.main");
     void this.nav.go("/hub");
   }
@@ -516,8 +524,15 @@ export class GameplayPageComponent implements AfterViewInit {
     this.audio.setAudioPack(packs[(index + direction + packs.length) % packs.length].id);
   }
   private playOutcomeAudio(outcome: "win" | "lose", perfect = false): void {
-    this.audio.playSfx(outcome === "win" ? perfect ? "game.perfect" : "game.win" : "game.fail");
+    this.stopOutcomeAudio();
+    this.outcomeCue = outcome === "win" ? perfect ? "game.perfect" : "game.win" : "game.fail";
+    this.audio.playLoopingSfx(this.outcomeCue);
     this.audio.duckMusic(outcome === "win" ? .2 : .35);
+  }
+  private stopOutcomeAudio(): void {
+    if (this.outcomeCue) this.audio.stopSfx(this.outcomeCue);
+    this.outcomeCue = null;
+    this.audio.restoreMusic();
   }
   private updateTimeAttackAudio(remaining: number): void {
     if (this.session.variant !== "time-attack") return;

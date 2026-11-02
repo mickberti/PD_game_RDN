@@ -40,7 +40,16 @@ export class AudioService {
   }
 
   playUi(cue: "tap" | "confirm" | "cancel" | "open" | "close"): void { this.playSfx(`ui.${cue}`); }
-  playSfx(cue: AudioCue): void {
+  playSfx(cue: AudioCue): void { this.playSfxInternal(cue, false); }
+  /** Starts an SFX that remains active until `stopSfx` is called for the same cue. */
+  playLoopingSfx(cue: AudioCue): void { this.playSfxInternal(cue, true); }
+  stopSfx(cue: AudioCue): void {
+    const active = this.activeSfx.get(cue);
+    if (!active) return;
+    for (const entry of [...active]) entry.stop();
+    this.activeSfx.delete(cue);
+  }
+  private playSfxInternal(cue: AudioCue, loop: boolean): void {
     const config = this.sfxConfig(cue); const now = performance.now(); this.count(cue, "requested");
     if ((config.cooldownMs ?? 0) > now - (this.lastPlayed.get(cue) ?? -Infinity)) { this.count(cue, "skippedCooldown"); this.debug(`SKIP ${cue} cooldown`, "SKIP"); return; }
     const active = this.activeSfx.get(cue) ?? new Set<ActiveSfx>();
@@ -48,8 +57,8 @@ export class AudioService {
     this.lastPlayed.set(cue, now);
     const sources = this.pickSources(config);
     const buffer = sources.map((source) => ({ source, buffer: this.sfxBuffers.get(source) })).find((item) => item.buffer);
-    if (buffer?.buffer && this.getSfxContext()) { this.playBufferedSfx(cue, config, buffer.buffer, active); return; }
-    this.playHtmlSfx(cue, config, sources, active);
+    if (buffer?.buffer && this.getSfxContext()) { this.playBufferedSfx(cue, config, buffer.buffer, active, loop); return; }
+    this.playHtmlSfx(cue, config, sources, active, loop);
   }
   playMusic(cue: MusicCue, crossfadeMs = AUDIO_SETTINGS.music.crossfadeMs): void {
     if (this.currentMusic?.cue === cue) { if (this.currentMusic.element.paused) this.tryPlayMusic(this.currentMusic.element, cue); return; }
@@ -108,9 +117,10 @@ export class AudioService {
       else { this.setAssetStatus(cue, "MISSING"); this.warn(`Unable to preload audio cue: ${cue}`); }
     }));
   }
-  private playBufferedSfx(cue: AudioCue, config: AudioCueConfig, buffer: AudioBuffer, active: Set<ActiveSfx>): void {
+  private playBufferedSfx(cue: AudioCue, config: AudioCueConfig, buffer: AudioBuffer, active: Set<ActiveSfx>, loop: boolean): void {
     const context = this.getSfxContext(); if (!context) return;
     const source = context.createBufferSource(); const gain = context.createGain(); source.buffer = buffer;
+    source.loop = loop;
     source.playbackRate.value = config.pitchVariation ? 1 + (Math.random() * 2 - 1) * config.pitchVariation : 1;
     gain.gain.value = this.finalSfxVolume(config); source.connect(gain).connect(context.destination);
     const entry: ActiveSfx = { stop: () => { try { source.stop(); } catch { /* The source may already be ended. */ } }, setVolume: (value) => { gain.gain.value = value; } };
@@ -123,8 +133,9 @@ export class AudioService {
       this.count(cue, "played"); this.setAssetStatus(cue, "LOADED"); this.debug(`PLAY ${cue}`, "PLAY");
     } catch { active.delete(entry); this.count(cue, "failedPlayback"); this.setAssetStatus(cue, "ERROR"); this.warn(`Unable to play ${cue}`); }
   }
-  private playHtmlSfx(cue: AudioCue, config: AudioCueConfig, sources: readonly string[], active: Set<ActiveSfx>): void {
+  private playHtmlSfx(cue: AudioCue, config: AudioCueConfig, sources: readonly string[], active: Set<ActiveSfx>, loop: boolean): void {
     const element = new Audio(); let stopTimer: ReturnType<typeof setTimeout> | undefined; element.preload = "auto"; element.volume = this.finalSfxVolume(config); element.playbackRate = config.pitchVariation ? 1 + (Math.random() * 2 - 1) * config.pitchVariation : 1;
+    element.loop = loop;
     const finish = () => { if (stopTimer !== undefined) clearTimeout(stopTimer); active.delete(entry); if (!active.size) this.activeSfx.delete(cue); this.disposeSfxElement(element); };
     const entry: ActiveSfx = { stop: finish, setVolume: (value) => { element.volume = value; } };
     active.add(entry); this.activeSfx.set(cue, active);

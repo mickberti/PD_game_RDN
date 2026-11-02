@@ -3,6 +3,7 @@ import { AuthGuard } from "./core/guards/auth.guard";
 import { AdminGuard } from "./core/guards/admin.guard";
 import { AdminShellPage } from "./pages/utils/admin/admin-shell.page";
 import { AudioDebugGuard } from "./core/guards/audio-debug.guard";
+import { environment } from '../environments/environment';
 
 export const routes: Routes = [
   { path: "", redirectTo: "boot", pathMatch: "full" },
@@ -14,18 +15,11 @@ export const routes: Routes = [
   	path: 'login',
   	loadComponent: () => import('./pages/login/login.page').then((m) => m.LoginPage)
   },
-  {
-  	path: 'login0',
-  	loadComponent: () => import('./pages/login/login0.page').then((m) => m.Login0Page)
-  },
-  {
-  	path: 'login1',
-  	loadComponent: () => import('./pages/login/login1.page').then((m) => m.Login1Page)
-  },
-  {
-  	path: 'login2',
-  	loadComponent: () => import('./pages/login/login2.page').then((m) => m.Login2Page)
-  },
+  ...(!environment.production ? [
+    { path: 'login0', loadComponent: () => import('./pages/login/login0.page').then((m) => m.Login0Page) },
+    { path: 'login1', loadComponent: () => import('./pages/login/login1.page').then((m) => m.Login1Page) },
+    { path: 'login2', loadComponent: () => import('./pages/login/login2.page').then((m) => m.Login2Page) },
+  ] : []),
   {
   	path: 'profile',
   	canActivate: [AuthGuard],

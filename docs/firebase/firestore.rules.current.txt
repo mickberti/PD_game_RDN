@@ -1,0 +1,98 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        )
+        && get(
+          /databases/$(database)/documents/users/$(request.auth.uid)
+        ).data.role == 'admin';
+    }
+
+    // Admin: accesso completo all'intero database.
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Dati utente.
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+
+      // Copre tutto ciò che si trova sotto users/{uid}/private.
+      match /private/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /purchases/{document=**} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Cataloghi pubblici in sola lettura.
+    match /catalogAwards/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogBoxes/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogChestes/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogEquip/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogHeroes/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /catalogResources/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Eventi pubblici.
+    match /events/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Configurazione pubblica.
+    match /gameConfigs/public {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Tempo server: utenti autenticati possono leggere e scrivere.
+    match /meta/time {
+      allow read, write: if isSignedIn();
+    }
+
+    // Eventuali altri documenti della collection meta:
+    // accessibili solo agli admin tramite il bypass globale.
+
+    match /sessions/{document=**} {
+      allow read, write: if isSignedIn();
+    }
+  }
+}

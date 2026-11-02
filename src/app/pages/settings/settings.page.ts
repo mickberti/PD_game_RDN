@@ -58,8 +58,10 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
             <ui-button-sprite [frame]="{name: 'icon-forward', effect: 'none'}" ariaLabel="Set audio successivo" (pressed)="nextAudioPack()"></ui-button-sprite>
           </div>
         </div>
-        <ui-setting-box type="service" [title]="t('gameService')" [subtitle]="gameServiceModeLabel()" [checked]="gameState.isMockMode()" (toggle)="toggleService()"></ui-setting-box>
-        <ui-setting-box type="task" title="URL diretto senza boot" [subtitle]="directRouteAccessLabel()" [checked]="directRouteAccess.enabled()" (toggle)="toggleDirectRouteAccess()"></ui-setting-box>
+        @if (!production) {
+          <ui-setting-box type="service" [title]="t('gameService')" [subtitle]="gameServiceModeLabel()" [checked]="gameState.isMockMode()" (toggle)="toggleService()"></ui-setting-box>
+          <ui-setting-box type="task" title="URL diretto senza boot" [subtitle]="directRouteAccessLabel()" [checked]="directRouteAccess.enabled()" (toggle)="toggleDirectRouteAccess()"></ui-setting-box>
+        }
         @if (audioDebugAvailable) { <div class="settings-links"><ui-button variant="complementary" (pressed)="openAudioDebug()">Audio Debug / Sound Test</ui-button></div> }
       </ui-panel>
 
@@ -93,9 +95,11 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
           <ui-button variant="complementary" [disabled]="resettingAwards()" (pressed)="resetClaimedAwards()">
             {{ resettingAwards() ? 'Ripristino premi...' : 'Ripristina premi ritirati' }}
           </ui-button>
+        @if (!production) {
           <ui-button variant="complementary" (pressed)="nav.go('utils/component-atlas-icon')" >{{ t('support') }}</ui-button>
-        <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
-        <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>
+          <ui-button variant="complementary" (pressed)="boostAllStatistics()">+50 statistiche</ui-button>
+          <ui-button variant="complementary" (pressed)="boostPlayerResources()">+2000 coin +500 gem +500 dust</ui-button>
+        }
         <ui-button variant="complementary" [disabled]="resettingProgress()" (pressed)="resetUserProgress()">{{ resettingProgress() ? t('resettingProgress') : t('resetProgress') }}</ui-button>
         </div>
       </ui-panel>
@@ -128,7 +132,7 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
         </ui-panel>
       }
 	  <div class="settings-links">
-	  <small>Version: v1.00</small>
+	  <small>Version: v1.0.20</small>
       <small>ID: 460003500F73289</small>
 	  </div>
     </div>
@@ -162,6 +166,7 @@ export class SettingsPage {
   readonly adminLevelActionPending = signal(false);
   readonly effectPlaygroundAvailable = computed(() => this.isAdmin());
   readonly audioDebugAvailable = !environment.production;
+  readonly production = environment.production;
 
   t(key: string): string {
     return this.language.t(key);
@@ -184,10 +189,12 @@ export class SettingsPage {
   openAudioDebug(): void { if (this.audioDebugAvailable) void this.nav.go("/utils/audio-debug"); }
 
   toggleService(): void {
+    if (this.production) return;
     this.gameState.toggleDataSourceMode();
   }
 
   toggleDirectRouteAccess(): void {
+    if (this.production) return;
     this.directRouteAccess.toggle();
   }
 
@@ -200,6 +207,7 @@ export class SettingsPage {
   }
 
   boostAllStatistics(): void {
+    if (this.production) return;
     const statisticBoosts = STATISTIC_TYPES.reduce<Partial<Record<StatisticType, number>>>(
       (updates, type) => ({
         ...updates,
@@ -212,6 +220,7 @@ export class SettingsPage {
   }
 
   boostPlayerResources(): void {
+    if (this.production) return;
     const currentProgress = this.gameState.progress();
 
     this.gameState.updateProgress({
