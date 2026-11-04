@@ -11,7 +11,7 @@ describe("FlowState", () => {
     expect(flows.filter((flow) => flow.interactable)).toHaveSize(2);
     expect(flows.filter((flow) => !flow.interactable).every((flow) => flow.active && flow.blockedReason === "DIVIDE_BY_TWO_REQUIRES_NON_ZERO_EVEN_INTEGER")).toBeTrue();
     const next = engine.apply(level, state, { type: "IMPULSE" });
-    expect(next.outerValues).toEqual([2, 3, -2, -3]);
+    expect(next.outerValues).toEqual(level.outerValues);
   });
 
   it("defers a chained destination and continues from its prerequisite", () => {

@@ -5,7 +5,7 @@ export const atlasData = {
         "x": 0,
         "y": 0,
         "w": 443,
-        "h": 635
+        "h": 631
       },
       "rotated": false,
       "trimmed": false,
@@ -29,7 +29,7 @@ export const atlasData = {
         "x": 464,
         "y": 0,
         "w": 443,
-        "h": 635
+        "h": 631
       },
       "rotated": false,
       "trimmed": false,
@@ -52,8 +52,8 @@ export const atlasData = {
       "frame": {
         "x": 928,
         "y": 0,
-        "w": 443,
-        "h": 635
+        "w": 442,
+        "h": 631
       },
       "rotated": false,
       "trimmed": false,

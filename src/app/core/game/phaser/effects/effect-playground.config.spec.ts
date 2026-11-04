@@ -22,7 +22,8 @@ describe("Effect Playground", () => {
 
   it("shows the shield and then applies the inverter in the third GEM example", () => {
     const engine = new PuzzleEngine();
-    const level = EFFECT_PLAYGROUND_SCENARIOS[EffectPlaygroundScenario.GEM_EFFECT_COMBINATIONS];
+    const scenario = EFFECT_PLAYGROUND_SCENARIOS[EffectPlaygroundScenario.GEM_EFFECT_COMBINATIONS];
+    const level = { ...scenario, slotPhases: [[{ outerIndex: 4 }]] };
     const result = engine.apply(level, engine.createInitialState(level), { type: "IMPULSE" });
 
     expect(result.lastEffectEvents?.some((event) => event.type === "SHIELD_ABSORBED" && event.gemId === "target-4")).toBeTrue();
@@ -47,7 +48,8 @@ describe("Effect Playground", () => {
 
   it("keeps effects behind a wall disabled until the wall has been broken", () => {
     const engine = new PuzzleEngine();
-    const level = EFFECT_PLAYGROUND_SCENARIOS[EffectPlaygroundScenario.WALL_WITH_FOLLOW_UP_EFFECTS];
+    const scenario = EFFECT_PLAYGROUND_SCENARIOS[EffectPlaygroundScenario.WALL_WITH_FOLLOW_UP_EFFECTS];
+    const level = { ...scenario, slotPhases: [[{ outerIndex: 0 }]] };
     const afterWall = engine.apply(level, engine.createInitialState(level), { type: "IMPULSE" });
     const afterEffects = engine.apply(level, afterWall, { type: "IMPULSE" });
 
@@ -65,10 +67,12 @@ describe("Effect Playground", () => {
     const effects = new LevelEffectConfigResolver().resolve(level.effectConfiguration, level.positions).effects;
     const mirror = effects.find((effect) => effect.config.type === GemEffectType.MIRROR && effect.target.type === EffectScope.GEM && effect.target.gem.index === 0)!;
     const amplifier = effects.find((effect) => effect.config.type === GemEffectType.AMPLIFIER && effect.target.type === EffectScope.GEM && effect.target.gem.index === 1)!;
-    const preview = engine.effectPreviewEvents(level, state);
+    const mirrorPreview = engine.effectPreviewEvents(level, state);
+    const amplifierLevel = { ...level, slotPhases: [[{ outerIndex: 1 }]] };
+    const amplifierPreview = engine.effectPreviewEvents(amplifierLevel, engine.createInitialState(amplifierLevel));
 
-    expect(willGemEffectApplyOnNextImpulse(mirror, preview)).toBeFalse();
-    expect(willGemEffectApplyOnNextImpulse(amplifier, preview)).toBeFalse();
-    expect(preview.filter((event) => event.type === "MIRROR_APPLIED" || event.type === "GEM_AMPLIFIER_APPLIED").every((event) => !shouldPresentEffectEvent(event))).toBeTrue();
+    expect(willGemEffectApplyOnNextImpulse(mirror, mirrorPreview)).toBeFalse();
+    expect(willGemEffectApplyOnNextImpulse(amplifier, amplifierPreview)).toBeFalse();
+    expect([...mirrorPreview, ...amplifierPreview].filter((event) => event.type === "MIRROR_APPLIED" || event.type === "GEM_AMPLIFIER_APPLIED").every((event) => !shouldPresentEffectEvent(event))).toBeTrue();
   });
 });

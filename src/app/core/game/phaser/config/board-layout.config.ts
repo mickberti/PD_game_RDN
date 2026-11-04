@@ -419,16 +419,16 @@ export const RDN_BOARD_LAYOUTS: Record<
 > = {
   4: {
     positions: 4,
-    ring: { diameter: 2.38, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
-    gear: { diameter: 1.47, offsetX: 0, offsetY: 0, angle: 0 },
+    ring: { diameter: 2.18, widthScale: 1, heightScale: 1, offsetX: 0, offsetY: 0, angle: 0 },
+    gear: { diameter: 1.42, offsetX: 0, offsetY: 0, angle: 0 },
     outerSlots: {
-      radius: 0.98,
+      radius: 0.88,
       angleOffset: 0,
       sphereRadius: 0.125,
       badgeOffsetX: -0.11,
       badgeOffsetY: 0.13,
     },
-    innerSlots: { radius: 0.65, angleOffset: 0, sphereRadius: 0.115 },
+    innerSlots: { radius: 0.67, angleOffset: 0, sphereRadius: 0.115 },
     impulse: { radius: 0.29, iconSize: 0.6 },
     trail: {
       startRadius: 0.22,

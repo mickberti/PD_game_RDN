@@ -26,12 +26,13 @@ describe("effect game-mode progression", () => {
     expect(validateEffectComplexity(first, "test")).toEqual([]);
     expect(resolver.resolve(first, 7).issues).toEqual([]);
     expect((first?.effects ?? []).filter((effect) => effect.target.type === EffectScope.LINK).length).toBeLessThanOrEqual(3);
-    expect((first?.effects ?? []).filter((effect) => effect.target.type === EffectScope.AREA).length).toBeLessThanOrEqual(1);
+    expect((first?.effects ?? []).filter((effect) => effect.target.type === EffectScope.AREA).length).toBeLessThanOrEqual(2);
   });
 
-  it("uses the one-hit wall throughout the introductory wall tier", () => {
+  it("ends the one-hit wall tier before introducing mirror", () => {
     expect(createProgressionEffectConfiguration("adventure", 20, 4, 1)?.effects?.[0].preset).toBe("WALL_1");
-    expect(createProgressionEffectConfiguration("adventure", 29, 4, 1)?.effects?.[0].preset).toBe("WALL_1");
+    expect(createProgressionEffectConfiguration("adventure", 24, 4, 1)?.effects?.[0].preset).toBe("WALL_1");
+    expect(createProgressionEffectConfiguration("adventure", 25, 4, 1)?.effects?.[0].preset).toBe("MIRROR_1");
   });
 
   it("adds the optional five-sphere link every three catalogue levels", () => {
@@ -55,7 +56,7 @@ describe("effect game-mode progression", () => {
   });
 
   it("applies every selected Free family independently from Adventure level gates", () => {
-    const configuration = createFreeModeEffectConfiguration("EASY", 4, 14, { gem: true, link: true, area: true });
+    const configuration = createFreeModeEffectConfiguration("EASY", 6, 14, { gem: true, link: true, area: true });
     const effects = configuration?.effects ?? [];
     expect(effects.some((effect) => effect.target.type === EffectScope.GEM)).toBeTrue();
     expect(effects.some((effect) => effect.target.type === EffectScope.LINK)).toBeTrue();

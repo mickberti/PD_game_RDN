@@ -269,7 +269,7 @@ export const atlasData = {
         "x": 1164,
         "y": 729,
         "w": 310,
-        "h": 310
+        "h": 295
       },
       "rotated": false,
       "trimmed": false,

@@ -6,6 +6,7 @@
 - I confini sono `src/app` (UI e core), `src/app/core/game/phaser` (motore e scena), `src/app/core/services` (stato, dati e integrazioni), `src/assets` (risorse), `android` (progetto nativo). `scripts` e `tools/rnd-catalogue` gestiscono i cataloghi RDN.
 - Per procedure ripetibili e richiamo delle Skill locali, consultare `docs/CODEX_SKILLS.md`; le Skill sono in `.agents/skills` e aggiungono controlli specifici senza sostituire queste istruzioni.
 - Per ruoli delegabili e strategia di orchestrazione, consultare `docs/CODEX_AGENTS.md`; i profili sono in `.codex/agents`.
+- Per audit di produzione `QUICK`, `FULL` o `RELEASE`, consultare `docs/CODEX_PRODUCTION_AUDIT.md` e la Skill `gearithm-production-audit`.
 
 ## Convenzioni e implementazione
 - Seguire nomi e stile del file vicino: il codice esistente usa TypeScript, SCSS, componenti standalone e servizi `providedIn: 'root'`; virgolette e indentazione non sono uniformi.

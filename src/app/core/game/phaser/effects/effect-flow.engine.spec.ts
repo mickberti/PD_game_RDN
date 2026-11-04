@@ -49,9 +49,9 @@ describe("EffectFlowEngine", () => {
     const fireByIce = resolve([7], [fire], [{ gemId: "target-0", value: -3, elementalAffinity: "ice" }]);
     const fireByFire = resolve([7], [fire], [{ gemId: "target-0", value: -3, elementalAffinity: "fire" }]);
     expect([iceByFire.values[0], iceByIce.values[0], iceByPlain.values[0]]).toEqual([4, 7, 7]);
-    expect([iceByFire.runtime.iceRemainingStrength.ice, iceByIce.runtime.iceRemainingStrength.ice, iceByPlain.runtime.iceRemainingStrength.ice]).toEqual([2, 2, 1]);
+    expect([iceByFire.runtime.iceRemainingStrength['ice'], iceByIce.runtime.iceRemainingStrength['ice'], iceByPlain.runtime.iceRemainingStrength['ice']]).toEqual([2, 2, 1]);
     expect([fireByIce.values[0], fireByFire.values[0]]).toEqual([4, 7]);
-    expect([fireByIce.runtime.fireRemainingStrength.fire, fireByFire.runtime.fireRemainingStrength.fire]).toEqual([2, 2]);
+    expect([fireByIce.runtime.fireRemainingStrength['fire'], fireByFire.runtime.fireRemainingStrength['fire']]).toEqual([2, 2]);
     expect(iceByFire.events.some((event) => event.type === "ELEMENTAL_BYPASSED")).toBeTrue();
     expect(iceByIce.events.some((event) => event.type === "ELEMENTAL_BLOCKED")).toBeTrue();
   });

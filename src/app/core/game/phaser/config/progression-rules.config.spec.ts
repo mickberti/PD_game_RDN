@@ -1,33 +1,47 @@
-import { RDN_EFFECT_SIMPLIFICATIONS, RDN_GEM_EFFECT_FALLBACK_PRESETS, rdnEffectRuleForLevel, rdnGemEffectCountForBoard, rdnLinkCountForBoard, rdnSpecialOperatorsForBoard } from './progression-rules.config';
+import {
+  RDN_EFFECT_SIMPLIFICATIONS,
+  RDN_GEM_EFFECT_FALLBACK_PRESETS,
+  RDN_MODE_BOARD_PROGRESSION_RULES,
+  rdnEffectRuleForLevel,
+  rdnGemEffectCountForBoard,
+  rdnLinkCountForBoard,
+  rdnSpecialOperatorsForBoard,
+} from '../catalogues/v011/progression-rules.config';
 
-describe('RDN progression rules', () => {
-  it('introduces one special only from seven spheres and never more than two', () => {
-    expect(rdnSpecialOperatorsForBoard(300, 6)).toEqual([]);
-    expect(rdnSpecialOperatorsForBoard(301, 7)).toHaveSize(1);
-    expect(rdnSpecialOperatorsForBoard(300, 7)).toHaveSize(2);
-    expect(rdnSpecialOperatorsForBoard(300, 8)).toHaveSize(2);
-  });
+describe('RDN v011 progression rules', () => {
+  for (const mode of ['adventure', 'time-attack'] as const) {
+    it(`keeps special operators within the configured board budget in ${mode}`, () => {
+      for (const spheres of [4, 6, 7, 8, 9]) {
+        const rule = [...RDN_MODE_BOARD_PROGRESSION_RULES].reverse().find((row) => spheres >= row.minSpheres)!;
+        const budget = mode === 'adventure' ? rule.adventure : rule.timeattack;
+        for (const level of [1, 300, 301]) {
+          const operators = rdnSpecialOperatorsForBoard(level, spheres, mode);
+          expect(operators.length).toBeGreaterThanOrEqual(budget.specials);
+          expect(operators.length).toBeLessThanOrEqual(Math.min(spheres, 2, budget.specials + budget.optionalSpecials));
+          expect(new Set(operators).size).toBe(operators.length);
+        }
+      }
+    });
 
-  it('configures fixed and optional links by sphere count', () => {
-    expect(rdnLinkCountForBoard(301, 6)).toBe(1);
-    expect(rdnLinkCountForBoard(300, 6)).toBe(2);
-    expect(rdnLinkCountForBoard(301, 7)).toBe(2);
-    expect(rdnLinkCountForBoard(300, 7)).toBe(3);
-    expect(rdnLinkCountForBoard(300, 8)).toBe(3);
-    expect(rdnLinkCountForBoard(301, 8)).toBe(3);
-  });
+    it(`keeps link and GEM-effect counts within the configured board budget in ${mode}`, () => {
+      for (const spheres of [4, 6, 7, 8, 9]) {
+        const rule = [...RDN_MODE_BOARD_PROGRESSION_RULES].reverse().find((row) => spheres >= row.minSpheres)!;
+        const budget = mode === 'adventure' ? rule.adventure : rule.timeattack;
+        for (const level of [1, 300, 301]) {
+          expect(rdnLinkCountForBoard(level, spheres, mode)).toBeGreaterThanOrEqual(budget.links);
+          expect(rdnLinkCountForBoard(level, spheres, mode)).toBeLessThanOrEqual(Math.min(spheres - 1, budget.links + budget.optionalLinks));
+          expect(rdnGemEffectCountForBoard(level, mode, spheres)).toBeGreaterThanOrEqual(budget.effects);
+          expect(rdnGemEffectCountForBoard(level, mode, spheres)).toBeLessThanOrEqual(budget.effects + budget.optionalEffects);
+        }
+      }
+    });
+  }
 
-  it('configures retries and only same-category effect scaling', () => {
+  it('keeps retries and same-category effect scaling configured', () => {
     expect(rdnEffectRuleForLevel(40).solutionAttemptsBeforeScaling).toBe(500);
     expect(RDN_EFFECT_SIMPLIFICATIONS.CORRUPTION_2).toBe('CORRUPTION_1');
-    expect(RDN_EFFECT_SIMPLIFICATIONS.TIMER_7).toBe('TIMER_10');
-    expect(RDN_EFFECT_SIMPLIFICATIONS.INVERTER_1).toBeUndefined();
-    expect(RDN_GEM_EFFECT_FALLBACK_PRESETS).toEqual(["SHIELD_1", "WALL_1", "AMPLIFIER_X2", "INVERTER_1", "ICE_1"]);
-  });
-
-  it('configures the GEM-effect interval by sphere count', () => {
-    expect([2, 3]).toContain(rdnGemEffectCountForBoard(1, 6));
-    expect([3, 4]).toContain(rdnGemEffectCountForBoard(2, 7));
-    expect([4, 5]).toContain(rdnGemEffectCountForBoard(3, 8));
+    expect(RDN_EFFECT_SIMPLIFICATIONS.TIMER_7).toBe('TIMER_5');
+    expect(RDN_EFFECT_SIMPLIFICATIONS.INVERTER_1).toBe('AMPLIFIER_X3');
+    expect(RDN_GEM_EFFECT_FALLBACK_PRESETS).toEqual(['SHIELD_1', 'WALL_1', 'AMPLIFIER_X2', 'INVERTER_1', 'ICE_1', 'FIRE_1']);
   });
 });

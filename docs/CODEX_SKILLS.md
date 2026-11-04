@@ -9,6 +9,7 @@ Le Skill sono in `.agents/skills/<nome>/SKILL.md`, formato supportato dalla skil
 | `gearithm-state-review` | Angular/Ionic, Auth, Firestore, progressi, shop, economia, eventi | Revisione dei flussi di stato e dei limiti server |
 | `gearithm-assets-audit` | Sprite, atlas, texture, audio | Path e limiti dei frame, riferimenti audio |
 | `gearithm-android-release` | Capacitor, Gradle, APK/AAB o preparazione Play | Coerenza locale di identità/versione e gate device/release |
+| `gearithm-production-audit` | Audit QUICK, FULL o RELEASE dell'intera candidata | Report per controlli stabili, piano d'azione e decisione GO/NO-GO |
 
 ## Richiamo ed esempi
 

@@ -9,17 +9,7 @@ describe('ShopService availability filtering', () => {
   const buildShopItem = (overrides: Partial<ShopItem>): ShopItem => ({
     id: 'item',
     framePanel: frame,
-    item: {
-      id: 'coins',
-      itemType: 'resource',
-      name: 'Coins',
-      description: 'Coins resource',
-      type: { id: 'res1', title: 'Coins', description: 'Coins resource', frame },
-      level: 1,
-      mastery: 0,
-      frame,
-    },
-    type: 'resource',
+    type: 'item',
     title: 'Coins',
     state: 'collect',
     price: { frame, type: 'gem', amount: 10 },

@@ -9,6 +9,7 @@ La configurazione di progetto è in `.codex/config.toml`; i profili sono in `.co
 | `mobile_performance` | Rendering, memoria, startup, asset e comportamento su Android | `gearithm-assets-audit`, `gearithm-android-release` |
 | `backend_economy` | Auth, Firestore, progressi, shop, ricompense, eventi | `gearithm-state-review` |
 | `qa_reviewer` | Revisione indipendente di diff, test e regressioni | Skill di dominio interessata |
+| `production_readiness` | Audit read-only di una candidata Android/Play e decisione GO/NO-GO basata su evidenze | `gearithm-production-audit` e Skill di dominio pertinenti |
 
 Il coordinatore principale gestisce architettura e integrazione; per questo non esiste un `software_architect` separato. Ogni agente legge gli `AGENTS.md` applicabili e apre una Skill solo quando la richiesta tocca il suo ambito. I TOML definiscono responsabilità e formato dei risultati, senza duplicare procedure.
 
@@ -28,7 +29,7 @@ La disponibilità dei profili è riletta dalle nuove sessioni Codex. In CLI, `/s
 1. Il coordinatore definisce obiettivo, confini dei file, input riproducibili e risultato richiesto; per un compito breve procede da solo.
 2. Delega soltanto analisi indipendenti o file disgiunti. Per esempio, `level_designer` controlla cataloghi mentre `backend_economy` traccia premi; un solo agente alla volta modifica `gameplay-page.component.ts` o altri file condivisi.
 3. Attende i risultati necessari prima di integrare. Usa un secondo agente per revisione read-only quando la modifica comporta rischio reale, poi esegue i controlli applicabili e restituisce un report unico.
-4. Limita ogni incarico a una versione, un flusso o un diff. Chiede prove con riferimenti ai file, non panoramiche generiche. `.codex/config.toml` limita a **3** i subagent aperti contemporaneamente, escluso il coordinatore.
+4. Limita ogni incarico a una versione, un flusso o un diff. Chiede prove con riferimenti ai file, non panoramiche generiche. `.codex/config.toml` limita a **2** i subagent aperti contemporaneamente, escluso il coordinatore.
 
 Per un cambiamento a effetti e premi: `gameplay_developer` analizza il motore, `backend_economy` il salvataggio del premio su file disgiunti, poi `qa_reviewer` verifica il diff integrato. Per un piccolo ritocco UI, il coordinatore lavora direttamente.
 
@@ -41,6 +42,6 @@ Per un cambiamento a effetti e premi: `gameplay_developer` analizza il motore, `
 
 ## Verifica iniziale
 
-- I sei TOML sono stati letti con `tomllib` (Python 3.13): nomi univoci, campi obbligatori presenti e limite di concorrenza pari a 3.
+- I profili originari sono stati letti con `tomllib` (Python 3.13); il nuovo `production_readiness.toml` ha superato la stessa validazione strutturale. Il limite di concorrenza effettivo va letto in `.codex/config.toml`.
 - `codex --strict-config doctor --summary` carica la configurazione, ma termina con un errore del provisioning del sandbox Windows; segnala anche avvisi locali su MCP e stato dei thread. Non è una prova di build o di qualità applicativa.
 - Un nuovo `codex exec` in sandbox read-only ha ricevuto la richiesta esplicita di delegare a `qa_reviewer`; il coordinatore ha restituito il valore `3` e ha riferito di aver usato quel profilo. Il test non ha richiesto modifiche al repository.

@@ -13,17 +13,13 @@ import { atlasData as atlasFantasyBgBoxDataSet1 } from 'src/assets/ui/fantasy_bg
 import { atlasData as atlasFantasyBgTopDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-top-set1';
 import { atlasData as atlasFantasyBgButtonDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-button-set1';
 import { atlasData as atlasFantasyBgAbilitaDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-abilita-set1';
-import { atlasData as atlasFantasyBgCharactersDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-characters-set1';
-import { atlasData as atlasFantasyBgEquipDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-equip-set1';
 import { atlasData as atlasFantasyBgGameDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-game-set1';
 import { atlasData as atlasFantasyBgEquipTypeDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-equip-type-set1';
 import { atlasData as atlasFantasyBgStarDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-star-set1';
 import { atlasData as atlasFantasyBgStarDataSet2 } from 'src/assets/ui/fantasy_bg/atlas/atlas-star-set2';
 import { atlasData as atlasFantasyBgChestDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-chest-set1';
-import { atlasData as atlasFantasyBgEventDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-event-set1';
 import { atlasData as atlasFantasyBgStoryDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-story-set1';
 import { atlasData as atlasFantasyBgBadgesDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-badges-set1';
-import { atlasData as atlasFantasyBgHudsDataSet1 } from 'src/assets/ui/fantasy_bg/atlas/atlas-hud-set1';
 import { atlasData as atlasFantasyBgGemsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-gem-set1';
 import { atlasData as atlasFantasyBgEffectsDataSet1 } from 'src/assets/game/fantasy_bg/atlas/atlas-effect-set1';
 import { atlasData as atlasFantasyBgEffectsDataSet2 } from 'src/assets/game/fantasy_bg/atlas/atlas-effect-set2';
@@ -96,17 +92,13 @@ export class AtlasService {
   	atlasFantasyBgTopDataSet1,
 	atlasFantasyBgButtonDataSet1,
 	atlasFantasyBgAbilitaDataSet1,
-	atlasFantasyBgCharactersDataSet1,
-	atlasFantasyBgEquipDataSet1,
 	atlasFantasyBgGameDataSet1,
 	atlasFantasyBgEquipTypeDataSet1,
 	atlasFantasyBgStarDataSet1,
 	atlasFantasyBgStarDataSet2,
 	atlasFantasyBgBoxDataSet1,
-	atlasFantasyBgEventDataSet1,
 	atlasFantasyBgStoryDataSet1,
 	atlasFantasyBgBadgesDataSet1,
-  atlasFantasyBgHudsDataSet1,
   atlasFantasyBgGemsDataSet1,
   atlasFantasyBgEffectsDataSet1,
   atlasFantasyBgEffectsDataSet2
@@ -134,15 +126,11 @@ export class AtlasService {
 	{ id: 'fantasy-bg-res-icons-set2', label: 'Fantasy BG - Resource Icons Set 2', data: atlasFantasyBgResIconDataSet2 },
     { id: 'fantasy-bg-box-set1', label: 'Fantasy BG - Box Set 1', data: atlasFantasyBgBoxDataSet1 },
     { id: 'fantasy-bg-top-set1', label: 'Fantasy BG - Top Set 1', data: atlasFantasyBgTopDataSet1 },
-    { id: 'fantasy-bg-hud-set1', label: 'Fantasy BG - HUD Set 1', data: atlasFantasyBgHudsDataSet1 },
 	{ id: 'fantasy-bg-button-set1', label: 'Fantasy BG - Button Set 1', data: atlasFantasyBgButtonDataSet1 },
 	{ id: 'fantasy-bg-abilita-set1', label: 'Fantasy BG - Abilità Set 1', data: atlasFantasyBgAbilitaDataSet1 },
-	{ id: 'fantasy-bg-characters-set1', label: 'Fantasy BG - Characters Set 1', data: atlasFantasyBgCharactersDataSet1 },
-	{ id: 'fantasy-bg-equips-set1', label: 'Fantasy BG - Equip Set 1', data: atlasFantasyBgEquipDataSet1 },
 	{ id: 'fantasy-bg-game-set1', label: 'Fantasy BG - Game Set 1', data: atlasFantasyBgGameDataSet1 },
 	{ id: 'fantasy-bg-equip-type-set1', label: 'Fantasy BG - Equip Type Set 1', data: atlasFantasyBgEquipTypeDataSet1 },
 	{ id: 'fantasy-bg-chest-type-set1', label: 'Fantasy BG - Chest Type Set 1', data: atlasFantasyBgChestDataSet1 },
-	{ id: 'fantasy-bg-event-type-set1', label: 'Fantasy BG - Event Type Set 1', data: atlasFantasyBgEventDataSet1 },
 	{ id: 'fantasy-bg-story-type-set1', label: 'Fantasy BG - Story Type Set 1', data: atlasFantasyBgStoryDataSet1 },
 	{ id: 'fantasy-bg-badges-type-set1', label: 'Fantasy BG - Badges Type Set 1', data: atlasFantasyBgBadgesDataSet1 },
   { id: 'fantasy-bg-gems-type-set1', label: 'Fantasy BG - Gems Type Set 1', data: atlasFantasyBgGemsDataSet1 },
