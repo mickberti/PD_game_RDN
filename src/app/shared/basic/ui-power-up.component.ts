@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, Input } from "@angular/core";
-import { CommonModule, NgClass } from "@angular/common";
+import { CommonModule } from "@angular/common";
 import { UIIconComponent } from "./ui-icon.component";
 import { GlobalItem, IconItem } from "../../core/models/game.models";
 import { defaultGlobalItem, defaultIcon } from "../../core/models/mock/fantasy/utils-data";

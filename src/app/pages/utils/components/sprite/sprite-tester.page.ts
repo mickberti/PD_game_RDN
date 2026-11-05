@@ -1,20 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonContent, IonFooter, IonToolbar } from '@ionic/angular/standalone';
 import { AtlasConfigOption, AtlasService } from '../../../../core/services/ui/assets/atlas.service';
 import { UiSpriteComponent } from 'src/app/shared/basic/ui-sprite.component';
 import { UIBottomUtilsComponent } from 'src/app/shared/components/ui-bottom-utils.component';
 import { UiUtilsPageHeaderComponent } from 'src/app/shared/components/ui-utils-page-header.component';
-
-interface AtlasFrame {
-	frame: { x: number; y: number; w: number; h: number };
-}
-
-interface AtlasData {
-	frames: Record<string, AtlasFrame>;
-	meta?: { image?: string; size?: { w: number; h: number } };
-}
 
 interface PreviewFormatOption {
   id: string;
@@ -49,6 +40,7 @@ type SpriteAnchor =
 	styleUrls: ['./sprite-tester.page.scss']
 })
 export class SpriteTesterPage {
+	private readonly atlasService = inject(AtlasService);
 	readonly atlasOptions: AtlasConfigOption[] = this.atlasService.configuredAtlasOptions;
 
 	readonly previewFormatOptions: PreviewFormatOption[] = [
@@ -89,7 +81,7 @@ export class SpriteTesterPage {
 	fit: SpriteFit = 'contain';
 	anchor: SpriteAnchor = 'center';
 
-	constructor(private readonly atlasService: AtlasService) {
+	constructor() {
 		this.selectedFrameName = this.frameNames[0] ?? '';
 		this.onPreviewFormatChange(this.selectedPreviewFormatId);
 	}

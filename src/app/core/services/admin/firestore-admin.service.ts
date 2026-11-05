@@ -142,7 +142,7 @@ export class FirestoreAdminService {
     return docData(ref) as Observable<T | undefined>;
   }
   
-  async saveDocument(path: string, data: any) {
+  async saveDocument(path: string, data: Record<string, unknown>) {
 	this.logger.logDebug('[FirestoreAdminService] saveDocument to path:', path, 'with data:', data);
     const ref = doc(this.firestore, path);
 	this.logger.logDebug('[FirestoreAdminService] saveDocument ref created:', ref);
@@ -156,7 +156,7 @@ export class FirestoreAdminService {
     await setDoc(ref, data);
   }
 
-  async updateDocument(path: string, data: any) {
+  async updateDocument(path: string, data: Record<string, unknown>) {
 	this.logger.logDebug('[FirestoreAdminService] updateDocument to path:', path, 'with data:', data);
     const ref = doc(this.firestore, path);
 	this.logger.logDebug('[FirestoreAdminService] updateDocument ref created:', ref);

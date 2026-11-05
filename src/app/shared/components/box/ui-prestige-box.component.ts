@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, Input } from "@angular/core";
-import { CommonModule, NgClass } from "@angular/common";
+import { CommonModule } from "@angular/common";
 import { UIButtonComponent } from "../../basic/ui-button.component";
 import { UIIconComponent } from "../../basic/ui-icon.component";
 import { ComponentMode, IconItem } from "../../../core/models/game.models";

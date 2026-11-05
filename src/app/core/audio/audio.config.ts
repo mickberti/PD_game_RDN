@@ -5,8 +5,6 @@ type AudioFormat = "ogg" | "mp3" | "wav";
 const asset = (path: string, formats: readonly AudioFormat[] = ["wav"]): readonly string[] => formats.map((format) => `assets/audio/${path}.${format}`);
 const musicAsset = (path: string): readonly string[] => asset(path, ["ogg", "mp3", "wav"]);
 const design = (durationMs: AudioDesignSpec["durationMs"], character: string, intensity: AudioDesignSpec["intensity"], priority: AudioDesignSpec["priority"]): AudioDesignSpec => ({ durationMs, character, intensity, priority });
-const sfx = (key: string, path: string, options: Omit<AudioCueConfig, "key" | "sources">): AudioCueConfig => ({ key, sources: asset(`sfx/${path}`), ...options });
-const variants = (...paths: string[]): readonly (readonly string[])[] => paths.map((path) => asset(`sfx/${path}`));
 
 export const AUDIO_SETTINGS = { music: { defaultVolume: .55, crossfadeMs: 500 }, sfx: { defaultVolume: .85 }, ducking: { enabled: true, targetVolume: .25, fadeMs: 100 } } as const;
 

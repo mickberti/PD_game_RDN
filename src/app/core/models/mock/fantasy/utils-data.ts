@@ -1,5 +1,4 @@
 import { ShopItem } from "../../shop.models";
-import { effect } from "@angular/core";
 import { AwardItem, FrameItem, GlobalItem, IconItem, ScoreItem } from "../../game.models";
 
 export const defaultGlobalItem: GlobalItem = {

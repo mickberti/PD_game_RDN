@@ -252,7 +252,7 @@ export class RdnPhaserScene extends Phaser.Scene {
     }
     if (m.actions.length) this.actionPanel(cx, height, m.actions);
     if (m.playground) this.playgroundOverlay(width, height, m.playground);
-    if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.showSettings) this.settingsDialog(cx, cy, m); else if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) m.playground ? this.playgroundInfoDialog(cx, cy) : m.freeSettings ? this.freeInfoDialog(cx, cy, m.freeSettings) : this.infoDialog(cx, cy, m); }
+    if (m.tutorial) this.tutorialDialog(cx, cy, m.tutorial); else if (m.outcome) this.dialog(cx, cy, m.outcome, m); else if (this.hasInfoOverlay(m)) { this.infoBackdrop(cx, cy, width, height); if (m.showSettings) this.settingsDialog(cx, cy, m); else if (m.selectedLinkEffectId !== null) this.linkInfoDialog(cx, cy, m, m.selectedLinkEffectId); else if (m.selectedGearGemIndex !== null) this.gearGemInfoDialog(cx, cy, m, m.selectedGearGemIndex); else if (m.selectedGemIndex !== null) this.gemInfoDialog(cx, cy, m, m.selectedGemIndex); else if (m.showInfo) { if (m.playground) this.playgroundInfoDialog(cx, cy); else if (m.freeSettings) this.freeInfoDialog(cx, cy, m.freeSettings); else this.infoDialog(cx, cy, m); } }
   }
   private beginDrag(pointer: Phaser.Input.Pointer): void { if (performance.now() < this.suppressBoardTapUntil) return; this.pointerDownAt = { x: pointer.x, y: pointer.y }; if (this.model?.selectedGemIndex !== null && this.infoScrollMax > 0) { this.infoScrollDragY = pointer.y; return; } if (this.busy || !this.model || this.model.outcome || this.hasInfoOverlay(this.model) || this.model.tutorial) return; const dx = pointer.x - this.wheelCenter.x; const dy = pointer.y - this.wheelCenter.y; const distance = Math.hypot(dx, dy); if (distance > this.wheelCenter.radius || distance < this.wheelCenter.radius * .3) return; this.dragging = true; this.dragStart = Math.atan2(dy, dx); this.dragDelta = 0; }
   private drag(pointer: Phaser.Input.Pointer): void { if (this.infoScrollDragY !== null) { const delta = this.infoScrollDragY - pointer.y; this.infoScrollDragY = pointer.y; this.scrollInfo(delta); return; } if (!this.dragging || !this.wheel || !pointer.isDown || !this.model) return; const a = Math.atan2(pointer.y - this.wheelCenter.y, pointer.x - this.wheelCenter.x); let delta = (a - this.dragStart) * 180 / Math.PI; if (delta > 180) delta -= 360; if (delta < -180) delta += 360; this.dragDelta = delta; this.setWheelAngle(this.model.state.rotationTurns * 360 / this.model.level.positions + delta); }
@@ -305,7 +305,7 @@ export class RdnPhaserScene extends Phaser.Scene {
   }
   /** One-shot, multi-particle current from the impulse to every currently active gem. */
   private playImpulseDischarge(model: RdnSceneModel, plan: ImpulseResolutionPlan): number {
-    const visual = EFFECT_PHASER_VISUAL.impulseDischarge; const { width, height } = this.scale; const layout = this.layout;
+    const { width, height } = this.scale; const layout = this.layout;
     const outerRadius = Math.min(width * .39, height * .31); const centerX = width / 2; const centerY = height * .49; const themeDecoration = getRdnThemeDecorationCalibration(layout.positions, this.visualSet(model));
     const ringX = centerX + outerRadius * (layout.ring.offsetX + themeDecoration.ring.offsetX); const ringY = centerY + outerRadius * (layout.ring.offsetY + themeDecoration.ring.offsetY);
     const startX = this.wheelCenter.x; const startY = this.wheelCenter.y;
@@ -1243,7 +1243,6 @@ export class RdnPhaserScene extends Phaser.Scene {
       const div2 = config?.specialInventory.divide2 ?? 0;
       const div3 = config?.specialInventory.divide3 ?? 0;
       const consumed = (operator: "divide2" | "divide3") => model.state.consumedSpecialOperatorIndexes.filter((index) => model.level.variant === "persistent" && model.level.innerValues[index] === operator).length;
-      const limits = config?.limits;
       const policy = getPuzzleScorePolicy(model.level);
       this.label(cx, cy - 145, "RISORSE ADVENTURE", 18, 0xf8dc8b).setDepth(depth + 1);
       this.label(cx, cy - 115, "Operatori numerici: fissi e infiniti", 13, 0xe6dfc3).setDepth(depth + 1);

@@ -156,7 +156,7 @@ export class CollectionEditorPage {
   ];
 
   collectionName = this.collectionOptions[0];
-  documents = signal<any[]>([]);
+  documents = signal<(Record<string, unknown> & { id: string })[]>([]);
   readonly allTypesFilterValue = '__all__';
   selectedTypeFilter = this.allTypesFilterValue;
   jsonEditor = '';
@@ -169,7 +169,7 @@ export class CollectionEditorPage {
 
     return [...new Set(
       this.documents()
-        .map((doc) => doc?.type)
+        .map((doc) => doc['type'])
         .filter((type): type is string => typeof type === 'string' && type.trim().length > 0)
     )].sort((a, b) => a.localeCompare(b));
   });
@@ -185,13 +185,13 @@ export class CollectionEditorPage {
     this.jsonEditor = '';
   }
 
-  filteredDocuments(): any[] {
+  filteredDocuments(): (Record<string, unknown> & { id: string })[] {
     const docs = this.documents();
     if (!this.supportsTypeFilter() || this.selectedTypeFilter === this.allTypesFilterValue) {
       return docs;
     }
 
-    return docs.filter((doc) => doc?.type === this.selectedTypeFilter);
+    return docs.filter((doc) => doc['type'] === this.selectedTypeFilter);
   }
 
   async loadCollection() {
@@ -214,7 +214,7 @@ export class CollectionEditorPage {
     }
   }
 
-  async edit(doc: any) {
+  async edit(doc: Record<string, unknown> & { id: string }) {
     this.jsonEditor = JSON.stringify(doc, null, 2);
     this.docPath = `${this.collectionName}/${doc.id}`;
     await this.presentToast(`Documento ${doc.id} aperto in modifica.`, 'primary');

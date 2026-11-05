@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonContent, IonFooter, IonToolbar } from '@ionic/angular/standalone';
 import { UIBottomUtilsComponent } from 'src/app/shared/components/ui-bottom-utils.component';
@@ -55,10 +55,6 @@ interface AnimationSortParts {
   suffix: string;
 }
 
-interface ImportMetaWithGlob extends ImportMeta {
-  glob?: <T = unknown>(pattern: string, options: { eager: true }) => Record<string, T>;
-}
-
 @Component({
   selector: 'app-frame-fix',
   standalone: true,
@@ -67,6 +63,7 @@ interface ImportMetaWithGlob extends ImportMeta {
   styleUrls: ['./frame-fix.page.scss']
 })
 export class FrameFixPage {
+	private readonly atlasService = inject(AtlasService);
 	
   readonly gridColumnsOptions = [2, 3, 4, 5, 6, 8];
   readonly previewFormatOptions: PreviewFormatOption[] = [
@@ -100,7 +97,7 @@ export class FrameFixPage {
     scale: number;
   } | null = null;
 
-  constructor(private readonly atlasService: AtlasService){
+  constructor(){
     this.reloadIcons();
   }
 

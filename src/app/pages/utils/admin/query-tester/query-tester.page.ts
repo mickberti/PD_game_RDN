@@ -139,7 +139,7 @@ export class QueryTesterPage {
   limitValue: number | null = null;
 
   readonly errorMessage = signal('');
-  readonly results = signal<any[]>([]);
+  readonly results = signal<(Record<string, unknown> & { id: string })[]>([]);
 
   resultsJson(): string {
     return JSON.stringify(this.results(), null, 2);
@@ -164,7 +164,7 @@ export class QueryTesterPage {
 
       this.results.set(docs);
       await this.presentToast(`Query completata: ${docs.length} documenti trovati.`, 'success');
-    } catch (error) {
+    } catch {
       this.errorMessage.set('Query non valida o non eseguibile. Controlla i filtri JSON.');
       await this.presentToast('Errore durante l\'esecuzione della query.', 'danger');
     }

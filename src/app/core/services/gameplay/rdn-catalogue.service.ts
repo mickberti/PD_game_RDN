@@ -37,7 +37,7 @@ export class RdnCatalogueService {
 
   async levels(version?: string): Promise<readonly LevelDefinition[]> {
     const manifest = await this.manifestFor(version);
-    this.levelsPromises.get(manifest.version) ?? this.levelsPromises.set(manifest.version, (async () => {
+    if (!this.levelsPromises.has(manifest.version)) this.levelsPromises.set(manifest.version, (async () => {
       const runtime = getRdnCatalogueRuntime(manifest.version);
       if (manifest.levelSchemaVersion !== undefined && manifest.levelSchemaVersion !== runtime.contract.levelSchemaVersion) throw new Error(`Catalogo RDN ${manifest.version} incompatibile: schema livelli ${manifest.levelSchemaVersion}.`);
       if (manifest.generatorVersion !== undefined && manifest.generatorVersion !== runtime.contract.generatorVersion) throw new Error(`Catalogo RDN ${manifest.version} incompatibile: motore ${manifest.generatorVersion}.`);
@@ -49,7 +49,7 @@ export class RdnCatalogueService {
 
   async audit(variant?: "adventure" | "time-attack", version?: string): Promise<readonly PuzzleSolutionAudit[]> {
     const manifest = await this.manifestFor(version);
-    this.auditPromises.get(manifest.version) ?? this.auditPromises.set(manifest.version, this.loadJson<readonly PuzzleSolutionAudit[]>(manifest.audit));
+    if (!this.auditPromises.has(manifest.version)) this.auditPromises.set(manifest.version, this.loadJson<readonly PuzzleSolutionAudit[]>(manifest.audit));
     const audit = await this.auditPromises.get(manifest.version)!;
     return variant ? audit.filter((row) => row.variant === variant) : audit;
   }

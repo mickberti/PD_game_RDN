@@ -1,0 +1,10 @@
+{
+  "firestore": {
+    "rules": "docs/firebase/firestore.rules.stage1.emulator.txt"
+  },
+  "emulators": {
+    "auth": { "host": "127.0.0.1", "port": 9099 },
+    "firestore": { "host": "127.0.0.1", "port": 8080 },
+    "ui": { "enabled": false }
+  }
+}

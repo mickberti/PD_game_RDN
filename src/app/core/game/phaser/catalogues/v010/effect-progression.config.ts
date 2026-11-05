@@ -129,11 +129,10 @@ export const policyCompatibleEffectConfiguration = (configuration: LevelEffectCo
   const effects = [...(configuration.effects ?? [])];
   const tier = resolveEffectProgressionTier(level);
   let gemIndex = 0;
-  let linkIndex = 0;
   let areaIndex = 0;
   const safe = effects.map((effect) => {
     if (effect.target.type === EffectScope.GEM) return { ...effect, preset: RDN_GEM_EFFECT_FALLBACK_PRESETS[gemIndex++ % RDN_GEM_EFFECT_FALLBACK_PRESETS.length] };
-    if (effect.target.type === EffectScope.LINK) { linkIndex += 1; return { ...effect, preset: "ECHO_LINK" as EffectPresetKey, overrides: { ...effect.overrides, direction: LinkDirection.FORWARD } }; }
+    if (effect.target.type === EffectScope.LINK) return { ...effect, preset: "ECHO_LINK" as EffectPresetKey, overrides: { ...effect.overrides, direction: LinkDirection.FORWARD } };
     return { ...effect, preset: (areaIndex++ % 2 === 0 ? "AREA_BOMB_MINUS_2" : "AREA_BOMB_PLUS_2") as EffectPresetKey };
   });
   const isValid = (candidate: readonly typeof safe[number][]) => !rdnEffectCombinationIssues(spheres, {

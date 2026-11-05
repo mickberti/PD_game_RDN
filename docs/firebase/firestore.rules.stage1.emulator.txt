@@ -1,0 +1,102 @@
+// PROTOTIPO LOCALE: usare solo con firebase.emulator.stage1.json.
+// NON distribuire: i progressi economici restano scrivibili dal client e gli
+// admin esistenti richiedono prima provisioning di custom claims affidabili.
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.get('admin', false) == true;
+    }
+
+    function profileChanges() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && request.resource.data.keys().hasOnly([
+          'role', 'profileId', 'nickname', 'bannerUrl', 'imageUrl', 'createdAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'role', 'profileId', 'nickname', 'bannerUrl', 'imageUrl', 'createdAt'
+        ])
+        && request.resource.data.role == 'user'
+        && request.resource.data.profileId is string
+        && request.resource.data.createdAt == request.time;
+      allow update: if isOwner(userId)
+        && profileChanges().hasOnly([
+          'profileId', 'createdAt', 'nickname', 'bannerUrl', 'imageUrl'
+        ])
+        && (!profileChanges().hasAny(['profileId'])
+          || (resource.data.get('profileId', '') == ''
+            && request.resource.data.profileId is string))
+        && (!profileChanges().hasAny(['createdAt'])
+          || (resource.data.get('createdAt', null) == null
+            && request.resource.data.createdAt == request.time));
+
+      // Il client corrente scrive l'intero progress: questa concessione resta
+      // insicura e deve essere sostituita insieme al contratto economico.
+      match /private/progress {
+        allow read, write: if isOwner(userId);
+
+        match /purchases/{purchaseId} {
+          allow read: if isOwner(userId);
+        }
+      }
+
+      match /purchases/{purchaseId} {
+        allow read: if isOwner(userId);
+      }
+    }
+
+    match /catalogAwards/{document=**} {
+      allow read: if true;
+    }
+    match /catalogBoxes/{document=**} {
+      allow read: if true;
+    }
+    match /catalogChestes/{document=**} {
+      allow read: if true;
+    }
+    match /catalogEquip/{document=**} {
+      allow read: if true;
+    }
+    match /catalogHeroes/{document=**} {
+      allow read: if true;
+    }
+    match /catalogResources/{document=**} {
+      allow read: if true;
+    }
+    match /events/{document=**} {
+      allow read: if true;
+    }
+    match /gameConfigs/public {
+      allow read: if true;
+    }
+
+    // serverTimestamp() viene valutato come request.time dalle Security Rules.
+    match /meta/time {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && request.resource.data.keys().hasOnly(['now'])
+        && request.resource.data.now == request.time;
+    }
+
+    // Nessun chiamante runtime trovato; vietato fino a inventario completo.
+    // sessions/* resta accessibile agli admin con claim tramite il match globale.
+  }
+}

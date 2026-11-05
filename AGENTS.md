@@ -17,3 +17,63 @@
 - Evitare alterazioni non intenzionali di Adventure, Time Attack, Free, autenticazione e dati persistiti.
 - Verifiche proporzionate: `npm run typecheck`; test mirati `*.spec.ts` per logica toccata; `npm run rdn:catalogue:check` per cataloghi; `npm run build` quando cambia integrazione/build. L'audit in `docs/RELEASE_READINESS_GEARITHM.md` segnala che lint e runner Karma sono già guasti: distinguere tali limiti dalle regressioni nuove. Non eseguire release o sincronizzazioni native per semplici documenti.
 - Un'attività è completa quando percorsi e contratti coinvolti sono verificati, i controlli pertinenti passano o i limiti sono dichiarati, e `git status --short` distingue le modifiche fatte da quelle preesistenti.
+
+
+## Mandatory Execution Report
+
+At the end of every task, include an
+"AI Execution Report" section in the final response.
+
+This section is mandatory for all tasks, including
+analysis, implementation, bug fixing and refactoring.
+
+### Subagents
+
+Report:
+- Subagent name.
+- Task delegated to each subagent.
+- Outcome of the delegated task.
+
+If no subagents were used, explicitly state:
+"Subagents: None".
+
+### Skills
+
+Report:
+- Name of each Skill actually invoked.
+- Purpose of its invocation.
+- Outcome, including any validation performed.
+
+If no Skills were used, explicitly state:
+"Skills: None".
+
+### Execution summary
+
+Include:
+- Files created or modified.
+- Tests and validations executed.
+- Final outcome.
+- Remaining issues, if any.
+
+### Reporting rules
+
+- Report only subagents and Skills actually used.
+- Never claim a Skill was executed merely because
+  its instructions were referenced or available.
+- Never claim a subagent was used unless it was spawned.
+- Distinguish successful, failed and skipped checks.
+- Keep the report concise and structured.
+- Do not omit this section, even for simple tasks.
+
+
+### Delegation transparency
+
+When subagents or Skills are available but not used,
+briefly explain why if the task could reasonably have
+benefited from them.
+
+Do not spawn subagents or invoke Skills solely to
+populate the execution report.
+
+Prefer efficient execution and minimize unnecessary
+token consumption.

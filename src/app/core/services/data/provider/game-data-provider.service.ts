@@ -11,10 +11,9 @@ import { GameCatalog } from '../../../models/game-catalog.model';
 import { EventService } from '../remote/event.service';
 import { RemoteConfigService } from '../remote/config.service';
 import { ProgressService } from '../remote/progress.service';
-import { ShopService, resolveAvailableShopItems } from '../remote/shop.service';
+import { ShopService } from '../remote/shop.service';
 import { ItemService } from '../remote/item.service';
 import { TimeService } from '../../utils/time.service';
-import { getActiveGameEvents } from '../../utils/availability/game-event-availability.util';
 import { LoggerService } from '../../infrastructure/logging/logger.service';
 import { TEMPORARY_RDN_CATALOG_AWARDS } from '../../../models/mock/fantasy/catalog-awards.rdn-temporary';
 
@@ -55,6 +54,7 @@ export class RemoteGameDataProvider implements GameDataProvider {
   }
 
   async loadShop(_forceRefresh = false): Promise<ShopItem[]> {
+    void _forceRefresh;
     return [];
   }
 
@@ -98,10 +98,12 @@ export class MockGameDataProvider implements GameDataProvider {
   }
 
   async loadShop(_forceRefresh = false): Promise<ShopItem[]> {
+    void _forceRefresh;
     return [];
   }
 
   async loadCatalog(_forceRefresh = false): Promise<GameCatalog> {
+    void _forceRefresh;
     return { awards: [...TEMPORARY_RDN_CATALOG_AWARDS] };
   }
 }

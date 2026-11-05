@@ -15,7 +15,7 @@ import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
   imports: [CommonModule, UIProgressbarComponent, UIProgressStarsComponent, UiSpriteComponent],
   template: `
     <article class="mode-item" [class.mode-item--inactive]="!active()">
-      <button type="button" class="mode-item__launch" [disabled]="!active()" (click)="select.emit(mode)">
+      <button type="button" class="mode-item__launch" [disabled]="!active()" (click)="modeSelected.emit(mode)">
         <div class="mode-item__background" [style.background-image]="backgroundImage()" aria-hidden="true"></div>
         <ui-progress-stars class="mode-item__mastery" [gameModeLevel]="playableLevel()" direction="vertical" />
         <div class="mode-item__overlay">
@@ -101,7 +101,7 @@ import { RDN_MAX_LEVEL } from "../../../core/game/phaser/config/levels.config";
 })
 export class ModeBoxComponent {
   @Input({ required: true }) mode!: ModeItem;
-  @Output() select = new EventEmitter<ModeItem>();
+  @Output() modeSelected = new EventEmitter<ModeItem>();
   @Output() selectLevels = new EventEmitter<ModeItem>();
 
   private readonly state = inject(GameStateService);

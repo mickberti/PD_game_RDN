@@ -1,6 +1,6 @@
 import { Injectable } from "@angular/core";
 import { SocialLogin } from "@capgo/capacitor-social-login";
-import { initializeApp } from "firebase/app";
+import { FirebaseApp, initializeApp } from "firebase/app";
 import { GoogleAuthProvider, User, getAuth, onAuthStateChanged, signInWithCredential } from "firebase/auth";
 import { environment } from "../../../../environments/environment";
 
@@ -9,10 +9,10 @@ import { environment } from "../../../../environments/environment";
 })
 export class LoginService {
     isWeb = false;
-    firebase: any;
-    loginResponse: any;
-    refresh_Access_token: any;
-	googleUserEmail: any;
+    firebase: FirebaseApp;
+    loginResponse: unknown;
+    refresh_Access_token: boolean | undefined;
+	googleUserEmail: string | null | undefined;
     lastError: string | null = null;
     constructor() {
         this.firebase = initializeApp(environment.firebase);
@@ -23,7 +23,7 @@ export class LoginService {
         await getAuth(this.firebase).signOut();
         this.refresh_Access_token = undefined;
         this.loginResponse = undefined;
-        await SocialLogin.logout({ provider: 'google' }).then(() => console.log('Signed Out')).catch((e: any) => { console.log('Signed Out'); });
+        await SocialLogin.logout({ provider: 'google' }).then(() => console.log('Signed Out')).catch(() => { console.log('Signed Out'); });
     }
 
     public async refreshToken() {
@@ -57,7 +57,7 @@ export class LoginService {
 		console.log('[LoginService] Starting Google login');
         this.lastError = null;
         try {
-        const user: any = await SocialLogin.login({
+        const user = await SocialLogin.login({
             provider: 'google',
             options: {
                 scopes: ['email', 'profile'],
@@ -65,7 +65,8 @@ export class LoginService {
             }
         });
         if (user) {
-			await this.signInWithGoogle(user.result.idToken);
+			const idToken = 'idToken' in user.result ? user.result.idToken : undefined;
+			await this.signInWithGoogle(idToken);
         }
         } catch {
             this.lastError = 'Accesso Google non riuscito. Riprova.';
@@ -78,7 +79,7 @@ export class LoginService {
 	
 	
 	
-	async signInWithGoogle(idToken: string) {
+	async signInWithGoogle(idToken?: string | null) {
 		const googleUser = await signInWithCredential(getAuth(this.firebase), GoogleAuthProvider.credential(idToken));
 		console.log('[LoginService] Firebase sign-in successful: ', googleUser.user.email);
 		this.googleUserEmail = googleUser.user.email;

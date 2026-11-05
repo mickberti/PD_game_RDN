@@ -70,8 +70,8 @@ export class Login1Page {
 		}
       });
       this.addLog('Init OK');
-    } catch (e: any) {
-      this.addLog('Init ERROR: ' + JSON.stringify(e));
+    } catch {
+      this.addLog('Init ERROR');
     }
   }
 
@@ -87,10 +87,12 @@ export class Login1Page {
 		}
       });
 
-	  this.addLog('Google response: ' + JSON.stringify(res));
+	  this.addLog('Google response received');
 
 	  // Capgo typing: result può essere online o offline
-	  const idToken = (res as any)?.result?.idToken;
+	  const idToken = res.result && 'idToken' in res.result && typeof res.result.idToken === 'string'
+	    ? res.result.idToken
+	    : undefined;
 
 	  if (!idToken) {
 	    throw new Error('ID TOKEN NULL');
@@ -103,10 +105,10 @@ export class Login1Page {
 
       this.user = cred.user;
 
-      this.addLog('Firebase login OK: ' + this.user?.email);
+      this.addLog('Firebase login OK');
 
-    } catch (e: any) {
-      this.addLog('Login ERROR: ' + JSON.stringify(e));
+    } catch {
+      this.addLog('Login ERROR');
     }
   }
 
@@ -116,8 +118,8 @@ export class Login1Page {
       await getAuth().signOut();
       this.user = null;
       this.addLog('Logout OK');
-    } catch (e: any) {
-      this.addLog('Logout ERROR: ' + JSON.stringify(e));
+    } catch {
+      this.addLog('Logout ERROR');
     }
   }
 

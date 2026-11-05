@@ -36,15 +36,20 @@ export class PlayerService {
 
 	  this.logger.logDebug('[PlayerService] : Loading player data for uid OK :', snap);
       if (snap.exists()) {
-        const profile = this.mapProfile(snap.data(), authUser);
-        this.playerSubject.next(profile);
+        const data = snap.data();
+        let profile = this.mapProfile(data, authUser);
 
-        if (!snap.data()['profileId'] || !snap.data()['createdAt']) {
+        if (!data['profileId'] || !data['createdAt']) {
           await setDoc(ref, {
             profileId: profile.profileId,
-            createdAt: snap.data()['createdAt'] ?? serverTimestamp()
+            createdAt: data['createdAt'] ?? serverTimestamp()
           }, { merge: true });
+          const repaired = await getDoc(ref);
+          if (repaired.exists()) {
+            profile = this.mapProfile(repaired.data(), authUser);
+          }
         }
+        this.playerSubject.next(profile);
       } else {
         const profile = this.createDefaultProfile(authUser);
         await setDoc(ref, {
@@ -61,7 +66,7 @@ export class PlayerService {
     }
   }
 
-  async updateProfile(uid: string, payload: Pick<PlayerProfile, 'role' | 'nickname' | 'bannerUrl' | 'imageUrl'>): Promise<void> {
+  async updateProfile(uid: string, payload: Pick<PlayerProfile, 'nickname' | 'bannerUrl' | 'imageUrl'>): Promise<void> {
     const ref = doc(this.firestore, 'users', uid);
     await setDoc(ref, payload, { merge: true });
 
@@ -96,7 +101,7 @@ export class PlayerService {
   private mapProfile(data: Record<string, unknown>, authUser?: AuthUser | null): PlayerProfile {
     return {
       role: typeof data['role'] === 'string' ? data['role'] : 'user',
-      profileId: typeof data['profileId'] === 'string'
+      profileId: typeof data['profileId'] === 'string' && data['profileId'].length > 0
         ? data['profileId']
         : doc(collection(this.firestore, 'userProfiles')).id,
       createdAt: data['createdAt'] instanceof Timestamp ? data['createdAt'] : null,

@@ -7,7 +7,6 @@ import {
   ElementRef,
   EventEmitter,
   inject,
-  Inject,
   Input,
   OnChanges,
   OnDestroy,
@@ -79,6 +78,9 @@ export interface ActionFeedbackFrameItem {
 })
 export class UIActionFeedbackOverlayComponent implements AfterViewInit, OnChanges, OnDestroy {
   private readonly logger = inject(LoggerService);
+  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly document = inject(DOCUMENT);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
   private readonly hostElement: HTMLElement;
   private readonly placeholder: Comment;
   private frameTimer?: ReturnType<typeof setTimeout>;
@@ -108,11 +110,7 @@ export class UIActionFeedbackOverlayComponent implements AfterViewInit, OnChange
   @Output() frameChanged = new EventEmitter<number>();
   @Output() sequenceEnded = new EventEmitter<void>();
 
-  constructor(
-    private readonly elementRef: ElementRef<HTMLElement>,
-    @Inject(DOCUMENT) private readonly document: Document,
-    private readonly changeDetectorRef: ChangeDetectorRef,
-  ) {
+  constructor() {
     this.hostElement = this.elementRef.nativeElement;
     this.placeholder = this.document.createComment("ui-action-feedback-overlay");
   }

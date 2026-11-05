@@ -59,6 +59,7 @@ export class GameplaySessionService {
   }
 
   getRouteForVariant(variant: GameplaySessionVariant): string {
+    void variant;
     return "/gameplay";
   }
 

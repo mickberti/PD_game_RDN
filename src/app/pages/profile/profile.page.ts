@@ -83,13 +83,6 @@ import { UIPanelComponent } from "../../shared/basic/ui-panel.component";
                 ></ion-input>
 			</div>
 			<div>
-                <div class="label" position="stacked">Ruolo</div>
-                <ion-input
-                  [(ngModel)]="form.role"
-                  placeholder="user"
-                ></ion-input>
-			</div>
-			<div>
                 <div class="label" position="stacked">Banner</div>
                 <ion-select
                   [(ngModel)]="form.bannerUrl"
@@ -231,7 +224,6 @@ export class ProfilePage implements OnInit {
   });
 
   form = {
-    role: '',
     nickname: '',
     bannerUrl: '',
     imageUrl: '',
@@ -288,7 +280,6 @@ export class ProfilePage implements OnInit {
 
     const player = this.gameState.player();
     this.form = {
-      role: player?.role ?? 'user',
       nickname: player?.nickname ?? '',
       bannerUrl: player?.bannerUrl || this.availableBanners[0].url,
       imageUrl: player?.imageUrl || this.availableProfileIcons[0].url,
@@ -304,7 +295,6 @@ export class ProfilePage implements OnInit {
 
     try {
       await this.playerService.updateProfile(uid, {
-        role: this.form.role || 'user',
         nickname: this.form.nickname.trim(),
         bannerUrl: this.form.bannerUrl.trim(),
         imageUrl: this.form.imageUrl.trim(),

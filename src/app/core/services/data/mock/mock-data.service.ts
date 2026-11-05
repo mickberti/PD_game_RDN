@@ -21,6 +21,7 @@ export class MockDataService {
   scores: ScoreItem[] = [];
 
   setTheme(_theme: GameTheme): void {
+    void _theme;
     this.modes = fantasyModes;
     this.bottomNav = fantasyBottomNav;
     this.bottomUtils = fantasyBottomUtils;

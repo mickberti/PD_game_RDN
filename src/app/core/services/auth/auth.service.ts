@@ -124,7 +124,7 @@ export class AuthService {
 			this.logger.logInfo('[AuthService] : Handling redirect result');
 			  const result = await getRedirectResult(this.auth);
 
-			  this.logger.logInfo('[AuthService] : Redirect result obtained', result);
+			  this.logger.logInfo('[AuthService] : Redirect result obtained');
 			  
 			  if (result?.user) {
 			    this.logger.logInfo('[AuthService] : Redirect sign-in successful for uid:', result.user.uid);

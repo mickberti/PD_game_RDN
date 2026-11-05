@@ -609,6 +609,7 @@ export class GameStateService {
     now: Date,
     counts: { heroCount: number; equipCount: number; resourceCount: number; boxCount: number },
   ): { shop: TimeShop; regenerated: boolean } {
+    void counts;
     if (shop?.item?.length && !this.isShopExpired(shop, now)) {
       return { shop, regenerated: false };
     }
@@ -624,6 +625,7 @@ export class GameStateService {
   }
 
   private isCatalogReadyForShopGeneration(catalog: GameCatalog): boolean {
+    void catalog;
     return (
       false
     );

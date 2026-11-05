@@ -43,9 +43,9 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
       </ui-panel>
 
       <ui-panel [variant]="'primary'" [title]="t('effects')" >
-        <ui-setting-box type="music" [title]="t('music')" [checked]="!audio.musicMuted()" (toggle)="toggleMusic()"></ui-setting-box>
+        <ui-setting-box type="music" [title]="t('music')" [checked]="!audio.musicMuted()" (toggled)="toggleMusic()"></ui-setting-box>
         <label style="display:grid;gap:5px;padding:0 12px 13px;color:#f7e9c7">Volume musica: {{ volumePercent(audio.musicVolume()) }}%<input type="range" min="0" max="100" [value]="volumePercent(audio.musicVolume())" (input)="setMusicVolume($any($event.target).value)" /></label>
-        <ui-setting-box type="sfx" [title]="t('sfx')" [checked]="!audio.sfxMuted()" (toggle)="toggleSfx()"></ui-setting-box>
+        <ui-setting-box type="sfx" [title]="t('sfx')" [checked]="!audio.sfxMuted()" (toggled)="toggleSfx()"></ui-setting-box>
         <label style="display:grid;gap:5px;padding:0 12px 13px;color:#f7e9c7">Volume effetti: {{ volumePercent(audio.sfxVolume()) }}%<input type="range" min="0" max="100" [value]="volumePercent(audio.sfxVolume())" (input)="setSfxVolume($any($event.target).value)" /></label>
         <div style="display:grid;gap:5px;padding:0 12px 13px;color:#f7e9c7">
           <span>Set audio</span>
@@ -59,8 +59,8 @@ const THEMES: GameTheme[] = ["fantasy_bg"];
           </div>
         </div>
         @if (!production) {
-          <ui-setting-box type="service" [title]="t('gameService')" [subtitle]="gameServiceModeLabel()" [checked]="gameState.isMockMode()" (toggle)="toggleService()"></ui-setting-box>
-          <ui-setting-box type="task" title="URL diretto senza boot" [subtitle]="directRouteAccessLabel()" [checked]="directRouteAccess.enabled()" (toggle)="toggleDirectRouteAccess()"></ui-setting-box>
+          <ui-setting-box type="service" [title]="t('gameService')" [subtitle]="gameServiceModeLabel()" [checked]="gameState.isMockMode()" (toggled)="toggleService()"></ui-setting-box>
+          <ui-setting-box type="task" title="URL diretto senza boot" [subtitle]="directRouteAccessLabel()" [checked]="directRouteAccess.enabled()" (toggled)="toggleDirectRouteAccess()"></ui-setting-box>
         }
         @if (audioDebugAvailable) { <div class="settings-links"><ui-button variant="complementary" (pressed)="openAudioDebug()">Audio Debug / Sound Test</ui-button></div> }
       </ui-panel>

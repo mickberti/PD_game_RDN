@@ -4,7 +4,8 @@ import {
   ElementRef,
   HostBinding,
   Input,
-  OnDestroy
+  OnDestroy,
+  inject
 } from '@angular/core';
 
 @Directive({
@@ -21,7 +22,7 @@ export class AnimateOnVisibleDirective implements AfterViewInit, OnDestroy {
 
   private observer?: IntersectionObserver;
 
-  constructor(private elementRef: ElementRef<HTMLElement>) {}
+  private readonly elementRef = inject<ElementRef<HTMLElement>>(ElementRef);
 
   ngAfterViewInit(): void {
     this.observer = new IntersectionObserver(

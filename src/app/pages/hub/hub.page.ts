@@ -49,7 +49,7 @@ interface LevelPickerItem {
         <section class="screen-list hub-list">
           @for (entry of hubItems(); track trackHubItem(entry)) {
             @if (entry.type === "mode") {
-              <ui-mode-box [mode]="entry.item" (select)="openMode($event)" (selectLevels)="openLevelPicker($event)" />
+              <ui-mode-box [mode]="entry.item" (modeSelected)="openMode($event)" (selectLevels)="openLevelPicker($event)" />
             } @else {
 			  <ui-event-box  [event]="entry.item" (selected)="openEvent($event)" />
             }

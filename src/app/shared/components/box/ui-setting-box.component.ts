@@ -26,7 +26,7 @@ export class UISettingBoxComponent {
   @Input() title = "--";
   @Input() subtitle = "";
   @Input() checked: boolean | null = null;
-  @Output() toggle = new EventEmitter<void>();
+  @Output() toggled = new EventEmitter<void>();
 
   readonly status = signal(true);
 
@@ -39,7 +39,7 @@ export class UISettingBoxComponent {
       this.status.update((value) => !value);
     }
 
-    this.toggle.emit();
+    this.toggled.emit();
   }
 }
 export { UISettingBoxComponent as UISettingChestComponent };

@@ -11,7 +11,8 @@ import {
 	AfterViewInit,
 	ViewChild,
 	ElementRef,
-	SimpleChanges
+	SimpleChanges,
+	OnChanges
 } from '@angular/core';
 import { FrameItem } from '../../core/models/game.models';
 import { AtlasFrame, AtlasService, AtlasSource } from '../../core/services/ui/assets/atlas.service';
@@ -62,7 +63,7 @@ type SpriteFit =
   `],
 	changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class UiSpriteComponent implements AfterViewInit, OnDestroy{
+export class UiSpriteComponent implements AfterViewInit, OnChanges, OnDestroy{
 
 
 	@ViewChild('container', { static: true })

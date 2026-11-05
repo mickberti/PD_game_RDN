@@ -50,7 +50,8 @@ const normalizeDailyLogin = (value: unknown): DailyLoginProgress => {
 export const normalizeGameProgress = (progress?: LegacyGameProgressDocument | null): GameProgress => {
   const inventory = normalizeInventory(progress);
 
-  const { actions: _legacyActions, ...progressFields } = progress ?? {};
+  const progressFields = { ...progress };
+  delete progressFields.actions;
 
   return {
     ...DEFAULT_GAME_PROGRESS,

@@ -32,9 +32,9 @@ export const AdminGuard: CanActivateFn = () => {
         tap(([initialized, user, player, playerLoaded]) =>
           logger.logDebug('[AdminGuard][wait-init] emission:', { initialized, user, player, playerLoaded })
         ),
-        filter(([initialized, user, _player, playerLoaded]) => initialized && (!user || playerLoaded)),
+        filter((values) => values[0] && (!values[1] || values[3])),
         take(1),
-        map(([_initialized, user, player]) => {
+        map(([, user, player]) => {
           if (!user) {
             return router.createUrlTree(['/login']);
           }
@@ -52,7 +52,7 @@ export const AdminGuard: CanActivateFn = () => {
     tap(([user, player, playerLoaded]) =>
       logger.logDebug('[AdminGuard][tap] emission:', { user, player, playerLoaded })
     ),
-    filter(([user, _player, playerLoaded]) => !user || playerLoaded),
+    filter((values) => !values[0] || values[2]),
     take(1),
     map(([user, player]) => {
       logger.logDebug('[AdminGuard][map] final state:', { user, player });

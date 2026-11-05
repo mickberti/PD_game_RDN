@@ -27,7 +27,7 @@ import { UIPanelComponent } from "../../basic/ui-panel.component";
               styleClass="popup-close-button"
               size="sm"
               [frame]="{ name: 'icon-close-large', effect: 'none' }"
-              (pressed)="cancel.emit()"
+              (pressed)="cancelled.emit()"
               ariaLabel="Chiudi popup"
             />
           </div>
@@ -110,7 +110,7 @@ export class UIConfirmActionPopupComponent {
   @Input() cancelLabel = "No";
   @Input() ariaLabel = "Popup di conferma";
   @Output() confirm = new EventEmitter<void>();
-  @Output() cancel = new EventEmitter<void>();
+  @Output() cancelled = new EventEmitter<void>();
 
   formattedPriceAmount(value: number): string {
     return this.utils.formatCompactNumber(value);

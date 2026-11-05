@@ -12,12 +12,12 @@ export class ProgressService {
   private readonly logger = inject(LoggerService);
 
   async loadUserProgress(uid: string): Promise<GameProgress> {
-	this.logger.logDebug('[ProgressService] : Loading progress for user :', uid);
+	this.logger.logDebug('[ProgressService] : Loading user progress');
 	
     const ref = doc(this.firestore, `users/${uid}/private/progress`);
     const snapshot = await getDoc(ref);
 
-	this.logger.logDebug('[ProgressService] : Loading progress for user OK :', snapshot);
+	this.logger.logDebug('[ProgressService] : User progress load completed');
 	
     if (!snapshot.exists()) {
 	  this.logger.logWarning('[ProgressService] : Progress document does not exist for user, using default progress');    
@@ -28,7 +28,7 @@ export class ProgressService {
   }
 
   async saveUserProgress(uid: string, progress: GameProgress): Promise<void> {
-	this.logger.logDebug('[ProgressService] : Saving progress for user :', uid, progress);
+	this.logger.logDebug('[ProgressService] : Saving user progress');
     const ref = doc(this.firestore, `users/${uid}/private/progress`);
 
     await setDoc(ref, {
@@ -38,7 +38,7 @@ export class ProgressService {
   }
 
   async resetUserProgress(uid: string, progress: GameProgress): Promise<void> {
-	this.logger.logDebug('[ProgressService] : Resetting progress for user :', uid, progress);
+	this.logger.logDebug('[ProgressService] : Resetting user progress');
     const ref = doc(this.firestore, `users/${uid}/private/progress`);
 
     await setDoc(ref, {

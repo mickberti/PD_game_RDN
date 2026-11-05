@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonContent, IonFooter, IonToolbar } from '@ionic/angular/standalone';
 import { ActivatedRoute } from '@angular/router';
@@ -56,10 +56,6 @@ interface AnimationSortParts {
   suffix: string;
 }
 
-interface ImportMetaWithGlob extends ImportMeta {
-  glob?: <T = unknown>(pattern: string, options: { eager: true }) => Record<string, T>;
-}
-
 @Component({
   selector: 'app-atlas-gallery',
   standalone: true,
@@ -102,10 +98,10 @@ export class AtlasIconsPage {
     scale: number;
   } | null = null;
 
-  constructor(
-    private readonly atlasService: AtlasService,
-    private readonly route: ActivatedRoute,
-  ) {
+  private readonly atlasService = inject(AtlasService);
+  private readonly route = inject(ActivatedRoute);
+
+  constructor() {
     this.isHeroAtlasPage = this.route.snapshot.data['atlasScope'] === 'heroes';
     this.atlasOptions = this.isHeroAtlasPage
       ? this.atlasService.configuredAtlasHeroOptions

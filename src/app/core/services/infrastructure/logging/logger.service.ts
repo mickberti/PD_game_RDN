@@ -22,27 +22,27 @@ export class LoggerService {
     this._level = environment.loggingLevel;
   }
 
-  logError(message: any, ...optionalParams: any[]): void {
+  logError(message: unknown, ...optionalParams: unknown[]): void {
     this.log(message, LoggingLevel.ERRORS, ...optionalParams);
   }
 
-  logWarning(message: any, ...optionalParams: any[]): void {
+  logWarning(message: unknown, ...optionalParams: unknown[]): void {
     this.log(message, LoggingLevel.WARNINGS, ...optionalParams);
   }
 
-  logInfo(message: any, ...optionalParams: any[]): void {
+  logInfo(message: unknown, ...optionalParams: unknown[]): void {
     this.log(message, LoggingLevel.INFO, ...optionalParams);
   }
 
-  logDebug(message: any, ...optionalParams: any[]): void {
+  logDebug(message: unknown, ...optionalParams: unknown[]): void {
     this.log(message, LoggingLevel.DEBUG, ...optionalParams);
   }
 
-  logVerbose(message: any, ...optionalParams: any[]): void {
+  logVerbose(message: unknown, ...optionalParams: unknown[]): void {
     this.log(message, LoggingLevel.VERBOSE, ...optionalParams);
   }
 
-  log(message: any, level = LoggingLevel.WARNINGS, ...optionalParams: any[]): void {
+  log(message: unknown, level = LoggingLevel.WARNINGS, ...optionalParams: unknown[]): void {
     if (this.shouldLog(level)) {
       switch (level) {
         case LoggingLevel.ERRORS:
